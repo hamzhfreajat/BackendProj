@@ -1,4 +1,5 @@
 import os
+import json
 import firebase_admin
 from firebase_admin import credentials, messaging
 
@@ -7,12 +8,19 @@ fcm_token = "fSQDp2YNRAe_xdZNM4Daz6:APA91bE44Tn0bJOoR8ZLiqCXtXrbHwz3yKiSRyDBJFeA
 
 print("Initializing Firebase...")
 try:
-    if not os.path.exists(cred_path):
-        print(f"File not found: {cred_path}")
-    else:
-        cred = credentials.Certificate(cred_path)
+    firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
+    if firebase_creds_json:
+        cred_dict = json.loads(firebase_creds_json)
+        cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred)
-        print("Firebase initialized!")
+        print("Firebase initialized from environment variable!")
+    else:
+        if not os.path.exists(cred_path):
+            print(f"File not found: {cred_path}")
+        else:
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            print("Firebase initialized!")
         
         message = messaging.Message(
             notification=messaging.Notification(title="Test Alert", body="This is a background notification test"),

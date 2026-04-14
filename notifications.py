@@ -121,10 +121,16 @@ async def send_personal_notification(
 
                 if not firebase_admin._apps:
                     # Initialize Firebase Admin only once
-                    cred_path = os.environ.get("FIREBASE_CREDENTIALS", "firebase-service-account.json")
-                    if os.path.exists(cred_path):
-                        cred = firebase_admin.credentials.Certificate(cred_path)
+                    firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
+                    if firebase_creds_json:
+                        cred_dict = json.loads(firebase_creds_json)
+                        cred = firebase_admin.credentials.Certificate(cred_dict)
                         firebase_admin.initialize_app(cred)
+                    else:
+                        cred_path = "firebase-service-account.json"
+                        if os.path.exists(cred_path):
+                            cred = firebase_admin.credentials.Certificate(cred_path)
+                            firebase_admin.initialize_app(cred)
 
                 if firebase_admin._apps:
                     for device in user_tokens:
