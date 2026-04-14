@@ -46,6 +46,28 @@ app.add_middleware(
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
 
+@app.middleware("http")
+async def cloudflare_edge_caching(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Only cache successful GET requests
+    if request.method == "GET" and response.status_code == 200:
+        path = request.url.path
+        
+        # Strictly avoid caching user-specific customized endpoints
+        if "/my-ads" in path or "/dashboard" in path or "/me" in path:
+            return response
+            
+        # Heavy static lookups (categories, locations) - Cache at Cloudflare Edge for 5 minutes
+        if path.startswith("/api/categories") or path.startswith("/api/locations"):
+            response.headers["Cache-Control"] = "public, max-age=300, s-maxage=300"
+            
+        # Standard feed lists (ads, ticker) - Cache for 60 seconds to squash identical concurrent requests
+        elif (path.startswith("/api/ads") and "/count" not in path) or path.startswith("/api/ticker"):
+            response.headers["Cache-Control"] = "public, max-age=60, s-maxage=60"
+            
+    return response
+
 app.include_router(fb_batch_router)
 app.include_router(ai_router)
 app.include_router(media_router)
