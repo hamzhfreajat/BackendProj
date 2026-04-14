@@ -1,0 +1,6 @@
+2026/04/01-11:03:07.033 ee4 Reusing MANIFEST D:\open\classifieds-app\backend\chrome_profile\Default\shared_proto_db/MANIFEST-000001
+2026/04/01-11:03:07.034 ee4 Recovering log #3
+2026/04/01-11:03:07.039 ee4 Reusing old log D:\open\classifieds-app\backend\chrome_profile\Default\shared_proto_db/000003.log 
+2026/04/01-11:03:09.450 98 Level-0 table #5: started
+2026/04/01-11:03:09.562 98 Level-0 table #5: 101289 bytes OK
+2026/04/01-11:03:09.565 98 Delete type=0 #3

@@ -1,0 +1,4 @@
+(501, 5, "لابتوب وكمبيوتر", None, None, None, None,
+(502, 5, "شاشات ورسيفرات", None, None, None, None,
+(503, 5, "أجهزة كهربائية منزلية", None, None, None, None,
+(504, 5, "ألعاب فيديو وبلايستيشن", None, None, None, None,

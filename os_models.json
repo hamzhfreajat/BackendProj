@@ -1,0 +1,598 @@
+{
+  "success": true,
+  "result": {
+    "status": 200,
+    "hash": "f8c6414e0a361655feb4cce8e355c3c4",
+    "data": {
+      "identifier": "cpMake_Motorbike_child",
+      "type": "listCellOptions",
+      "fullscreen": true,
+      "values": [
+        {
+          "id": "24356",
+          "label": "Aerox",
+          "icon": null,
+          "search_field": "ايروكس aerox ئەروکس other models",
+          "group_label": ""
+        },
+        {
+          "id": "23630",
+          "label": "Axes",
+          "icon": null,
+          "search_field": "اكسز axes ئاکس other models",
+          "group_label": ""
+        },
+        {
+          "id": "9776",
+          "label": "Bolt",
+          "icon": null,
+          "search_field": "bolt bolt bolt other models",
+          "group_label": ""
+        },
+        {
+          "id": "9778",
+          "label": "Bolt R-Spec",
+          "icon": null,
+          "search_field": "bolt r-spec bolt r-spec bolt r-spec other models",
+          "group_label": ""
+        },
+        {
+          "id": "19815",
+          "label": "Cygnus",
+          "icon": null,
+          "search_field": "سكنس cygnus cygnus other models",
+          "group_label": ""
+        },
+        {
+          "id": "9780",
+          "label": "FJ-09",
+          "icon": null,
+          "search_field": "fj-09 fj-09 fj-09 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9782",
+          "label": "FJR1300A",
+          "icon": null,
+          "search_field": "fjr1300a fjr1300a fjr1300a other models",
+          "group_label": ""
+        },
+        {
+          "id": "9784",
+          "label": "FJR1300ES",
+          "icon": null,
+          "search_field": "fjr1300es fjr1300es fjr1300es other models",
+          "group_label": ""
+        },
+        {
+          "id": "9786",
+          "label": "FZ6R",
+          "icon": null,
+          "search_field": "fz6r fz6r fz6r other models",
+          "group_label": ""
+        },
+        {
+          "id": "9750",
+          "label": "Grizzly EPS",
+          "icon": null,
+          "search_field": "grizzly eps grizzly eps گریزلی eps other models",
+          "group_label": ""
+        },
+        {
+          "id": "9752",
+          "label": "Grizzly EPS SE",
+          "icon": null,
+          "search_field": "grizzly eps se grizzly eps se grizzly eps se other models",
+          "group_label": ""
+        },
+        {
+          "id": "9754",
+          "label": "Kodiak 450",
+          "icon": null,
+          "search_field": "kodiak 450 kodiak 450 kodiak 450 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9756",
+          "label": "Kodiak 450 EPS",
+          "icon": null,
+          "search_field": "kodiak 450 eps kodiak 450 eps kodiak 450 eps other models",
+          "group_label": ""
+        },
+        {
+          "id": "9758",
+          "label": "Kodiak 700",
+          "icon": null,
+          "search_field": "kodiak 700 kodiak 700 kodiak 700 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9760",
+          "label": "Kodiak 700 EPS",
+          "icon": null,
+          "search_field": "kodiak 700 eps kodiak 700 eps kodiak 700 eps other models",
+          "group_label": ""
+        },
+        {
+          "id": "9762",
+          "label": "Kodiak 700 EPS SE",
+          "icon": null,
+          "search_field": "kodiak 700 eps se kodiak 700 eps se kodiak 700 eps se other models",
+          "group_label": ""
+        },
+        {
+          "id": "9788",
+          "label": "MT-07",
+          "icon": null,
+          "search_field": "mt-07 mt-07 mt-07 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9790",
+          "label": "MT-09",
+          "icon": null,
+          "search_field": "mt-09 mt-09 mt-09 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9792",
+          "label": "MT-10",
+          "icon": null,
+          "search_field": "mt-10 mt-10 mt-10 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9874",
+          "label": "Niken",
+          "icon": null,
+          "search_field": "niken niken niken other models",
+          "group_label": ""
+        },
+        {
+          "id": "39839",
+          "label": "NMAX",
+          "icon": null,
+          "search_field": "nmax nmax nmax other models",
+          "group_label": ""
+        },
+        {
+          "id": "9794",
+          "label": "PW50",
+          "icon": null,
+          "search_field": "pw50 pw50 pw50 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9796",
+          "label": "Raider",
+          "icon": null,
+          "search_field": "raider raider raider other models",
+          "group_label": ""
+        },
+        {
+          "id": "9764",
+          "label": "Raptor 700",
+          "icon": null,
+          "search_field": "raptor 700 raptor 700 raptor 700 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9746",
+          "label": "Raptor 700R",
+          "icon": null,
+          "search_field": "raptor 700r raptor 700r ڕاپتۆر 700r other models",
+          "group_label": ""
+        },
+        {
+          "id": "9748",
+          "label": "Raptor 700R SE",
+          "icon": null,
+          "search_field": "raptor 700r se raptor 700r se ڕاپتۆر 700r se other models",
+          "group_label": ""
+        },
+        {
+          "id": "9766",
+          "label": "Raptor 90",
+          "icon": null,
+          "search_field": "raptor 90 raptor 90 raptor 90 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9798",
+          "label": "SCR950",
+          "icon": null,
+          "search_field": "scr950 scr950 scr950 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9876",
+          "label": "SMAX",
+          "icon": null,
+          "search_field": "smax smax smax other models",
+          "group_label": ""
+        },
+        {
+          "id": "9800",
+          "label": "SR400",
+          "icon": null,
+          "search_field": "sr400 sr400 sr400 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9802",
+          "label": "STAR ELUDER",
+          "icon": null,
+          "search_field": "star eluder star eluder star eluder other models",
+          "group_label": ""
+        },
+        {
+          "id": "9804",
+          "label": "STAR VENTURE",
+          "icon": null,
+          "search_field": "star venture star venture star venture other models",
+          "group_label": ""
+        },
+        {
+          "id": "9806",
+          "label": "Stryker",
+          "icon": null,
+          "search_field": "stryker stryker stryker other models",
+          "group_label": ""
+        },
+        {
+          "id": "9808",
+          "label": "Super Ténéré",
+          "icon": null,
+          "search_field": "super ténéré super ténéré super ténéré other models",
+          "group_label": ""
+        },
+        {
+          "id": "24336",
+          "label": "TmaX",
+          "icon": null,
+          "search_field": "tmax tmax tmax other models",
+          "group_label": ""
+        },
+        {
+          "id": "9810",
+          "label": "Tracer 900",
+          "icon": null,
+          "search_field": "tracer 900 tracer 900 tracer 900 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9812",
+          "label": "Tracer 900 GT",
+          "icon": null,
+          "search_field": "tracer 900 gt tracer 900 gt tracer 900 gt other models",
+          "group_label": ""
+        },
+        {
+          "id": "9814",
+          "label": "TT-R110E",
+          "icon": null,
+          "search_field": "tt-r110e tt-r110e tt-r110e other models",
+          "group_label": ""
+        },
+        {
+          "id": "9816",
+          "label": "TT-R125LE",
+          "icon": null,
+          "search_field": "tt-r125le tt-r125le tt-r125le other models",
+          "group_label": ""
+        },
+        {
+          "id": "9818",
+          "label": "TT-R230",
+          "icon": null,
+          "search_field": "tt-r230 tt-r230 tt-r230 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9820",
+          "label": "TT-R50E",
+          "icon": null,
+          "search_field": "tt-r50e tt-r50e tt-r50e other models",
+          "group_label": ""
+        },
+        {
+          "id": "9822",
+          "label": "TW200",
+          "icon": null,
+          "search_field": "tw200 tw200 tw200 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9824",
+          "label": "V Star",
+          "icon": null,
+          "search_field": "v star v star v star other models",
+          "group_label": ""
+        },
+        {
+          "id": "9826",
+          "label": "V Star 1300 Delux",
+          "icon": null,
+          "search_field": "v star 1300 delux v star 1300 delux v star 1300 delux other models",
+          "group_label": ""
+        },
+        {
+          "id": "9828",
+          "label": "V Star 1300 tourer",
+          "icon": null,
+          "search_field": "v star 1300 tourer v star 1300 tourer v star 1300 tourer other models",
+          "group_label": ""
+        },
+        {
+          "id": "9830",
+          "label": "V Star 950 tourer",
+          "icon": null,
+          "search_field": "v star 950 tourer v star 950 tourer v star 950 tourer other models",
+          "group_label": ""
+        },
+        {
+          "id": "9878",
+          "label": "Vino Classic",
+          "icon": null,
+          "search_field": "vino classic vino classic vino classic other models",
+          "group_label": ""
+        },
+        {
+          "id": "9832",
+          "label": "VMAX",
+          "icon": null,
+          "search_field": "vmax vmax vmax other models",
+          "group_label": ""
+        },
+        {
+          "id": "9834",
+          "label": "WR250F",
+          "icon": null,
+          "search_field": "wr250f wr250f wr250f other models",
+          "group_label": ""
+        },
+        {
+          "id": "9836",
+          "label": "WR250R",
+          "icon": null,
+          "search_field": "wr250r wr250r wr250r other models",
+          "group_label": ""
+        },
+        {
+          "id": "9838",
+          "label": "WR450F",
+          "icon": null,
+          "search_field": "wr450f wr450f wr450f other models",
+          "group_label": ""
+        },
+        {
+          "id": "9880",
+          "label": "XMAX",
+          "icon": null,
+          "search_field": "xmax xmax xmax other models",
+          "group_label": ""
+        },
+        {
+          "id": "9840",
+          "label": "XSR700",
+          "icon": null,
+          "search_field": "xsr700 xsr700 xsr700 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9842",
+          "label": "XSR900",
+          "icon": null,
+          "search_field": "xsr900 xsr900 xsr900 other models",
+          "group_label": ""
+        },
+        {
+          "id": "24332",
+          "label": "XT 660X",
+          "icon": null,
+          "search_field": "xt 660x xt 660x xt 660x other models",
+          "group_label": ""
+        },
+        {
+          "id": "9844",
+          "label": "XT250",
+          "icon": null,
+          "search_field": "xt250 xt250 xt250 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9768",
+          "label": "YFZ450R",
+          "icon": null,
+          "search_field": "yfz450r yfz450r yfz450r other models",
+          "group_label": ""
+        },
+        {
+          "id": "9770",
+          "label": "YFZ450R SE",
+          "icon": null,
+          "search_field": "yfz450r se yfz450r se yfz450r se other models",
+          "group_label": ""
+        },
+        {
+          "id": "9772",
+          "label": "YFZ50",
+          "icon": null,
+          "search_field": "yfz50 yfz50 yfz50 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9846",
+          "label": "YZ125",
+          "icon": null,
+          "search_field": "yz125 yz125 yz125 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9848",
+          "label": "YZ250",
+          "icon": null,
+          "search_field": "yz250 yz250 yz250 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9850",
+          "label": "YZ250F",
+          "icon": null,
+          "search_field": "yz250f yz250f yz250f other models",
+          "group_label": ""
+        },
+        {
+          "id": "9852",
+          "label": "YZ250FX",
+          "icon": null,
+          "search_field": "yz250fx yz250fx yz250fx other models",
+          "group_label": ""
+        },
+        {
+          "id": "9854",
+          "label": "YZ250X",
+          "icon": null,
+          "search_field": "yz250x yz250x yz250x other models",
+          "group_label": ""
+        },
+        {
+          "id": "9856",
+          "label": "YZ450F",
+          "icon": null,
+          "search_field": "yz450f yz450f yz450f other models",
+          "group_label": ""
+        },
+        {
+          "id": "9858",
+          "label": "YZ450FX",
+          "icon": null,
+          "search_field": "yz450fx yz450fx yz450fx other models",
+          "group_label": ""
+        },
+        {
+          "id": "9860",
+          "label": "YZ65",
+          "icon": null,
+          "search_field": "yz65 yz65 yz65 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9862",
+          "label": "YZ85",
+          "icon": null,
+          "search_field": "yz85 yz85 yz85 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9864",
+          "label": "YZF-R1",
+          "icon": null,
+          "search_field": "yzf-r1 yzf-r1 yzf-r1 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9866",
+          "label": "YZF-R1M",
+          "icon": null,
+          "search_field": "yzf-r1m yzf-r1m yzf-r1m other models",
+          "group_label": ""
+        },
+        {
+          "id": "9868",
+          "label": "YZF-R1S",
+          "icon": null,
+          "search_field": "yzf-r1s yzf-r1s yzf-r1s other models",
+          "group_label": ""
+        },
+        {
+          "id": "9870",
+          "label": "YZF-R3",
+          "icon": null,
+          "search_field": "yzf-r3 yzf-r3 yzf-r3 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9872",
+          "label": "YZF-R6",
+          "icon": null,
+          "search_field": "yzf-r6 yzf-r6 yzf-r6 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9882",
+          "label": "Zuma 125",
+          "icon": null,
+          "search_field": "zuma 125 zuma 125 zuma 125 other models",
+          "group_label": ""
+        },
+        {
+          "id": "9884",
+          "label": "Zuma 50F",
+          "icon": null,
+          "search_field": "zuma 50f zuma 50f zuma 50f other models",
+          "group_label": ""
+        },
+        {
+          "id": "9886",
+          "label": "Zuma 50FX",
+          "icon": null,
+          "search_field": "zuma 50fx zuma 50fx zuma 50fx other models",
+          "group_label": ""
+        },
+        {
+          "id": "9774",
+          "label": "Other",
+          "icon": null,
+          "search_field": "اخري other ئەوانەی تر other models",
+          "group_label": ""
+        }
+      ],
+      "search": {
+        "placeholder": {
+          "color": "#808083",
+          "locale": "Search for Model",
+          "style": {
+            "bold": false,
+            "size": "s"
+          }
+        }
+      },
+      "withIcons": false,
+      "autoSave": true,
+      "cardBg": true,
+      "submitType": "normal",
+      "GA": null,
+      "parent": [
+        "cpMake_Motorbike"
+      ],
+      "linked": [],
+      "cell": {
+        "label": {
+          "color": "#000000",
+          "style": {
+            "bold": false,
+            "size": "xs"
+          },
+          "icon": "",
+          "align": ""
+        },
+        "subLabel": {
+          "color": "#000000",
+          "style": {
+            "bold": false,
+            "size": "m"
+          }
+        }
+      },
+      "editable": true,
+      "submit": null,
+      "title": {
+        "color": "#000000",
+        "locale": "Model",
+        "icon": "",
+        "align": ""
+      }
+    }
+  }
+}

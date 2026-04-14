@@ -1,0 +1,3 @@
+import json
+
+# We will read from a string payload locally. I will construct the files.

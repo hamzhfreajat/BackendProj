@@ -1,0 +1,395 @@
+{
+  "success": true,
+  "result": {
+    "status": 200,
+    "hash": "622e6990fb5b992f5d08f934189b93b2",
+    "data": {
+      "identifier": "cpMake_Motorbike",
+      "type": "listCellOptions",
+      "fullscreen": true,
+      "values": [
+        {
+          "id": "4531",
+          "label": "Aprilia",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4531.png",
+          "search_field": "ابريليا aprilia ئاپریلیا other models",
+          "group_label": ""
+        },
+        {
+          "id": "19827",
+          "label": "Bajaj",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Bajaj.png",
+          "search_field": "باجاج bajaj bajaj other models",
+          "group_label": ""
+        },
+        {
+          "id": "19865",
+          "label": "Benda",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Benda.png",
+          "search_field": "باندا benda benda other models",
+          "group_label": ""
+        },
+        {
+          "id": "13489",
+          "label": "Benelli",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-benelli.png",
+          "search_field": "بينيلي benelli benelli other models",
+          "group_label": ""
+        },
+        {
+          "id": "4533",
+          "label": "BMW",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4533.png",
+          "search_field": "بي ام دبليو bmw بی‌ئەم‌دابلیو other models",
+          "group_label": ""
+        },
+        {
+          "id": "4535",
+          "label": "Buggy",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4535.png",
+          "search_field": "بوجي buggy بوگی other models",
+          "group_label": ""
+        },
+        {
+          "id": "4537",
+          "label": "Can-Am",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4537.png",
+          "search_field": "كان ام can-am کان-ئام other models",
+          "group_label": ""
+        },
+        {
+          "id": "8678",
+          "label": "CFMOTO",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Cfmoto_8678.png",
+          "search_field": "سي اف موتو cfmoto cfmoto other models",
+          "group_label": ""
+        },
+        {
+          "id": "13491",
+          "label": "Daelim",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-daelim.png",
+          "search_field": "دايليم daelim daelim other models",
+          "group_label": ""
+        },
+        {
+          "id": "23584",
+          "label": "Dayang",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Dayang.png",
+          "search_field": "دايونغ dayang dayang other models",
+          "group_label": ""
+        },
+        {
+          "id": "23582",
+          "label": "Diken",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Diken.png",
+          "search_field": "الدكن diken diken other models",
+          "group_label": ""
+        },
+        {
+          "id": "4539",
+          "label": "Ducati",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4539.png",
+          "search_field": "دوكاتي ducati دوکاتی other models",
+          "group_label": ""
+        },
+        {
+          "id": "19847",
+          "label": "Haojin",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Haojin.png",
+          "search_field": "هاوجن haojin haojin other models",
+          "group_label": ""
+        },
+        {
+          "id": "4541",
+          "label": "Harley Davidson",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4541.png",
+          "search_field": "هارلي ديفيدسون harley davidson هارلی داڤیدسن other models",
+          "group_label": ""
+        },
+        {
+          "id": "18839",
+          "label": "Hero",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-hero.png",
+          "search_field": "هيرو hero هێرۆ other models",
+          "group_label": ""
+        },
+        {
+          "id": "4543",
+          "label": "Honda",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4543.png",
+          "search_field": "هوندا honda هۆندا other models",
+          "group_label": ""
+        },
+        {
+          "id": "43275",
+          "label": "Husqvarna",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike_husqvarna.png",
+          "search_field": "هوسكفارنا husqvarna هوسکڤارنا other models",
+          "group_label": ""
+        },
+        {
+          "id": "4545",
+          "label": "Hyosung",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4545.png",
+          "search_field": "هايوسنج hyosung هیۆسۆنگ other models",
+          "group_label": ""
+        },
+        {
+          "id": "13493",
+          "label": "Indian",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-indian.png",
+          "search_field": "انديان indian indian other models",
+          "group_label": ""
+        },
+        {
+          "id": "13492",
+          "label": "Jianshe",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-jianshe.png",
+          "search_field": "جيانشي jianshe jianshe other models",
+          "group_label": ""
+        },
+        {
+          "id": "23580",
+          "label": "Johny Pag",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/JohnyPag.png",
+          "search_field": "جوني باغ johny pag johny pag other models",
+          "group_label": ""
+        },
+        {
+          "id": "4547",
+          "label": "Kawasaki",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4547.png",
+          "search_field": "كاواساكي kawasaki کاواساكی other models",
+          "group_label": ""
+        },
+        {
+          "id": "19817",
+          "label": "Keeway",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Keeway.png",
+          "search_field": "كي واي keeway keeway other models",
+          "group_label": ""
+        },
+        {
+          "id": "4549",
+          "label": "KTM",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4549.png",
+          "search_field": "كاي تي ام ktm کەی‌تی‌ئەم other models",
+          "group_label": ""
+        },
+        {
+          "id": "19781",
+          "label": "Kymco",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Kymco.png",
+          "search_field": "كامكو kymco کیمکو other models",
+          "group_label": ""
+        },
+        {
+          "id": "43135",
+          "label": "Loncin",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike_loncin.png",
+          "search_field": "لونسين loncin لۆنسین other models",
+          "group_label": ""
+        },
+        {
+          "id": "4551",
+          "label": "Moto Guzzi",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4551.png",
+          "search_field": "موتو جوزي moto guzzi مۆتۆ گوزی other models",
+          "group_label": ""
+        },
+        {
+          "id": "8680",
+          "label": "MV Agusta",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/MvAgusta_8680.png",
+          "search_field": "ام في اجوستا mv agusta mv agusta other models",
+          "group_label": ""
+        },
+        {
+          "id": "19805",
+          "label": "Nami",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Nami.png",
+          "search_field": "ناما nami نامی other models",
+          "group_label": ""
+        },
+        {
+          "id": "4553",
+          "label": "Piaggio",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4553.png",
+          "search_field": "بياجيو piaggio پیاجیو other models",
+          "group_label": ""
+        },
+        {
+          "id": "23574",
+          "label": "Polaris",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Polaris.png",
+          "search_field": "بولاريس polaris پۆلارس other models",
+          "group_label": ""
+        },
+        {
+          "id": "40391",
+          "label": "QJmotor",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike_qjmotor.png",
+          "search_field": "qjmotor qjmotor qjmotor other models",
+          "group_label": ""
+        },
+        {
+          "id": "14878",
+          "label": "Royal Enfield",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-royalenfield.png",
+          "search_field": "رويال انفيلد royal enfield ڕۆیال ئینفیلد other models",
+          "group_label": ""
+        },
+        {
+          "id": "24330",
+          "label": "Sanya",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Sanya.png",
+          "search_field": "سانيا sanya سانیا other models",
+          "group_label": ""
+        },
+        {
+          "id": "23594",
+          "label": "Sharmax",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Sharmax.png",
+          "search_field": "شارماكس sharmax sharmax other models",
+          "group_label": ""
+        },
+        {
+          "id": "4557",
+          "label": "Suzuki",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4557.png",
+          "search_field": "سوزوكي suzuki سوزوکی other models",
+          "group_label": ""
+        },
+        {
+          "id": "8682",
+          "label": "SYM",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/SYM_8682.png",
+          "search_field": "sym sym sym other models",
+          "group_label": ""
+        },
+        {
+          "id": "38719",
+          "label": "Taro",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Make_Motorbike_Taro.png",
+          "search_field": "تارو taro تارۆ other models",
+          "group_label": ""
+        },
+        {
+          "id": "19799",
+          "label": "Tiger",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Tiger.png",
+          "search_field": "تايجر tiger تایگەر other models",
+          "group_label": ""
+        },
+        {
+          "id": "4559",
+          "label": "Triumph",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4559.png",
+          "search_field": "تريمف triumph ترایۆمف other models",
+          "group_label": ""
+        },
+        {
+          "id": "13490",
+          "label": "TVS",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-tvs.png",
+          "search_field": "تي في اس tvs tvs other models",
+          "group_label": ""
+        },
+        {
+          "id": "4561",
+          "label": "Vespa",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4561.png",
+          "search_field": "فيسبا vespa ڤێسپا other models",
+          "group_label": ""
+        },
+        {
+          "id": "8684",
+          "label": "Victory",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Victory_8684.png",
+          "search_field": "فيكتوري victory ڤیکتۆری other models",
+          "group_label": ""
+        },
+        {
+          "id": "43089",
+          "label": "Voge",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/",
+          "search_field": "فوج voge ڤۆگ other models",
+          "group_label": ""
+        },
+        {
+          "id": "4563",
+          "label": "Yamaha",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/option_4563.png",
+          "search_field": "ياماها yamaha یاماها other models",
+          "group_label": ""
+        },
+        {
+          "id": "23576",
+          "label": "YCRMotor",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/YCRMotor.png",
+          "search_field": "واي سي ار موتور ycrmotor ycrmotor other models",
+          "group_label": ""
+        },
+        {
+          "id": "23578",
+          "label": "Zontes",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/Zontes.png",
+          "search_field": "زونتس zontes zontes other models",
+          "group_label": ""
+        },
+        {
+          "id": "4565",
+          "label": "Other",
+          "icon": "https://opensooqui2.os-cdn.com/api/apiV/{platform}/{size}/cp/make_motorbike-other.png",
+          "search_field": "اخري other ئەوانەی تر other models",
+          "group_label": ""
+        }
+      ],
+      "search": {
+        "placeholder": {
+          "color": "#808083",
+          "locale": "Search for Make",
+          "style": {
+            "bold": false,
+            "size": "s"
+          }
+        }
+      },
+      "withIcons": true,
+      "autoSave": true,
+      "cardBg": true,
+      "submitType": "normal",
+      "GA": null,
+      "parent": [],
+      "linked": [
+        "cpMake_Motorbike_child"
+      ],
+      "cell": {
+        "label": {
+          "color": "#000000",
+          "style": {
+            "bold": false,
+            "size": "xs"
+          },
+          "icon": "",
+          "align": ""
+        },
+        "subLabel": {
+          "color": "#000000",
+          "style": {
+            "bold": false,
+            "size": "m"
+          }
+        }
+      },
+      "editable": true,
+      "submit": null,
+      "title": {
+        "color": "#000000",
+        "locale": "Make",
+        "icon": "",
+        "align": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+ID: 12219 | Parent: 410 | Brand: infinix | Name: Infinix
+ID: 4304 | Parent: 430 | Brand: xiaomi | Name: Xiaomi Watch
+ID: 4401 | Parent: 440 | Brand: xiaomi | Name: Xiaomi Band
+ID: 20535 | Parent: 420 | Brand: شاومي | Name: شاومي
+ID: 38905 | Parent: 430 | Brand: شاومي | Name: شاومي
+ID: 7886 | Parent: 410 | Brand: oppo | Name: Oppo
+ID: 7884 | Parent: 410 | Brand: xiaomi | Name: Xiaomi
+ID: 994401 | Parent: 440 | Brand: xiaomi | Name: Xiaomi Band

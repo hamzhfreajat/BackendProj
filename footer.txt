@@ -1,0 +1,61 @@
+def seed():
+    from database import SessionLocal
+    import models
+    db = SessionLocal()
+    
+    try:
+        # First Level
+        for cat in CATEGORIES:
+            if len(cat) < 7: continue
+            if cat[1] is None:
+                slugs = cat[7] if len(cat) > 7 else None
+                existing = db.query(models.Category).filter(models.Category.id == cat[0]).first()
+                if existing:
+                    existing.name = cat[2]
+                    existing.parent_id = cat[1]
+                    existing.description = cat[3]
+                    existing.icon_name = cat[4]
+                    existing.color_hex = cat[5]
+                    existing.tag = cat[6]
+                    existing.slugs = slugs
+                else:
+                    new_cat = models.Category(
+                        id=cat[0], parent_id=cat[1], name=cat[2],
+                        description=cat[3], icon_name=cat[4], color_hex=cat[5],
+                        tag=cat[6], slugs=slugs
+                    )
+                    db.add(new_cat)
+        db.flush()
+        
+        # Other Levels
+        for cat in CATEGORIES:
+            if len(cat) < 7: continue
+            if cat[1] is not None:
+                slugs = cat[7] if len(cat) > 7 else None
+                existing = db.query(models.Category).filter(models.Category.id == cat[0]).first()
+                if existing:
+                    existing.name = cat[2]
+                    existing.parent_id = cat[1]
+                    existing.description = cat[3]
+                    existing.icon_name = cat[4]
+                    existing.color_hex = cat[5]
+                    existing.tag = cat[6]
+                    existing.slugs = slugs
+                else:
+                    new_cat = models.Category(
+                        id=cat[0], parent_id=cat[1], name=cat[2],
+                        description=cat[3], icon_name=cat[4], color_hex=cat[5],
+                        tag=cat[6], slugs=slugs
+                    )
+                    db.add(new_cat)
+                    
+        db.commit()
+        print(f"Categories seeded successfully. Total in list: {len(CATEGORIES)}")
+    except Exception as e:
+        print(f"ERROR: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    seed()
