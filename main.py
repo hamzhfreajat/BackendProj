@@ -12,7 +12,6 @@ from typing import List
 
 import models
 import schemas
-import scraper
 import auth
 import notifications
 from notifications import send_personal_notification
@@ -1062,20 +1061,6 @@ def read_stories(db: Session = Depends(get_db)):
     stories = db.query(models.Story).options(joinedload(models.Story.owner)).order_by(models.Story.created_at.desc()).limit(20).all()
     return stories
 
-@app.post("/api/scraper/start", status_code=202)
-def start_scraper(request: schemas.ScrapeRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """
-    Kicks off an asynchronous scraping task.
-    """
-    background_tasks.add_task(scraper.run_scraper_task, request.model_dump(), db)
-    return {"message": "Scraping task initiated successfully", "status": "processing"}
-
-@app.get("/api/scraper/status")
-def scraper_status():
-    """
-    Returns the real-time progress of the background scraping task.
-    """
-    return scraper.active_scrape_status
 
 # --- Saved Groups Admin API ---
 
