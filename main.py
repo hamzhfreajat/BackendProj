@@ -478,21 +478,24 @@ def read_ads(
         query = query.filter(models.Ad.title.ilike(f"%{search}%") | models.Ad.description.ilike(f"%{search}%"))
         
     if location:
-        target_loc = location[-1]
-        if target_loc == "محافظة العاصمة":
-            target_loc = "عمان"
-        elif target_loc.startswith("محافظة "):
-            target_loc = target_loc.replace("محافظة ", "")
+        filters = []
+        for loc in location:
+            target_loc = loc
+            if target_loc == "محافظة العاصمة":
+                target_loc = "عمان"
+            elif target_loc.startswith("محافظة "):
+                target_loc = target_loc.replace("محافظة ", "")
+                
+            filters.append(models.Ad.location.ilike(f"%{target_loc}%"))
             
-        filters = [models.Ad.location.ilike(f"%{target_loc}%")]
-        
-        city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
-        if city:
-            for region in city.regions:
-                if len(region.name_ar) > 2:
-                    filters.append(models.Ad.location.ilike(f"%{region.name_ar}%"))
-                    
-        query = query.filter(or_(*filters))
+            city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
+            if city:
+                for region in city.regions:
+                    if len(region.name_ar) > 2:
+                        filters.append(models.Ad.location.ilike(f"%{region.name_ar}%"))
+                        
+        if filters:
+            query = query.filter(or_(*filters))
         
     if min_price is not None:
         query = query.filter(models.Ad.price >= min_price)
@@ -608,6 +611,11 @@ def read_ads(
         selectinload(models.Ad.real_estate_detail)
     )
     
+    # Define priority booleans for Postgres sorting
+    from sqlalchemy.sql.expression import case
+    has_image  = case((models.Ad.image_url != None, 1), else_=0)
+    has_price  = case((models.Ad.price > 0, 1), else_=0)
+
     if sort_by == 'price_asc':
         query = query.order_by(models.Ad.price.asc())
     elif sort_by == 'price_desc':
@@ -617,13 +625,13 @@ def read_ads(
     elif sort_by == 'most_viewed':
         query = query.order_by(models.Ad.views.desc())
     elif sort_by == 'newest':
-        query = query.order_by(models.Ad.created_at.desc())
+        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc())
     elif sort_by == 'premium_first':
         query = query.order_by(models.Ad.is_hot.desc(), models.Ad.created_at.desc())
     elif sort_by == 'recommended' or sort_by is None:
-        query = query.order_by(models.Ad.is_hot.desc(), models.Ad.views.desc(), models.Ad.created_at.desc())
+        query = query.order_by(models.Ad.is_hot.desc(), has_image.desc(), has_price.desc(), models.Ad.views.desc(), models.Ad.created_at.desc())
     else:
-        query = query.order_by(models.Ad.created_at.desc())
+        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc())
         
     ads = query.offset(skip).limit(limit).all()
     return ads
