@@ -85,64 +85,24 @@ class FbBatchResponse(BaseModel):
 
 # -- Gemini: ONE call for ALL posts ------------------------------------------
 
-_GEMINI_BATCH_PROMPT = """You are an AI assistant that extracts structured classified-ad data from Facebook posts.
+_GEMINI_BATCH_PROMPT = """You are an expert data extractor. Extract classified-ad data from the given Facebook posts and respond ONLY with a JSON array.
 
-Below is a numbered list of Facebook posts representing real classified ads (usually referencing locations in Jordan).
-For EACH post, extract the following fields:
-- index        (int) -- the post number as given
-- title        (string, max 120 chars) -- a concise, clear ad title
-- description  (string) -- rewrite and regenerate the description from scratch using the best SEO optimization language and highly engaging Arabic phrasing. Do NOT copy the original text directly. Make it sound like a premium, professional classified ad.
-- price        (float) -- Extract the exact numeric price. Support eastern arabic numbers (e.g. ٥٠ دينار is 50.0). Look carefully for implicit rent/sale numbers. Return 0.0 ONLY if strictly missing. Do not return strings!
-- location     (string) -- The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. إربد, لواء بني كنانة, عقربا, حوض البلد). Keep empty if not found.
-- phone_number (string or null) -- phone number if mentioned
-- category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a property or room.
-- suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
-- attributes (object) -- Extract these specific property/shared-room features if mentioned:
-    - rooms (int) -- Number of rooms
-    - bathrooms (int) -- Number of bathrooms
-    - furnished (string) -- Match exactly: مفروشة, غير مفروشة, مفروش جزئياً
-    - floor (string) -- Match exactly: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, 1, 2, 3, 4, 5, 6, 7
-    - key_features (list[string]) -- Match exactly if possible: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج
-    - room_type (string) -- غرفة خاصة, غرفة مشتركة, سرير في غرفة, استوديو ملحق بالسكن
-    - target_audience (list[string]) -- شباب, طلاب, بنات, عائلات
-    - room_capacity (string) -- شخص واحد, شخصين
-    - current_occupants (int) -- Number of people currently in apartment
-    - rent_duration (string) -- Match exactly: يومي, أسبوعي, شهري, كل 3 أشهر, كل أربع أشهر, كل 5 أشهر, كل 6 أشهر, سنوي
-    - rent_includes (list[string]) -- الكهرباء, الماء, الإنترنت, التدفئة
-    - payment_frequency (string) -- دفع شهري, دفع كل 3 شهور
-    - insurance_required (bool)
-    - bathroom_type (string) -- حمام ماستر, حمام مشترك
-    - room_contents (list[string]) -- سرير مفرد, خزانة, شاشة
-    - room_features (list[string]) -- مكيف مستقل, رديتر, بلكونة
-    - shared_spaces (list[string]) -- صالة جلوس واسعة, طاولة طعام
-    - kitchen_appliances (list[string]) -- ثلاجة, مايكرويف, غسالة
-    - laundry_appliances (list[string]) -- غسالة, نشافة
-    - smoking_rules (string) -- التدخين مسموح, يمنع التدخين
-    - quietness_rules (string) -- سكن هادئ جداً, سكن مرن
-    - guests_rules (string) -- مسموح بالزوار, يمنع الزوار
-    - pets_rules (string) -- مسموح, يمنع
-    - cleaning_rules (string)
-    - building_age (string) -- Match exactly: 0 - 11 شهر, 1 - 5 سنوات, 6 - 9 سنوات, 10 - 19 سنوات, +20 سنة
-    - building_features (list[string]) -- Match exactly if possible: يوجد مصعد, حديقة, موقف سيارات, حارس / أمن وحماية, كراج تفك, منطقة شواء, نظام كهرباء احتياطي للطوارئ, بركة سباحة, انتركم
-    - land_type (string) -- Match exactly: سكنية, تجارية, زراعية, صناعية, استثمارية, سياحية, مختلطة, أخرى
-    - zoning_classification (string) -- Match exactly: سكن أ, سكن ب, سكن ج, سكن د, تجاري, زراعي, صناعي, أخرى
-    - facade (string) -- Match exactly: شمالية, جنوبية, شرقية, غربية, شمالية شرقية, شمالية غربية, جنوبية شرقية, جنوبية غربية
-    - geometric_shape (string) -- Match exactly: مستطيل, مربع, غير منتظم, زاوية / شارعَين
-    - topography (string) -- Match exactly: مستوية, منحدرة, جبلية, واد
-    - available_services (list[string]) -- Match exactly: ماء, كهرباء, صرف صحي, إنترنت, شوارع معبدة
-    - ownership_type (string) -- Match exactly: ملك, تفويض, أخرى
-    - is_mortgaged (string) -- Match exactly: نعم, لا
-    - installment_possible (string) -- Match exactly: نعم, لا
-    - nearby_places (list[string]) -- جامعة, سوبر ماركت, قريبة من الباص
+For EACH post, extract:
+- index: (int) the given post number
+- title: (string) generate a concise, professional arabic title
+- description: (string) rewrite professionally for SEO. Do not strictly copy.
+- price: (float) numeric price (0.0 if missing)
+- location: (string) e.g. 'عمان, عبدون'. IMPORTANT RULE: Numbered zones (المنطقة الثالثة, الخامسة, السادسة, التاسعة, etc.) belong to العقبة (Aqaba), NOT Amman! Output format: 'العقبة, المنطقة الثالثة'. Empty if missing.
+- phone_number: (string or null)
+- category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, not offering one).
+- suggested_tags: (list[string]) 2-4 important keywords mentioned.
+- attributes: (object) Extract the following ONLY if explicitly mentioned (OMIT the key entirely if not found to save tokens!):
+  area (string/int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]), room_type (string), target_audience (list[string]), room_capacity (string), rent_includes (list[string]), payment_frequency (string), insurance_required (bool), building_age (string), building_features (list[string]), land_type (string), zoning_classification (string).
 
-Return a JSON ARRAY where each element corresponds to one post.
-Respond ONLY with valid JSON. No explanation, no markdown fences, no extra text.
-
-=== CATEGORIES LIST ===
+CATEGORIES:
 {categories_block}
-=======================
 
-=== POSTS ===
+POSTS:
 {posts_block}
 """
 
@@ -152,9 +112,7 @@ def _build_posts_block(posts: List[FbPost]) -> str:
     for i, p in enumerate(posts):
         idx = p.index or (i + 1)
         lines.append(f"--- Post #{idx} ---")
-        lines.append(f"Author: {p.author or 'Unknown'}")
-        lines.append(f"Text: {(p.text or '')[:2000]}")
-        lines.append(f"URL: {p.postUrl or 'N/A'}")
+        lines.append(f"Text: {(p.text or '')[:800]}")
         lines.append(f"Images: {len(p.images) if p.images else 0}")
         lines.append("")
     return "\n".join(lines)
@@ -181,16 +139,9 @@ def _build_categories_block(db: Session) -> str:
     
     categories_context_lines = []
     for cat in db_categories:
-        parent_name = ""
-        if cat.parent_id:
-            parent = category_map.get(cat.parent_id)
-            if parent:
-                parent_name = f" (Child of {parent.name})"
-        
-        linked_tags_str = ", ".join([tag.name for tag in getattr(cat, 'linked_tags', [])]) if getattr(cat, 'linked_tags', []) else ""
-        tags = f" | Tag: {cat.tag}" if getattr(cat, 'tag', None) else ""
-        keywords = f" | Keywords: {linked_tags_str}" if linked_tags_str else ""
-        categories_context_lines.append(f"ID: {cat.id} | Name: {cat.name}{parent_name}{tags}{keywords}")
+        linked_tags_str = ",".join([tag.name for tag in getattr(cat, 'linked_tags', [])]) if getattr(cat, 'linked_tags', []) else ""
+        keywords = f" | {linked_tags_str}" if linked_tags_str else ""
+        categories_context_lines.append(f"ID:{cat.id} Name:{cat.name}{keywords}")
         
     return "\n".join(categories_context_lines)
 
@@ -230,39 +181,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
         logger.info("JSON successfully parsed.")
         return parsed
 
-    # 1. Try Gemini
-    if api_key_gemini:
-        try:
-            logger.info("Trying Gemini AI...")
-            genai.configure(api_key=api_key_gemini)
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            config = genai.types.GenerationConfig(response_mime_type="application/json")
-            resp = model.generate_content(prompt, generation_config=config)
-            return _parse_json_result(resp.text.strip())
-        except Exception as e:
-            logger.warning(f"Gemini failed: {e}")
-            errors.append(f"Gemini: {e}")
-
-    # 2. Try Grok (grok-3-mini)
-    if api_key_grok:
-        try:
-            logger.info("Trying Grok AI...")
-            headers = {"Authorization": f"Bearer {api_key_grok}", "Content-Type": "application/json"}
-            payload = {
-                "model": "grok-3-mini",
-                "messages": [{"role": "user", "content": prompt}],
-                "response_format": {"type": "json_object"}
-            }
-            res = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers, timeout=60)
-            res.raise_for_status()
-            data = res.json()
-            raw = data["choices"][0]["message"]["content"]
-            return _parse_json_result(raw)
-        except Exception as e:
-            logger.warning(f"Grok failed: {e}")
-            errors.append(f"Grok: {e}")
-
-    # 3. Try DeepSeek
+    # 1. Try DeepSeek (Priority 1 to minimize token cost)
     if api_key_deepseek:
         try:
             logger.info("Trying DeepSeek AI...")
@@ -272,14 +191,48 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 "messages": [{"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"}
             }
-            res = requests.post("https://api.deepseek.com/chat/completions", json=payload, headers=headers, timeout=60)
+            res = requests.post("https://api.deepseek.com/chat/completions", json=payload, headers=headers, timeout=25)
             res.raise_for_status()
             data = res.json()
             raw = data["choices"][0]["message"]["content"]
             return _parse_json_result(raw)
         except Exception as e:
-            logger.warning(f"DeepSeek failed: {e}")
+            logger.warning(f"DeepSeek failed/timed-out: {e}")
             errors.append(f"DeepSeek: {e}")
+
+    # 2. Try Gemini
+    if api_key_gemini:
+        try:
+            logger.info("Trying Gemini AI...")
+            genai.configure(api_key=api_key_gemini)
+            # Use gemini-2.5-flash as an efficient fallback
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            config = genai.types.GenerationConfig(response_mime_type="application/json")
+            # Set explicit timeout to prevent 524 timeout chain
+            resp = model.generate_content(prompt, generation_config=config, request_options={"timeout": 25.0})
+            return _parse_json_result(resp.text.strip())
+        except Exception as e:
+            logger.warning(f"Gemini failed/timed-out: {e}")
+            errors.append(f"Gemini: {e}")
+
+    # 3. Try Grok (grok-3-mini)
+    if api_key_grok:
+        try:
+            logger.info("Trying Grok AI...")
+            headers = {"Authorization": f"Bearer {api_key_grok}", "Content-Type": "application/json"}
+            payload = {
+                "model": "grok-3-mini",
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": {"type": "json_object"}
+            }
+            res = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers, timeout=25)
+            res.raise_for_status()
+            data = res.json()
+            raw = data["choices"][0]["message"]["content"]
+            return _parse_json_result(raw)
+        except Exception as e:
+            logger.warning(f"Grok failed/timed-out: {e}")
+            errors.append(f"Grok: {e}")
 
     raise RuntimeError(f"All AIs failed: {errors}")
 
@@ -288,7 +241,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     """Process all posts in chunks to avoid token limits, running concurrently."""
     categories_block = _build_categories_block(db)
     
-    CHUNK_SIZE = 4
+    # Increased chunk size to minimize API requests for large batches natively
+    CHUNK_SIZE = 25
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
@@ -376,11 +330,32 @@ def _get_or_create_ai_user(db: Session) -> models.User:
 
 def _is_duplicate(db: Session, source_url: str, raw_description: str) -> bool:
     if source_url:
+        import re
+        # 1. Check exact match
         if db.query(models.Ad).filter(models.Ad.source_url == source_url).first():
             return True
-    if raw_description:
-        if db.query(models.Ad).filter(models.Ad.raw_description == raw_description[:500]).first():
+            
+        # 2. Extract FB Post ID and use LIKE matcher (handles tracking parameter changes)
+        match = re.search(r'/posts/(\d+)', source_url)
+        if match:
+            post_id = match.group(1)
+            if db.query(models.Ad).filter(models.Ad.source_url.like(f"%/posts/{post_id}%")).first():
+                return True
+                
+        match2 = re.search(r'story_fbid=(\d+)', source_url)
+        if match2:
+            post_id = match2.group(1)
+            if db.query(models.Ad).filter(models.Ad.source_url.like(f"%story_fbid={post_id}%")).first():
+                return True
+
+    if raw_description and len(raw_description) > 30:
+        # 3. Match by the first 100 characters of the description.
+        # This fixes a bug where text truncation or expansion bypassed the uniqueness check.
+        short_desc = raw_description[:100]
+        safe_desc = short_desc.replace('%', '\\%').replace('_', '\\_')
+        if db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first():
             return True
+            
     return False
 
 
@@ -414,6 +389,22 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     except (ValueError, TypeError):
         final_price = 0.0
 
+    from datetime import datetime, timedelta
+    ad_created_at = None
+    if post.timestamp:
+        try:
+            # Handle standard ISO formats from the JS scraper
+            dt_str = post.timestamp.replace('Z', '+00:00')
+            dt = datetime.fromisoformat(dt_str)
+            
+            # The database stores naive standard time in Jordan Local Time (UTC+3)
+            # Since the scraper sends UTC (Z) or offset-aware dates, we shift to +3 first
+            dt = dt + timedelta(hours=3)
+            
+            ad_created_at = dt.replace(tzinfo=None) # Use naive datetime for SQLAlchemy TIMESTAMP
+        except ValueError:
+            pass
+
     ad = models.Ad(
         user_id=ai_user_id,
         title=ad_title,
@@ -436,6 +427,9 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         },
         is_published=True,
     )
+    
+    if ad_created_at:
+        ad.created_at = ad_created_at
     
     # Map AI extracted Tags
     suggested_tags = ai_data.get("suggested_tags", [])
@@ -500,6 +494,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     # Step 1: Filter duplicates and empty posts BEFORE calling AI
     posts_to_process: List[FbPost] = []
     post_index_map: dict = {}
+    seen_in_batch = set()
 
     for i, post in enumerate(req.posts):
         idx = post.index or (i + 1)
@@ -513,6 +508,28 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             skipped += 1
             results.append(PostResult(index=idx, status="skipped", reason="Duplicate post"))
             continue
+            
+        # Intra-batch duplicate check (prevents sending 2 identical posts to AI if they were both scraped just now)
+        unique_key = None
+        if post.postUrl:
+            import re
+            match = re.search(r'/posts/(\d+)', post.postUrl)
+            if match:
+                unique_key = f"post_{match.group(1)}"
+            else:
+                match2 = re.search(r'story_fbid=(\d+)', post.postUrl)
+                if match2:
+                    unique_key = f"story_{match2.group(1)}"
+        
+        if not unique_key and post.text and len(post.text) > 30:
+            unique_key = f"text_{post.text[:100]}"
+            
+        if unique_key:
+            if unique_key in seen_in_batch:
+                skipped += 1
+                results.append(PostResult(index=idx, status="skipped", reason="Duplicate post (in batch)"))
+                continue
+            seen_in_batch.add(unique_key)
 
         raw_text = post.text or ""
         clean_text = re.sub(r'[\s-]', '', raw_text)
@@ -542,6 +559,13 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     for j, post in enumerate(posts_to_process):
         idx = post_index_map[j]
         ai_data = ai_results[j] if j < len(ai_results) else {}
+
+        # If AI failed to process this post (returned empty or no title), SKIP it!
+        if not ai_data or not isinstance(ai_data, dict) or not ai_data.get("title"):
+            skipped += 1
+            logger.info(f"Post #{idx} skipped: AI processing failed or returned empty data.")
+            results.append(PostResult(index=idx, status="skipped", reason="AI processing failed"))
+            continue
 
         # Skip if AI determined this is a "Looking for" post
         if ai_data.get("category_id") == 0:
