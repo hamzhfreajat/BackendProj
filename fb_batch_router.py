@@ -262,11 +262,12 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
             logger.info(f"Sending chunk of {len(chunk)} posts to AI...")
             res = _ai_process_chunk(chunk, categories_block)
             if len(res) < len(chunk):
-                res.extend([{}] * (len(chunk) - len(res)))
+                # If AI returned fewer results, pad with an explicit error to avoid silent blanks
+                res.extend([{"ai_chunk_error": "AI returned fewer items than requested (possible truncation)"}] * (len(chunk) - len(res)))
             return res[:len(chunk)]
         except Exception as e:
             logger.error(f"AI chunk failed: {e}. Falling back to default data for chunk.")
-            return [{}] * len(chunk)
+            return [{"ai_chunk_error": str(e)}] * len(chunk)
 
     all_results = []
     # Run all AI chunk processing concurrently
@@ -602,20 +603,30 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         idx = post_index_map[j]
         ai_data = ai_results[j] if j < len(ai_results) else {}
 
-        # If AI failed to process this post (returned empty or no title), SKIP it!
-        if not ai_data or not isinstance(ai_data, dict) or not ai_data.get("title"):
+        # 1. Output explicit AI Exceptions
+        if isinstance(ai_data, dict) and "ai_chunk_error" in ai_data:
             skipped += 1
-            logger.info(f"Post #{idx} skipped: AI processing failed or returned empty data.")
-            _log_training_data(db, post.text or "", ai_data, "failed", "AI processing failed or returned empty title")
-            results.append(PostResult(index=idx, status="skipped", reason="AI processing failed"))
+            reason = f"AI Error: {ai_data['ai_chunk_error']}"
+            logger.error(f"Post #{idx} skipped: {reason}")
+            _log_training_data(db, post.text or "", ai_data, "failed", reason)
+            results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
-        # Skip if AI determined this is a "Looking for" post
-        if ai_data.get("category_id") == 0:
+        # 2. Skip if AI determined this is a "Looking for" post or rejected it explicitly
+        if isinstance(ai_data, dict) and ai_data.get("category_id") == 0:
             skipped += 1
             reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate (category_id=0)")
             logger.info(f"Post #{idx} rejected: {reason}")
             _log_training_data(db, post.text or "", ai_data, "rejected", reason)
+            results.append(PostResult(index=idx, status="skipped", reason=reason))
+            continue
+
+        # 3. Finally, if AI just returned empty properties (like no title), complain
+        if not ai_data or not ai_data.get("title"):
+            skipped += 1
+            reason = "AI returned missing or incomplete JSON (no title)"
+            logger.info(f"Post #{idx} skipped: {reason}")
+            _log_training_data(db, post.text or "", ai_data, "failed", reason)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
