@@ -163,23 +163,30 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
     errors = []
 
     def _parse_json_result(raw: str) -> List[dict]:
-        logger.info("Stripping markdown fences...")
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
+        import json
+        import re
         logger.info("Parsing JSON...")
-        parsed = json.loads(raw)
-        
-        # Unpack if json_object wrapper is used (common for Deepseek/Grok JSON mode)
-        if isinstance(parsed, dict) and len(parsed) == 1 and "posts" in parsed:
-            parsed = parsed["posts"]
-        elif isinstance(parsed, dict):
-            parsed = [parsed]
+        try:
+            # Strip markdown fences if present
+            raw = raw.strip()
+            # Regex to find the first JSON array or object
+            match = re.search(r'(\{.*\}|\[.*\])', raw, re.DOTALL)
+            if match:
+                raw = match.group(1)
             
-        logger.info("JSON successfully parsed.")
-        return parsed
+            parsed = json.loads(raw)
+            
+            # Unpack if json_object wrapper is used (common for Deepseek/Grok JSON mode)
+            if isinstance(parsed, dict) and len(parsed) == 1 and "posts" in parsed:
+                parsed = parsed["posts"]
+            elif isinstance(parsed, dict):
+                parsed = [parsed]
+                
+            logger.info("JSON successfully parsed.")
+            return parsed
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON Parsing failed: {e}. Raw received: {raw[:200]}...")
+            return []
 
     # 1. Try DeepSeek (Priority 1 to minimize token cost)
     if api_key_deepseek:
@@ -349,13 +356,17 @@ def _is_duplicate(db: Session, source_url: str, raw_description: str) -> bool:
                 return True
 
     if raw_description and len(raw_description) > 30:
-        # 3. Match by the first 250 characters of the description instead of 100.
-        # This prevents completely distinct posts from being marked as duplicates
-        # just because they start with the same long generic greeting.
+        # 3. Match by the first 250 characters of the description. 
+        # If the text is long enough, use LIKE to catch slight variations. 
+        # If it's short, use EXACT match to prevent false positives!
         short_desc = raw_description[:250]
-        safe_desc = short_desc.replace('%', '\\%').replace('_', '\\_')
-        if db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first():
-            return True
+        if len(short_desc) > 80:
+            safe_desc = short_desc.replace('%', '\\%').replace('_', '\\_')
+            if db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first():
+                return True
+        else:
+            if db.query(models.Ad).filter(models.Ad.raw_description == raw_description).first():
+                return True
             
     return False
 
