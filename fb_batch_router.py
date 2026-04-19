@@ -349,9 +349,10 @@ def _is_duplicate(db: Session, source_url: str, raw_description: str) -> bool:
                 return True
 
     if raw_description and len(raw_description) > 30:
-        # 3. Match by the first 100 characters of the description.
-        # This fixes a bug where text truncation or expansion bypassed the uniqueness check.
-        short_desc = raw_description[:100]
+        # 3. Match by the first 250 characters of the description instead of 100.
+        # This prevents completely distinct posts from being marked as duplicates
+        # just because they start with the same long generic greeting.
+        short_desc = raw_description[:250]
         safe_desc = short_desc.replace('%', '\\%').replace('_', '\\_')
         if db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first():
             return True
@@ -415,7 +416,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         category_id=final_category_id,
         source_type=SourceType.SCRAPER_BOT,
         source_url=post.postUrl or None,
-        raw_description=(post.text or "")[:2000] if post.text else None,
+        raw_description=(post.text or "")[:8000] if post.text else None,
         attributes={
             **ai_attrs, # Spread AI extracted attributes safely
             "author": post.author,
@@ -479,6 +480,20 @@ def ingest_fb_posts_batch(
         logger.error(f"Unhandled error in batch endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+def _log_training_data(post_text: str, ai_output: dict, status: str, reason: Optional[str] = None):
+    try:
+        import pathlib, json
+        log_file = pathlib.Path(__file__).parent / "ai_training_dataset.jsonl"
+        record = {
+            "text": post_text,
+            "status": status,
+            "ai_output": ai_output,
+            "reason": reason
+        }
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as e:
+        logger.error(f"Training logger failed: {e}")
 
 def _do_ingest(req: FbBatchRequest, db: Session):
     if not req.posts:
@@ -522,7 +537,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                     unique_key = f"story_{match2.group(1)}"
         
         if not unique_key and post.text and len(post.text) > 30:
-            unique_key = f"text_{post.text[:100]}"
+            unique_key = f"text_{post.text[:250]}"
             
         if unique_key:
             if unique_key in seen_in_batch:
@@ -564,6 +579,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if not ai_data or not isinstance(ai_data, dict) or not ai_data.get("title"):
             skipped += 1
             logger.info(f"Post #{idx} skipped: AI processing failed or returned empty data.")
+            _log_training_data(post.text or "", ai_data, "failed", "AI processing failed or returned empty title")
             results.append(PostResult(index=idx, status="skipped", reason="AI processing failed"))
             continue
 
@@ -571,6 +587,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if ai_data.get("category_id") == 0:
             skipped += 1
             logger.info(f"Post #{idx} rejected: AI determined it is seeking an apartment, not offering.")
+            _log_training_data(post.text or "", ai_data, "rejected", "Seeking apartment (category_id=0)")
             results.append(PostResult(index=idx, status="skipped", reason="Seeking apartment, not offering"))
             continue
 
@@ -583,6 +600,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                 default_location=req.default_location or "",
             )
             saved += 1
+            _log_training_data(post.text or "", ai_data, "success", None)
             results.append(PostResult(index=idx, status="saved", ad_id=ad.id, title=ad.title))
             logger.info(f"Post #{idx} -> Ad ID {ad.id}: {ad.title}")
         except Exception as e:
