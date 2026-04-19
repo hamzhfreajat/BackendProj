@@ -248,8 +248,10 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     """Process all posts in chunks to avoid token limits, running concurrently."""
     categories_block = _build_categories_block(db)
     
-    # Increased chunk size to minimize API requests for large batches natively
-    CHUNK_SIZE = 25
+    # Send ALL non-duplicate posts to AI safely in chunks
+    # Keep chunk size small (5) to ensure the AI doesn't hit output token limits 
+    # and truncate the JSON array in the middle of processing!
+    CHUNK_SIZE = 5
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
