@@ -94,10 +94,13 @@ For EACH post, extract:
 - price: (float) numeric price (0.0 if missing)
 - location: (string) e.g. 'عمان, عبدون'. IMPORTANT RULE: Numbered zones (المنطقة الثالثة, الخامسة, السادسة, التاسعة, etc.) belong to العقبة (Aqaba), NOT Amman! Output format: 'العقبة, المنطقة الثالثة'. Empty if missing.
 - phone_number: (string or null)
-- category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, not offering one).
+- category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, or if the post is NOT offering real estate).
+- rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture', 'Advertising maintenance service', etc.)
 - suggested_tags: (list[string]) 2-4 important keywords mentioned.
 - attributes: (object) Extract the following ONLY if explicitly mentioned (OMIT the key entirely if not found to save tokens!):
   area (string/int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]), room_type (string), target_audience (list[string]), room_capacity (string), rent_includes (list[string]), payment_frequency (string), insurance_required (bool), building_age (string), building_features (list[string]), land_type (string), zoning_classification (string).
+
+NOTE: Short-term, daily, and weekly furnished rentals perfectly valid! DO NOT reject them.
 
 CATEGORIES:
 {categories_block}
@@ -337,25 +340,25 @@ def _get_or_create_ai_user(db: Session) -> models.User:
     return ai_user
 
 
-def _is_duplicate(db: Session, source_url: str, raw_description: str) -> bool:
+def _is_duplicate(db: Session, source_url: str, raw_description: str) -> Optional[int]:
     if source_url:
         import re
         # 1. Check exact match
-        if db.query(models.Ad).filter(models.Ad.source_url == source_url).first():
-            return True
+        ad = db.query(models.Ad).filter(models.Ad.source_url == source_url).first()
+        if ad: return ad.id
             
         # 2. Extract FB Post ID and use LIKE matcher (handles tracking parameter changes)
         match = re.search(r'/posts/(\d+)', source_url)
         if match:
             post_id = match.group(1)
-            if db.query(models.Ad).filter(models.Ad.source_url.like(f"%/posts/{post_id}%")).first():
-                return True
+            ad = db.query(models.Ad).filter(models.Ad.source_url.like(f"%/posts/{post_id}%")).first()
+            if ad: return ad.id
                 
         match2 = re.search(r'story_fbid=(\d+)', source_url)
         if match2:
             post_id = match2.group(1)
-            if db.query(models.Ad).filter(models.Ad.source_url.like(f"%story_fbid={post_id}%")).first():
-                return True
+            ad = db.query(models.Ad).filter(models.Ad.source_url.like(f"%story_fbid={post_id}%")).first()
+            if ad: return ad.id
 
     if raw_description and len(raw_description) > 30:
         # 3. Match by the first 250 characters of the description. 
@@ -364,13 +367,13 @@ def _is_duplicate(db: Session, source_url: str, raw_description: str) -> bool:
         short_desc = raw_description[:250]
         if len(short_desc) > 80:
             safe_desc = short_desc.replace('%', '\\%').replace('_', '\\_')
-            if db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first():
-                return True
+            ad = db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first()
+            if ad: return ad.id
         else:
-            if db.query(models.Ad).filter(models.Ad.raw_description == raw_description).first():
-                return True
+            ad = db.query(models.Ad).filter(models.Ad.raw_description == raw_description).first()
+            if ad: return ad.id
             
-    return False
+    return None
 
 
 def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, default_location):
@@ -520,7 +523,9 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     # Step 1: Filter duplicates and empty posts BEFORE calling AI
     posts_to_process: List[FbPost] = []
     post_index_map: dict = {}
-    seen_in_batch = set()
+    # Separate sets for URL and Text intra-batch deduplication
+    seen_in_batch_urls = set()
+    seen_in_batch_texts = set()
 
     for i, post in enumerate(req.posts):
         idx = post.index or (i + 1)
@@ -530,32 +535,43 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             results.append(PostResult(index=idx, status="skipped", reason="No text or URL"))
             continue
 
-        if _is_duplicate(db, post.postUrl or "", post.text or ""):
+        dup_ad_id = _is_duplicate(db, post.postUrl or "", post.text or "")
+        if dup_ad_id:
             skipped += 1
-            results.append(PostResult(index=idx, status="skipped", reason="Duplicate post"))
+            reason = f"Duplicate post (Matches Ad ID {dup_ad_id})"
+            _log_training_data(db, post.text or "", {"dup_ad_id": dup_ad_id}, "skipped", reason)
+            results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
             
-        # Intra-batch duplicate check (prevents sending 2 identical posts to AI if they were both scraped just now)
-        unique_key = None
+        # Intra-batch duplicate check (prevents sending identical posts to AI if they were both scraped just now)
+        unique_key_url = None
         if post.postUrl:
             import re
             match = re.search(r'/posts/(\d+)', post.postUrl)
             if match:
-                unique_key = f"post_{match.group(1)}"
+                unique_key_url = f"post_{match.group(1)}"
             else:
                 match2 = re.search(r'story_fbid=(\d+)', post.postUrl)
                 if match2:
-                    unique_key = f"story_{match2.group(1)}"
+                    unique_key_url = f"story_{match2.group(1)}"
         
-        if not unique_key and post.text and len(post.text) > 30:
-            unique_key = f"text_{post.text[:250]}"
+        unique_key_text = None
+        if post.text and len(post.text) > 30:
+            unique_key_text = f"text_{post.text[:250]}"
+
+        is_intra_dup = False
+        if unique_key_url and unique_key_url in seen_in_batch_urls:
+            is_intra_dup = True
+        if unique_key_text and unique_key_text in seen_in_batch_texts:
+            is_intra_dup = True
             
-        if unique_key:
-            if unique_key in seen_in_batch:
-                skipped += 1
-                results.append(PostResult(index=idx, status="skipped", reason="Duplicate post (in batch)"))
-                continue
-            seen_in_batch.add(unique_key)
+        if is_intra_dup:
+            skipped += 1
+            results.append(PostResult(index=idx, status="skipped", reason="Duplicate post (in batch)"))
+            continue
+            
+        if unique_key_url: seen_in_batch_urls.add(unique_key_url)
+        if unique_key_text: seen_in_batch_texts.add(unique_key_text)
 
         raw_text = post.text or ""
         clean_text = re.sub(r'[\s-]', '', raw_text)
@@ -597,9 +613,10 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         # Skip if AI determined this is a "Looking for" post
         if ai_data.get("category_id") == 0:
             skipped += 1
-            logger.info(f"Post #{idx} rejected: AI determined it is seeking an apartment, not offering.")
-            _log_training_data(db, post.text or "", ai_data, "rejected", "Seeking apartment (category_id=0)")
-            results.append(PostResult(index=idx, status="skipped", reason="Seeking apartment, not offering"))
+            reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate (category_id=0)")
+            logger.info(f"Post #{idx} rejected: {reason}")
+            _log_training_data(db, post.text or "", ai_data, "rejected", reason)
+            results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
         try:
