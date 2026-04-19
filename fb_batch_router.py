@@ -480,18 +480,16 @@ def ingest_fb_posts_batch(
         logger.error(f"Unhandled error in batch endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-def _log_training_data(post_text: str, ai_output: dict, status: str, reason: Optional[str] = None):
+def _log_training_data(db: Session, post_text: str, ai_output: dict, status: str, reason: Optional[str] = None):
     try:
-        import pathlib, json
-        log_file = pathlib.Path(__file__).parent / "ai_training_dataset.jsonl"
-        record = {
-            "text": post_text,
-            "status": status,
-            "ai_output": ai_output,
-            "reason": reason
-        }
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        record = models.AITrainingLog(
+            post_text=post_text,
+            status=status,
+            ai_output=ai_output,
+            reason=reason
+        )
+        db.add(record)
+        db.commit()
     except Exception as e:
         logger.error(f"Training logger failed: {e}")
 
@@ -579,7 +577,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if not ai_data or not isinstance(ai_data, dict) or not ai_data.get("title"):
             skipped += 1
             logger.info(f"Post #{idx} skipped: AI processing failed or returned empty data.")
-            _log_training_data(post.text or "", ai_data, "failed", "AI processing failed or returned empty title")
+            _log_training_data(db, post.text or "", ai_data, "failed", "AI processing failed or returned empty title")
             results.append(PostResult(index=idx, status="skipped", reason="AI processing failed"))
             continue
 
@@ -587,7 +585,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if ai_data.get("category_id") == 0:
             skipped += 1
             logger.info(f"Post #{idx} rejected: AI determined it is seeking an apartment, not offering.")
-            _log_training_data(post.text or "", ai_data, "rejected", "Seeking apartment (category_id=0)")
+            _log_training_data(db, post.text or "", ai_data, "rejected", "Seeking apartment (category_id=0)")
             results.append(PostResult(index=idx, status="skipped", reason="Seeking apartment, not offering"))
             continue
 
@@ -600,7 +598,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                 default_location=req.default_location or "",
             )
             saved += 1
-            _log_training_data(post.text or "", ai_data, "success", None)
+            _log_training_data(db, post.text or "", ai_data, "success", None)
             results.append(PostResult(index=idx, status="saved", ad_id=ad.id, title=ad.title))
             logger.info(f"Post #{idx} -> Ad ID {ad.id}: {ad.title}")
         except Exception as e:

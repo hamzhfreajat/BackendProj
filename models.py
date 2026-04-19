@@ -382,3 +382,13 @@ class SavedFilter(Base):
 
     user = relationship("User")
     category = relationship("Category")
+
+class AITrainingLog(Base):
+    __tablename__ = "ai_training_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_text = Column(Text, nullable=False)
+    status = Column(String(50), nullable=False) # e.g. success, failed, rejected
+    ai_output = Column(JSONB, nullable=True)     # Stores the parsed dictionary from AI
+    reason = Column(Text, nullable=True)         # E.g. "Seeking apartment (category_id=0)"
+    created_at = Column(TIMESTAMP, server_default=func.now())
