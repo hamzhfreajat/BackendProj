@@ -82,15 +82,13 @@ _GEMINI_BATCH_PROMPT = """You are an expert data extractor. Extract classified-a
 For EACH post, extract:
 - index: (int) the given post number
 - title: (string) generate a concise, professional arabic title
-- description: (string) rewrite professionally for SEO. Do not strictly copy.
 - price: (float) numeric price (0.0 if missing)
-- location: (string) e.g. 'عمان, عبدون'. IMPORTANT RULE: Numbered zones (المنطقة الثالثة, الخامسة, السادسة, التاسعة, etc.) belong to العقبة (Aqaba), NOT Amman! Output format: 'العقبة, المنطقة الثالثة'. Empty if missing.
+- location: (string) e.g. 'عمان, عبدون'. IMPORTANT RULE: Numbered zones (المنطقة الثالثة, الخامسة, etc.) belong to العقبة (Aqaba), NOT Amman! Output format: 'العقبة, المنطقة الثالثة'. Empty if missing.
 - phone_number: (string or null)
 - category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, or if the post is NOT offering real estate).
-- rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture', 'Advertising maintenance service', etc.)
-- suggested_tags: (list[string]) 2-4 important keywords mentioned.
-- attributes: (object) Extract the following ONLY if explicitly mentioned (OMIT the key entirely if not found to save tokens!):
-  area (string/int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]), room_type (string), target_audience (list[string]), room_capacity (string), rent_includes (list[string]), payment_frequency (string), insurance_required (bool), building_age (string), building_features (list[string]), land_type (string), zoning_classification (string).
+- rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture')
+- attributes: (object) Extract the following ONLY if explicitly mentioned (OMIT key entirely to save tokens!):
+  area (int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]). No other arrays!
 
 NOTE: Short-term, daily, and weekly furnished rentals perfectly valid! DO NOT reject them.
 
@@ -141,9 +139,44 @@ def _build_categories_block(db: Session) -> str:
     return "\n".join(categories_context_lines)
 
 
+import threading
+import time
+import json
+import os
+from datetime import datetime
+
+_GEMINI_LOCK = threading.Lock()
+_LAST_GEMINI_CALL = 0.0
+
+def _check_and_update_gemini_daily_limit() -> bool:
+    """Returns True if under limits, False if 999 daily limit reached."""
+    usage_file = "gemini_usage.json"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    try:
+        if os.path.exists(usage_file):
+            with open(usage_file, "r") as f:
+                usage = json.load(f)
+        else:
+            usage = {"date": today_str, "count": 0}
+            
+        if usage.get("date") != today_str:
+            usage = {"date": today_str, "count": 0}
+            
+        if usage["count"] >= 999:
+            return False
+            
+        usage["count"] += 1
+        with open(usage_file, "w") as f:
+            json.dump(usage, f)
+        return True
+    except Exception:
+        return True # Fail open safely if disk write fails
+
+
 def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
-    api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    # Use gemini as primary logic default key if env is broken
+    api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "AIzaSyCYIrJIgss0qUi8oqtb8J5u9oPXxNtjAjQ"
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
     api_key_grok = os.getenv("GROK_API_KEY")
 
@@ -183,7 +216,40 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             logger.error(f"JSON Parsing failed: {e}. Raw received: {raw[:200]}...")
             return []
 
-    # 1. Try DeepSeek (Priority 1 to minimize token cost)
+    # 1. Try Gemini (Priority 1: Free Tier optimized with 15 RPM queue)
+    if api_key_gemini:
+        try:
+            global _LAST_GEMINI_CALL
+            with _GEMINI_LOCK:
+                if not _check_and_update_gemini_daily_limit():
+                    logger.warning("Gemini Daily Limit (999) Reached! Skipping to fallback.")
+                    raise RuntimeError("Gemini Daily Limit Reached")
+
+                # 429 Too Many Requests preventer: Ensure 4.1 sec gap between requests
+                now = time.time()
+                elapsed = now - _LAST_GEMINI_CALL
+                if elapsed < 4.1:
+                    logger.info(f"Rate limiting Gemini: Sleeping {4.1 - elapsed:.2f}s to respect 15 RPM limit")
+                    time.sleep(4.1 - elapsed)
+                _LAST_GEMINI_CALL = time.time()
+
+            logger.info("Trying Gemini AI... (REST API) gemini-1.5-flash")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key_gemini}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseMimeType": "application/json"}
+            }
+            res = requests.post(url, json=payload, headers=headers, timeout=45)
+            res.raise_for_status()
+            data = res.json()
+            raw = data["candidates"][0]["content"]["parts"][0]["text"]
+            return _parse_json_result(raw.strip())
+        except Exception as e:
+            logger.warning(f"Gemini failed/timed-out: {e}")
+            errors.append(f"Gemini: {e}")
+
+    # 2. Try DeepSeek (Priority 2 Fallback)
     if api_key_deepseek:
         try:
             logger.info("Trying DeepSeek AI...")
@@ -201,25 +267,6 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
         except Exception as e:
             logger.warning(f"DeepSeek failed/timed-out: {e}")
             errors.append(f"DeepSeek: {e}")
-
-    # 2. Try Gemini
-    if api_key_gemini:
-        try:
-            logger.info("Trying Gemini AI... (REST API)")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key_gemini}"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"responseMimeType": "application/json"}
-            }
-            res = requests.post(url, json=payload, headers=headers, timeout=45)
-            res.raise_for_status()
-            data = res.json()
-            raw = data["candidates"][0]["content"]["parts"][0]["text"]
-            return _parse_json_result(raw.strip())
-        except Exception as e:
-            logger.warning(f"Gemini failed/timed-out: {e}")
-            errors.append(f"Gemini: {e}")
 
     # 3. Try Grok (grok-3-mini)
     if api_key_grok:
@@ -248,9 +295,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = _build_categories_block(db)
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size small (5) to ensure the AI doesn't hit output token limits 
-    # and truncate the JSON array in the middle of processing!
-    CHUNK_SIZE = 5
+    # Keep chunk size optimized (10) to balance between DeepSeek cache hits and timeout limits.
+    CHUNK_SIZE = 10
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
