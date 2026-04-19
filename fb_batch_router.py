@@ -233,8 +233,8 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     time.sleep(4.1 - elapsed)
                 _LAST_GEMINI_CALL = time.time()
 
-            logger.info("Trying Gemini AI... (REST API) gemini-1.5-flash-8b (Flash-Lite)")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={api_key_gemini}"
+            logger.info("Trying Gemini AI... (REST API) gemini-2.5-flash-lite (Flash-Lite)")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
