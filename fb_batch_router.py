@@ -22,14 +22,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-# SDK imports - prefer new google.genai, fallback to old google.generativeai
-try:
-    from google import genai as _genai_new
-    _USE_NEW_SDK = True
-except ImportError:
-    import google.generativeai as genai
-    _USE_NEW_SDK = False
-
 from dotenv import load_dotenv
 _this_dir = pathlib.Path(__file__).resolve().parent
 load_dotenv(_this_dir / ".env", override=True)
@@ -201,7 +193,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 "messages": [{"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"}
             }
-            res = requests.post("https://api.deepseek.com/chat/completions", json=payload, headers=headers, timeout=25)
+            res = requests.post("https://api.deepseek.com/chat/completions", json=payload, headers=headers, timeout=45)
             res.raise_for_status()
             data = res.json()
             raw = data["choices"][0]["message"]["content"]
@@ -213,14 +205,18 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
     # 2. Try Gemini
     if api_key_gemini:
         try:
-            logger.info("Trying Gemini AI...")
-            genai.configure(api_key=api_key_gemini)
-            # Use gemini-2.5-flash as an efficient fallback
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            config = genai.types.GenerationConfig(response_mime_type="application/json")
-            # Set explicit timeout to prevent 524 timeout chain
-            resp = model.generate_content(prompt, generation_config=config, request_options={"timeout": 25.0})
-            return _parse_json_result(resp.text.strip())
+            logger.info("Trying Gemini AI... (REST API)")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key_gemini}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseMimeType": "application/json"}
+            }
+            res = requests.post(url, json=payload, headers=headers, timeout=45)
+            res.raise_for_status()
+            data = res.json()
+            raw = data["candidates"][0]["content"]["parts"][0]["text"]
+            return _parse_json_result(raw.strip())
         except Exception as e:
             logger.warning(f"Gemini failed/timed-out: {e}")
             errors.append(f"Gemini: {e}")
@@ -235,7 +231,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 "messages": [{"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"}
             }
-            res = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers, timeout=25)
+            res = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers, timeout=45)
             res.raise_for_status()
             data = res.json()
             raw = data["choices"][0]["message"]["content"]
