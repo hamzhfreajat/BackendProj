@@ -87,8 +87,9 @@ For EACH post, extract:
 - phone_number: (string or null)
 - category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, or if the post is NOT offering real estate).
 - rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture')
-- attributes: (object) Extract the following ONLY if explicitly mentioned (OMIT key entirely to save tokens!):
-  area (int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]). No other arrays!
+- suggested_tags: (list[string]) 2-4 important keywords mentioned.
+- attributes: (object) Extract the following ONLY if explicitly mentioned:
+  area (int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]), building_features (list[string]), target_audience (list[string]).
 
 NOTE: Short-term, daily, and weekly furnished rentals perfectly valid! DO NOT reject them.
 
