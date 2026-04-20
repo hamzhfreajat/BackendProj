@@ -525,6 +525,25 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     db.commit()
     db.refresh(ad)
     
+    # Store explicit Real Estate Details for Flutter UI exposure
+    try:
+        re_detail = models.AdRealEstateDetail(
+            ad_id=ad.id,
+            bathrooms=ai_attrs.get("bathrooms"),
+            furnished=str(ai_attrs.get("furnished")) if ai_attrs.get("furnished") is not None else None,
+            build_area=ai_attrs.get("area") or ai_attrs.get("build_area"),
+            floor=str(ai_attrs.get("floor")) if ai_attrs.get("floor") is not None else None,
+            rent_duration=str(ai_attrs.get("rent_duration")) if ai_attrs.get("rent_duration") is not None else None,
+            key_features=ai_attrs.get("key_features", []),
+            additional_features=ai_attrs.get("building_features", []) + ai_attrs.get("target_audience", []),
+            nearby_locations=[]
+        )
+        db.add(re_detail)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to create Real Estate Details for bot ad: {e}")
+    
     # TRIGGER NOTIFICATION ENGINE 
     from observer import trigger_saved_filter_notifications
     try:
