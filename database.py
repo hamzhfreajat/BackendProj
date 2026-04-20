@@ -15,7 +15,12 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 encoded_password = urllib.parse.quote_plus(DB_PASSWORD)
 SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Globally enforce the exact timezone so the Postgres func.now() strictly outputs Jordan time,
+# eliminating the 3-hour "time ago" parsing discrepancy in Flutter.
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"options": "-c timezone=Asia/Amman"}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
