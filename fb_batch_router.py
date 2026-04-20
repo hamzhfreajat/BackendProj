@@ -244,7 +244,10 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             res.raise_for_status()
             data = res.json()
             raw = data["candidates"][0]["content"]["parts"][0]["text"]
-            return _parse_json_result(raw.strip())
+            parsed = _parse_json_result(raw.strip())
+            for item in parsed:
+                if isinstance(item, dict): item["ai_model"] = "gemini-2.5-flash-lite"
+            return parsed
         except Exception as e:
             logger.warning(f"Gemini failed/timed-out: {e}")
             errors.append(f"Gemini: {e}")
@@ -263,7 +266,10 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             res.raise_for_status()
             data = res.json()
             raw = data["choices"][0]["message"]["content"]
-            return _parse_json_result(raw)
+            parsed = _parse_json_result(raw)
+            for item in parsed:
+                if isinstance(item, dict): item["ai_model"] = "deepseek-chat"
+            return parsed
         except Exception as e:
             logger.warning(f"DeepSeek failed/timed-out: {e}")
             errors.append(f"DeepSeek: {e}")
@@ -282,7 +288,10 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             res.raise_for_status()
             data = res.json()
             raw = data["choices"][0]["message"]["content"]
-            return _parse_json_result(raw)
+            parsed = _parse_json_result(raw)
+            for item in parsed:
+                if isinstance(item, dict): item["ai_model"] = "grok-3-mini"
+            return parsed
         except Exception as e:
             logger.warning(f"Grok failed/timed-out: {e}")
             errors.append(f"Grok: {e}")
