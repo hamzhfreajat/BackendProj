@@ -509,6 +509,10 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     # Map AI extracted Tags
     suggested_tags = ai_data.get("suggested_tags", [])
     if isinstance(suggested_tags, list) and len(suggested_tags) > 0:
+        dest_category = None
+        if final_category_id:
+            dest_category = db.query(models.Category).filter(models.Category.id == final_category_id).first()
+            
         for tag_name in suggested_tags:
             if not isinstance(tag_name, str):
                 continue
@@ -520,6 +524,10 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
                 tag = models.Tag(name=clean_tag)
                 db.add(tag)
             ad.linked_tags.append(tag)
+            
+            # Propagate the tag to the global category so Flutter renders it as a filter chip!
+            if dest_category and tag not in dest_category.linked_tags:
+                dest_category.linked_tags.append(tag)
             
     db.add(ad)
     db.commit()
