@@ -175,8 +175,7 @@ def _check_and_update_gemini_daily_limit() -> bool:
 
 def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
-    # Use gemini as primary logic default key if env is broken
-    api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "AIzaSyCYIrJIgss0qUi8oqtb8J5u9oPXxNtjAjQ"
+    api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
     api_key_grok = os.getenv("GROK_API_KEY")
 
