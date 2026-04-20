@@ -246,7 +246,9 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             raw = data["candidates"][0]["content"]["parts"][0]["text"]
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
-                if isinstance(item, dict): item["ai_model"] = "gemini-2.5-flash-lite"
+                if isinstance(item, dict): 
+                    item["ai_model"] = "gemini-2.5-flash-lite"
+                    item["raw_unparsed_chunk_layer"] = raw.strip()
             return parsed
         except Exception as e:
             logger.warning(f"Gemini failed/timed-out: {e}")
@@ -268,7 +270,9 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             raw = data["choices"][0]["message"]["content"]
             parsed = _parse_json_result(raw)
             for item in parsed:
-                if isinstance(item, dict): item["ai_model"] = "deepseek-chat"
+                if isinstance(item, dict): 
+                    item["ai_model"] = "deepseek-chat"
+                    item["raw_unparsed_chunk_layer"] = raw
             return parsed
         except Exception as e:
             logger.warning(f"DeepSeek failed/timed-out: {e}")
@@ -290,7 +294,9 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             raw = data["choices"][0]["message"]["content"]
             parsed = _parse_json_result(raw)
             for item in parsed:
-                if isinstance(item, dict): item["ai_model"] = "grok-3-mini"
+                if isinstance(item, dict): 
+                    item["ai_model"] = "grok-3-mini"
+                    item["raw_unparsed_chunk_layer"] = raw
             return parsed
         except Exception as e:
             logger.warning(f"Grok failed/timed-out: {e}")
@@ -548,15 +554,16 @@ def ingest_fb_posts_batch(
         logger.error(f"Unhandled error in batch endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-def _log_training_data(db: Session, post_text: str, ai_output: dict, status: str, reason: Optional[str] = None):
+def _log_training_data(db: Session, post_text: str, ai_output: dict, status: str, reason: str, raw_response: str = None):
     try:
-        record = models.AITrainingLog(
+        log_entry = models.AITrainingLog(
             post_text=post_text,
             status=status,
             ai_output=ai_output,
-            reason=reason
+            reason=reason,
+            raw_response=raw_response
         )
-        db.add(record)
+        db.add(log_entry)
         db.commit()
     except Exception as e:
         logger.error(f"Training logger failed: {e}")
@@ -654,12 +661,17 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         idx = post_index_map[j]
         ai_data = ai_results[j] if j < len(ai_results) else {}
 
+        # Extract the raw chunk layer so we don't pollute the JSONB column with raw text
+        raw_res = None
+        if isinstance(ai_data, dict) and "raw_unparsed_chunk_layer" in ai_data:
+            raw_res = ai_data.pop("raw_unparsed_chunk_layer")
+
         # 1. Output explicit AI Exceptions
         if isinstance(ai_data, dict) and "ai_chunk_error" in ai_data:
             skipped += 1
             reason = f"AI Error: {ai_data['ai_chunk_error']}"
             logger.error(f"Post #{idx} skipped: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "failed", reason)
+            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
@@ -668,7 +680,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             skipped += 1
             reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate (category_id=0)")
             logger.info(f"Post #{idx} rejected: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "rejected", reason)
+            _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
@@ -677,7 +689,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             skipped += 1
             reason = "AI returned missing or incomplete JSON (no title)"
             logger.info(f"Post #{idx} skipped: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "failed", reason)
+            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
@@ -690,7 +702,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                 default_location=req.default_location or "",
             )
             saved += 1
-            _log_training_data(db, post.text or "", ai_data, "success", None)
+            _log_training_data(db, post.text or "", ai_data, "success", None, raw_res)
             results.append(PostResult(index=idx, status="saved", ad_id=ad.id, title=ad.title))
             logger.info(f"Post #{idx} -> Ad ID {ad.id}: {ad.title}")
         except Exception as e:
