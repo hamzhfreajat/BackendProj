@@ -389,6 +389,7 @@ class AITrainingLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     post_text = Column(Text, nullable=False)
     status = Column(String(50), nullable=False) # e.g. success, failed, rejected
+    ai_model = Column(String(100), nullable=True) # e.g. gemini-2.5-flash-lite, deepseek-chat
     ai_output = Column(JSONB, nullable=True)     # Stores the parsed dictionary from AI
     raw_response = Column(Text, nullable=True)   # Stores the exact unparsed text returned by AI for training
     reason = Column(Text, nullable=True)         # E.g. "Seeking apartment (category_id=0)"

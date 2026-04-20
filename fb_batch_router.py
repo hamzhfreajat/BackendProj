@@ -554,11 +554,12 @@ def ingest_fb_posts_batch(
         logger.error(f"Unhandled error in batch endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-def _log_training_data(db: Session, post_text: str, ai_output: dict, status: str, reason: str, raw_response: str = None):
+def _log_training_data(db: Session, post_text: str, ai_output: dict, status: str, reason: str, raw_response: str = None, ai_model: str = None):
     try:
         log_entry = models.AITrainingLog(
             post_text=post_text,
             status=status,
+            ai_model=ai_model,
             ai_output=ai_output,
             reason=reason,
             raw_response=raw_response
@@ -661,17 +662,20 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         idx = post_index_map[j]
         ai_data = ai_results[j] if j < len(ai_results) else {}
 
-        # Extract the raw chunk layer so we don't pollute the JSONB column with raw text
         raw_res = None
-        if isinstance(ai_data, dict) and "raw_unparsed_chunk_layer" in ai_data:
-            raw_res = ai_data.pop("raw_unparsed_chunk_layer")
+        used_ai_model = None
+        if isinstance(ai_data, dict):
+            if "raw_unparsed_chunk_layer" in ai_data:
+                raw_res = ai_data.pop("raw_unparsed_chunk_layer")
+            if "ai_model" in ai_data:
+                used_ai_model = ai_data.pop("ai_model")
 
         # 1. Output explicit AI Exceptions
         if isinstance(ai_data, dict) and "ai_chunk_error" in ai_data:
             skipped += 1
             reason = f"AI Error: {ai_data['ai_chunk_error']}"
             logger.error(f"Post #{idx} skipped: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res)
+            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res, used_ai_model)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
@@ -680,7 +684,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             skipped += 1
             reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate (category_id=0)")
             logger.info(f"Post #{idx} rejected: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res)
+            _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res, used_ai_model)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
@@ -689,7 +693,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             skipped += 1
             reason = "AI returned missing or incomplete JSON (no title)"
             logger.info(f"Post #{idx} skipped: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res)
+            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res, used_ai_model)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 
@@ -702,7 +706,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                 default_location=req.default_location or "",
             )
             saved += 1
-            _log_training_data(db, post.text or "", ai_data, "success", None, raw_res)
+            _log_training_data(db, post.text or "", ai_data, "success", None, raw_res, used_ai_model)
             results.append(PostResult(index=idx, status="saved", ad_id=ad.id, title=ad.title))
             logger.info(f"Post #{idx} -> Ad ID {ad.id}: {ad.title}")
         except Exception as e:
