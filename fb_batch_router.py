@@ -117,15 +117,18 @@ def _build_categories_block(db: Session) -> str:
     # we provide a massive token-saving hardcoded macro block. 
     # This prevents the prompt from inflating to thousands of redundant tokens per chunk!
     return """
-ID: 3 | عقارات للإيجار (General Real Estate Rent)
-ID: 14 | شقق للإيجار (Apartments Rent)
-ID: 16 | ستوديوهات للإيجار (Studios Rent)
-ID: 17 | غرفة مستقلة للإيجار (Private Room Rent)
-ID: 2 | عقارات للبيع (General Real Estate Sale)
-ID: 15 | شقق للبيع (Apartments Sale)
+ID: 301 | شقق للإيجار (Apartments Rent)
+ID: 302 | ستوديوهات للإيجار (Studios Rent)
+ID: 3101 | فلل وقصور (Villas Rent)
+ID: 3102 | بيوت مستقلة (Houses Rent)
+ID: 10301 | شقق للبيع (Apartments Sale)
+ID: 10302 | ستوديوهات للبيع (Studios Sale)
+ID: 10101 | فلل وقصور للبيع (Villas Sale)
+ID: 10102 | بيوت مستقلة للبيع (Houses Sale)
 ID: 10313 | أراضي للبيع أو الإيجار (Lands)
 
-* RULE: If it's a house/villa/office, just route to 3 (Rent) or 2 (Sale). 
+* RULE: If it doesn't fit the above but is a rental property, fallback to ID: 3 (General Rent).
+* RULE: If it doesn't fit but is a property for sale, fallback to ID: 2 (General Sale).
 * RULE: If they are SEEKING an apartment, use ID: 0 (Reject).
 """
 
