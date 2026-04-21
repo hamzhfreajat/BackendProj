@@ -222,11 +222,11 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     logger.warning("Gemini Daily Limit (999) Reached! Skipping to fallback.")
                     raise RuntimeError("Gemini Daily Limit Reached")
 
-                # 429 Too Many Requests preventer: Ensure 4.1 sec gap between requests
+                # 429 Too Many Requests preventer: Ensure 5.0 sec gap between requests (max 12 RPM)
                 now = time.time()
                 elapsed = now - _LAST_GEMINI_CALL
-                if elapsed < 4.1:
-                    sleep_time = 4.1 - elapsed
+                if elapsed < 5.0:
+                    sleep_time = 5.0 - elapsed
                     _LAST_GEMINI_CALL = now + sleep_time
                 else:
                     _LAST_GEMINI_CALL = now
@@ -327,8 +327,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = _build_categories_block(db)
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size optimized (10) to balance between DeepSeek cache hits and timeout limits.
-    CHUNK_SIZE = 10
+    # Keep chunk size optimized (15) to reduce overall API calls to Gemini (prevents 429s)
+    CHUNK_SIZE = 15
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
@@ -344,8 +344,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
             return [{"ai_chunk_error": str(e)}] * len(chunk)
 
     all_results = []
-    # Run all AI chunk processing concurrently
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    # Run all AI chunk processing concurrently (max 3 workers to prevent overwhelming free tier lock)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         results_from_threads = executor.map(process_single_chunk, chunks)
         for chunk_res in results_from_threads:
             all_results.extend(chunk_res)
