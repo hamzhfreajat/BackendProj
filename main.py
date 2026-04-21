@@ -617,21 +617,21 @@ def read_ads(
     has_price  = case((models.Ad.price > 0, 1), else_=0)
 
     if sort_by == 'price_asc':
-        query = query.order_by(models.Ad.price.asc())
+        query = query.order_by(models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
-        query = query.order_by(models.Ad.price.desc())
+        query = query.order_by(models.Ad.price.desc(), models.Ad.id.desc())
     elif sort_by == 'oldest':
-        query = query.order_by(models.Ad.created_at.asc())
+        query = query.order_by(models.Ad.created_at.asc(), models.Ad.id.asc())
     elif sort_by == 'most_viewed':
-        query = query.order_by(models.Ad.views.desc())
+        query = query.order_by(models.Ad.views.desc(), models.Ad.id.desc())
     elif sort_by == 'newest':
-        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc())
+        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
-        query = query.order_by(models.Ad.is_hot.desc(), models.Ad.created_at.desc())
+        query = query.order_by(models.Ad.is_hot.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'recommended' or sort_by is None:
-        query = query.order_by(models.Ad.is_hot.desc(), has_image.desc(), has_price.desc(), models.Ad.views.desc(), models.Ad.created_at.desc())
+        query = query.order_by(models.Ad.is_hot.desc(), has_image.desc(), has_price.desc(), models.Ad.views.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     else:
-        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc())
+        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
         
     ads = query.offset(skip).limit(limit).all()
     return ads
