@@ -212,17 +212,21 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             logger.error(f"JSON Parsing failed: {e}. Raw received: {raw[:200]}...")
             return []
 
-    # 1. Try Gemini (Priority 1: Free Tier optimized with 15 RPM queue)
-    if api_key_gemini:
+    # 1. Try Gemini Exclusively (Infinite Retry with increasing backoff)
+    if not api_key_gemini:
+        raise RuntimeError("No Gemini API key provided. Fallbacks are disabled by user request.")
+
+    max_retries = 15
+    for attempt in range(max_retries):
         try:
             global _LAST_GEMINI_CALL
             sleep_time = 0.0
             with _GEMINI_LOCK:
                 if not _check_and_update_gemini_daily_limit():
-                    logger.warning("Gemini Daily Limit (999) Reached! Skipping to fallback.")
+                    logger.warning("Gemini Daily Limit (999) Reached! Failing.")
                     raise RuntimeError("Gemini Daily Limit Reached")
 
-                # 429 Too Many Requests preventer: Ensure 5.0 sec gap between requests (max 12 RPM)
+                # Ensure 5.0 sec gap between requests (max 12 RPM)
                 now = time.time()
                 elapsed = now - _LAST_GEMINI_CALL
                 if elapsed < 5.0:
@@ -232,10 +236,10 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     _LAST_GEMINI_CALL = now
 
             if sleep_time > 0:
-                logger.info(f"Rate limiting Gemini: Sleeping {sleep_time:.2f}s outside lock to respect 15 RPM limit")
+                logger.info(f"Rate limiting Gemini: Sleeping {sleep_time:.2f}s outside lock to respect RPM limit")
                 time.sleep(sleep_time)
 
-            logger.info("Trying Gemini AI... (REST API) gemini-2.5-flash-lite (Flash-Lite)")
+            logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
             headers = {"Content-Type": "application/json"}
             payload = {
@@ -246,18 +250,8 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 }
             }
             
-            # Explicit Google 429 Retry Logic to prevent instantly falling back to DeepSeek
-            max_retries = 3
-            res = None
-            for attempt in range(max_retries):
-                res = requests.post(url, json=payload, headers=headers, timeout=60)
-                if res.status_code == 429:
-                    wait_sec = (attempt + 1) * 6
-                    logger.warning(f"Google HTTP 429 Too Many Requests. Retrying in {wait_sec}s...")
-                    time.sleep(wait_sec)
-                    continue
-                res.raise_for_status()
-                break
+            res = requests.post(url, json=payload, headers=headers, timeout=60)
+            res.raise_for_status()
 
             data = res.json()
             raw = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -267,59 +261,21 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     item["ai_model"] = "gemini-2.5-flash-lite"
                     item["raw_unparsed_chunk_layer"] = raw.strip()
             return parsed
-        except Exception as e:
-            logger.warning(f"Gemini failed/timed-out: {e}")
-            errors.append(f"Gemini: {e}")
 
-    # 2. Try DeepSeek (Priority 2 Fallback)
-    if api_key_deepseek:
-        try:
-            logger.info("Trying DeepSeek AI...")
-            headers = {"Authorization": f"Bearer {api_key_deepseek}", "Content-Type": "application/json"}
-            payload = {
-                "model": "deepseek-chat",
-                "messages": [{"role": "user", "content": prompt}],
-                "response_format": {"type": "json_object"}
-            }
-            res = requests.post("https://api.deepseek.com/chat/completions", json=payload, headers=headers, timeout=45)
-            res.raise_for_status()
-            data = res.json()
-            raw = data["choices"][0]["message"]["content"]
-            parsed = _parse_json_result(raw)
-            for item in parsed:
-                if isinstance(item, dict): 
-                    item["ai_model"] = "deepseek-chat"
-                    item["raw_unparsed_chunk_layer"] = raw
-            return parsed
         except Exception as e:
-            logger.warning(f"DeepSeek failed/timed-out: {e}")
-            errors.append(f"DeepSeek: {e}")
+            # If the exception is Daily Limit, break out immediately
+            if "Gemini Daily Limit Reached" in str(e):
+                errors.append(str(e))
+                break
 
-    # 3. Try Grok (grok-3-mini)
-    if api_key_grok:
-        try:
-            logger.info("Trying Grok AI...")
-            headers = {"Authorization": f"Bearer {api_key_grok}", "Content-Type": "application/json"}
-            payload = {
-                "model": "grok-3-mini",
-                "messages": [{"role": "user", "content": prompt}],
-                "response_format": {"type": "json_object"}
-            }
-            res = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers, timeout=45)
-            res.raise_for_status()
-            data = res.json()
-            raw = data["choices"][0]["message"]["content"]
-            parsed = _parse_json_result(raw)
-            for item in parsed:
-                if isinstance(item, dict): 
-                    item["ai_model"] = "grok-3-mini"
-                    item["raw_unparsed_chunk_layer"] = raw
-            return parsed
-        except Exception as e:
-            logger.warning(f"Grok failed/timed-out: {e}")
-            errors.append(f"Grok: {e}")
+            wait_sec = (attempt + 1) * 8
+            logger.warning(f"Gemini failed (Attempt {attempt+1}/{max_retries}): {e}. Retrying in {wait_sec}s...")
+            time.sleep(wait_sec)
+            
+    errors.append("Gemini failed after maximum retries.")
 
-    raise RuntimeError(f"All AIs failed: {errors}")
+    logger.error("AI processing failed entirely.")
+    raise RuntimeError(f"AI processing failed: {errors}")
 
 
 def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
