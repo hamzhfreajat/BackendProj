@@ -195,6 +195,9 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             if match:
                 raw = match.group(1)
             
+            # Clean up unescaped control characters (like raw tabs or newlines) which breaks standard json.loads
+            raw = re.sub(r'[\x00-\x19]', ' ', raw)
+            
             parsed = json.loads(raw)
             
             # Unpack if json_object wrapper is used (common for Deepseek/Grok JSON mode)
@@ -237,10 +240,25 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"responseMimeType": "application/json"}
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "maxOutputTokens": 8192
+                }
             }
-            res = requests.post(url, json=payload, headers=headers, timeout=45)
-            res.raise_for_status()
+            
+            # Explicit Google 429 Retry Logic to prevent instantly falling back to DeepSeek
+            max_retries = 3
+            res = None
+            for attempt in range(max_retries):
+                res = requests.post(url, json=payload, headers=headers, timeout=60)
+                if res.status_code == 429:
+                    wait_sec = (attempt + 1) * 6
+                    logger.warning(f"Google HTTP 429 Too Many Requests. Retrying in {wait_sec}s...")
+                    time.sleep(wait_sec)
+                    continue
+                res.raise_for_status()
+                break
+
             data = res.json()
             raw = data["candidates"][0]["content"]["parts"][0]["text"]
             parsed = _parse_json_result(raw.strip())
