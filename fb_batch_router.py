@@ -214,7 +214,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
     if not api_key_gemini:
         raise RuntimeError("No Gemini API key provided. Fallbacks are disabled by user request.")
 
-    max_retries = 15
+    max_retries = 3
     for attempt in range(max_retries):
         try:
             global _LAST_GEMINI_CALL
@@ -266,7 +266,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 errors.append(str(e))
                 break
 
-            wait_sec = (attempt + 1) * 8
+            wait_sec = (attempt + 1) * 5
             logger.warning(f"Gemini failed (Attempt {attempt+1}/{max_retries}): {e}. Retrying in {wait_sec}s...")
             time.sleep(wait_sec)
             
