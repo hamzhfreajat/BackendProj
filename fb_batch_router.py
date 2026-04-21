@@ -184,8 +184,6 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
     errors = []
 
     def _parse_json_result(raw: str) -> List[dict]:
-        import json
-        import re
         logger.info("Parsing JSON...")
         try:
             # Strip markdown fences if present
@@ -606,7 +604,6 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         # Intra-batch duplicate check (prevents sending identical posts to AI if they were both scraped just now)
         unique_key_url = None
         if post.postUrl:
-            import re
             match = re.search(r'/posts/(\d+)', post.postUrl)
             if match:
                 unique_key_url = f"post_{match.group(1)}"
