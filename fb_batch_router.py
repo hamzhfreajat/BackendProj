@@ -113,31 +113,21 @@ def _build_posts_block(posts: List[FbPost]) -> str:
 
 
 def _build_categories_block(db: Session) -> str:
-    # Fetch only categories related to apartments/residential rent and sale
-    c_all = db.query(models.Category).all()
-    allowed_ids = set()
-    category_map = {c.id: c for c in c_all}
+    # Instead of dynamically querying 50+ categories with linked_tags every single chunk, 
+    # we provide a massive token-saving hardcoded macro block. 
+    # This prevents the prompt from inflating to thousands of redundant tokens per chunk!
+    return """
+ID: 3 | عقارات للإيجار (General Real Estate Rent)
+ID: 14 | شقق للإيجار (Apartments Rent)
+ID: 16 | ستوديوهات للإيجار (Studios Rent)
+ID: 17 | غرفة مستقلة للإيجار (Private Room Rent)
+ID: 2 | عقارات للبيع (General Real Estate Sale)
+ID: 15 | شقق للبيع (Apartments Sale)
+ID: 10313 | أراضي للبيع أو الإيجار (Lands)
 
-    for c in c_all:
-        if any(keyword in c.name for keyword in ["شقق", "شقة", "سكن", "ستوديو", "سكني", "فيلات", "عقارات"]):
-            allowed_ids.add(c.id)
-            # Add parents recursively so AI sees the full path context (e.g. Real estate -> Residential -> Apartment)
-            pid = c.parent_id
-            while pid:
-                allowed_ids.add(pid)
-                parent = category_map.get(pid)
-                pid = parent.parent_id if parent else None
-
-    # Sort categories to group parents with children visually
-    db_categories = sorted([c for c in c_all if c.id in allowed_ids], key=lambda x: x.id)
-    
-    categories_context_lines = []
-    for cat in db_categories:
-        linked_tags_str = ",".join([tag.name for tag in getattr(cat, 'linked_tags', [])]) if getattr(cat, 'linked_tags', []) else ""
-        keywords = f" | {linked_tags_str}" if linked_tags_str else ""
-        categories_context_lines.append(f"ID:{cat.id} Name:{cat.name}{keywords}")
-        
-    return "\n".join(categories_context_lines)
+* RULE: If it's a house/villa/office, just route to 3 (Rent) or 2 (Sale). 
+* RULE: If they are SEEKING an apartment, use ID: 0 (Reject).
+"""
 
 
 import threading
@@ -220,6 +210,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
     if api_key_gemini:
         try:
             global _LAST_GEMINI_CALL
+            sleep_time = 0.0
             with _GEMINI_LOCK:
                 if not _check_and_update_gemini_daily_limit():
                     logger.warning("Gemini Daily Limit (999) Reached! Skipping to fallback.")
@@ -229,9 +220,14 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 now = time.time()
                 elapsed = now - _LAST_GEMINI_CALL
                 if elapsed < 4.1:
-                    logger.info(f"Rate limiting Gemini: Sleeping {4.1 - elapsed:.2f}s to respect 15 RPM limit")
-                    time.sleep(4.1 - elapsed)
-                _LAST_GEMINI_CALL = time.time()
+                    sleep_time = 4.1 - elapsed
+                    _LAST_GEMINI_CALL = now + sleep_time
+                else:
+                    _LAST_GEMINI_CALL = now
+
+            if sleep_time > 0:
+                logger.info(f"Rate limiting Gemini: Sleeping {sleep_time:.2f}s outside lock to respect 15 RPM limit")
+                time.sleep(sleep_time)
 
             logger.info("Trying Gemini AI... (REST API) gemini-2.5-flash-lite (Flash-Lite)")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
