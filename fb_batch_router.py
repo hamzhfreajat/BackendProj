@@ -19,6 +19,7 @@ import concurrent.futures
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from extraction_constants import REAL_ESTATE_CATEGORIES
 from mapper import get_location_map, get_category_map, map_location, map_category
