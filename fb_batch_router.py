@@ -20,7 +20,8 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from extraction_constants import REAL_ESTATE_CATEGORIES
+from mapper import get_location_map, get_category_map, map_location, map_category
 
 from dotenv import load_dotenv
 _this_dir = pathlib.Path(__file__).resolve().parent
@@ -100,6 +101,46 @@ POSTS:
 {posts_block}
 """
 
+_GEMMA_SINGLE_PROMPT = """You are an expert real estate data extractor. Perform JSON extraction from the provided Facebook post. 
+
+EXTREMELY IMPORTANT RULE FOR ARABIC: 
+If the post contains the word "مطلوب" (Wanted/Seeking) or the author is ASKING to buy or rent an apartment, it is NOT a real estate offering! You MUST set category_id to 0 and provide a rejection_reason.
+
+EXAMPLES OF CORRECT BEHAVIOR:
+Example 1 (WANTED POST):
+Post: "مطلوب شقة للايجار في الجبيهة بسعر رخيص"
+Output: {{"title": "", "price": 0.0, "location": "", "phone_number": null, "category_name": "", "rejection_reason": "Author is seeking an apartment, not offering one", "suggested_tags": [], "attributes": {{}}}}
+
+Example 2 (OFFERING POST - APARTMENT FOR SALE):
+Post: "شقة للبيع في طبربور 3 غرف نوم بسعر 40 الف دينار 0791234567"
+Output: {{"title": "شقة للبيع في طبربور 3 غرف نوم", "price": 40000.0, "location": "عمان, طبربور", "phone_number": "0791234567", "category_name": "شقق للبيع", "rejection_reason": "", "suggested_tags": ["للبيع", "طبربور", "3 غرف"], "attributes": {{"rooms": 3}}}}
+
+Example 3 (OFFERING POST - APARTMENT FOR RENT):
+Post: "شقة فارغة للايجار في دير غبارمكونه من ٣ نوم صالةمطبخ٢ حمام0795634384"
+Output: {{"title": "شقة فارغة للإيجار في دير غبار", "price": 0.0, "location": "عمان, دير غبار", "phone_number": "0795634384", "category_name": "شقق للإيجار", "rejection_reason": "", "suggested_tags": ["شقة فارغة", "دير غبار", "إيجار"], "attributes": {{"rooms": 3, "bathrooms": 2, "furnished": "فارغة"}}}}
+
+Now, process the following post. Respond ONLY with a JSON object.
+
+Extract:
+- title: (string) generate a concise, professional arabic title (Empty if category_id is 0)
+- price: (float) numeric price (0.0 if missing)
+- location: (string) Extract the exact city and region found in the post. Format as "City, Region" (e.g. "عمان, عبدون") if known, otherwise just output the region name.
+- phone_number: (string or null) Look closely for 10-digit numbers.
+- category_name: (string) Extract the exact real estate category (e.g. 'شقق للبيع', 'أراضي للإيجار', 'ستوديوهات'). Use empty string if author is SEEKING or if not offering real estate.
+- rejection_reason: (string) If not offering real estate, provide exact reason why here.
+- suggested_tags: (list[string]) 2-4 important keywords mentioned.
+- attributes: (object) Extract basic properties into this object. Also CRITICALLY, create a nested "dynamic_data" object containing these EXACT keys if mentioned:
+  - "dynamic_data": {{ 
+      "area": (int), "bedrooms": (string), "bathrooms": (string), "furnishing": (string), "rent_duration": (string), "floor": (string), "age": (string), "main_features": (list[string]), "extra_features": (list[string]), "nearby": (list[string]), "facade": (string), "target_tenants": (list[string]), "property_restrictions": (list[string]), "building_fees_status": (list[string]), "water_supply": (list[string]), "cooling_features": (list[string]), "heating_features": (list[string]), "security_deposit_type": (string)
+  }}
+
+POST:
+{post_text}
+
+---
+CRITICAL INSTRUCTION: Output ONLY valid JSON matching the exact schema requested. Do NOT output conversational text, explanations, or markdown like ```json. Start your response with {{ and end with }}.
+"""
+
 
 def _build_posts_block(posts: List[FbPost]) -> str:
     lines = []
@@ -110,28 +151,6 @@ def _build_posts_block(posts: List[FbPost]) -> str:
         lines.append(f"Images: {len(p.images) if p.images else 0}")
         lines.append("")
     return "\n".join(lines)
-
-
-def _build_categories_block(db: Session) -> str:
-    # Instead of dynamically querying 50+ categories with linked_tags every single chunk, 
-    # we provide a massive token-saving hardcoded macro block. 
-    # This prevents the prompt from inflating to thousands of redundant tokens per chunk!
-    return """
-ID: 301 | شقق للإيجار (Apartments Rent)
-ID: 302 | ستوديوهات للإيجار (Studios Rent)
-ID: 3101 | فلل وقصور (Villas Rent)
-ID: 3102 | بيوت مستقلة (Houses Rent)
-ID: 10301 | شقق للبيع (Apartments Sale)
-ID: 10302 | ستوديوهات للبيع (Studios Sale)
-ID: 10101 | فلل وقصور للبيع (Villas Sale)
-ID: 10102 | بيوت مستقلة للبيع (Houses Sale)
-ID: 10313 | أراضي للبيع أو الإيجار (Lands)
-
-* RULE: If it doesn't fit the above but is a rental property, fallback to ID: 3 (General Rent).
-* RULE: If it doesn't fit but is a property for sale, fallback to ID: 2 (General Sale).
-* RULE: If they are SEEKING an apartment, use ID: 0 (Reject).
-"""
-
 
 import threading
 import time
@@ -167,7 +186,7 @@ def _check_and_update_gemini_daily_limit() -> bool:
         return True # Fail open safely if disk write fails
 
 
-def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
+def _ai_process_chunk(chunk_posts: List[FbPost]) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
     api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
@@ -210,7 +229,53 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             logger.error(f"JSON Parsing failed: {e}. Raw received: {raw[:200]}...")
             return []
 
-    # 1. Try Gemini Exclusively (Infinite Retry with increasing backoff)
+    # 1. Try Local Gemma if enabled
+    use_local_gemma = os.getenv("USE_LOCAL_GEMMA", "false").lower() == "true"
+    if use_local_gemma:
+        from openai import OpenAI
+        
+        gemma_base_url = os.getenv("GEMMA_BASE_URL", "http://localhost:11434/v1")
+        gemma_api_key = os.getenv("GEMMA_API_KEY", "ollama") # Default for ollama
+        gemma_model_name = os.getenv("GEMMA_MODEL_NAME", "gemma-classifieds")
+        
+        client = OpenAI(base_url=gemma_base_url, api_key=gemma_api_key)
+        
+        all_parsed = []
+        for post in chunk_posts:
+            single_prompt = _GEMMA_SINGLE_PROMPT.format(
+                post_text=post.text
+            )
+            
+            post_parsed = {"ai_chunk_error": "Gemma failed"}
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"Trying Local Gemma (Attempt {attempt+1}/{max_retries})...")
+                    response = client.chat.completions.create(
+                        model=gemma_model_name,
+                        messages=[{"role": "user", "content": single_prompt}],
+                        response_format={"type": "json_object"},
+                        temperature=0.1
+                    )
+                    
+                    raw = response.choices[0].message.content
+                    parsed_list = _parse_json_result(raw.strip())
+                    if parsed_list and len(parsed_list) > 0:
+                        post_parsed = parsed_list[0]
+                        post_parsed["ai_model"] = gemma_model_name
+                        post_parsed["raw_unparsed_chunk_layer"] = raw.strip()
+                        break # success, exit retry loop
+                        
+                except Exception as e:
+                    logger.warning(f"Local Gemma failed for post (Attempt {attempt+1}/{max_retries}): {e}")
+                    post_parsed["ai_chunk_error"] = str(e)
+                    time.sleep(1)
+                    
+            all_parsed.append(post_parsed)
+            
+        return all_parsed
+
+    # 2. Try Gemini Exclusively (Infinite Retry with increasing backoff)
     if not api_key_gemini:
         raise RuntimeError("No Gemini API key provided. Fallbacks are disabled by user request.")
 
@@ -238,7 +303,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 time.sleep(sleep_time)
 
             logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key_gemini}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={api_key_gemini}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
@@ -256,7 +321,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
                 if isinstance(item, dict): 
-                    item["ai_model"] = "gemini-2.5-flash"
+                    item["ai_model"] = "gemini-3.1-flash-lite-preview"
                     item["raw_unparsed_chunk_layer"] = raw.strip()
             return parsed
 
@@ -288,7 +353,7 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     def process_single_chunk(chunk):
         try:
             logger.info(f"Sending chunk of {len(chunk)} posts to AI...")
-            res = _ai_process_chunk(chunk, categories_block)
+            res = _ai_process_chunk(chunk)
             if len(res) < len(chunk):
                 # If AI returned fewer results, pad with an explicit error to avoid silent blanks
                 res.extend([{"ai_chunk_error": "AI returned fewer items than requested (possible truncation)"}] * (len(chunk) - len(res)))
@@ -389,25 +454,25 @@ def _is_duplicate(db: Session, source_url: str, raw_description: str) -> Optiona
             ad = db.query(models.Ad).filter(models.Ad.source_url.like(f"%story_fbid={post_id}%")).first()
             if ad: return ad.id
 
-    if raw_description and len(raw_description) > 30:
-        # 3. Match by the first 250 characters of the description. 
-        # If the text is long enough, use LIKE to catch slight variations. 
-        # If it's short, use EXACT match to prevent false positives!
-        short_desc = raw_description[:250]
-        if len(short_desc) > 80:
-            safe_desc = short_desc.replace('%', '\\%').replace('_', '\\_')
-            ad = db.query(models.Ad).filter(models.Ad.raw_description.like(f"{safe_desc}%")).first()
-            if ad: return ad.id
-        else:
-            ad = db.query(models.Ad).filter(models.Ad.raw_description == raw_description).first()
-            if ad: return ad.id
+    return None
             
     return None
-
-
 def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, default_location):
-    # Ensure Gemini's dynamic assignment takes priority over wildcard fb_request mapping
-    final_category_id = ai_data.get("category_id") or fb_request_category_id or 3
+    # Dynamically extract Category from AI category_name strings
+    categories_map = get_category_map()
+    ai_cat_name = ai_data.get("category_name", "")
+    mapped_cat_id = 0
+    if ai_cat_name:
+        mapped_cat_id = map_category(ai_cat_name, categories_map)
+        
+    final_category_id = mapped_cat_id or ai_data.get("category_id") or fb_request_category_id or 3
+    if ai_data.get("rejection_reason"):
+        final_category_id = 0 # Enforce rejected 
+    
+    # Map explicit Region Locs
+    location_map = get_location_map()
+    ai_loc_str = ai_data.get("location", "")
+    mapped_location = map_location(ai_loc_str, location_map) or default_location or ""
 
     # Generate smarter fallback title if AI extraction failed
     ad_title = ai_data.get("title")
@@ -456,7 +521,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         title=ad_title,
         description=ai_data.get("description") or post.text or "",
         price=final_price,
-        location=ai_data.get("location") or default_location or "",
+        location=mapped_location,
         image_url=json.dumps(post.images) if post.images and len(post.images) > 0 else None,
         category_id=final_category_id,
         source_type=SourceType.SCRAPER_BOT,
@@ -464,6 +529,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         raw_description=(post.text or "")[:8000] if post.text else None,
         attributes={
             **ai_attrs, # Spread AI extracted attributes safely
+            "dynamic_data": ai_attrs.get("dynamic_data", {}), # Ensure it explicitly exists
             "author": post.author,
             "timestamp": post.timestamp,
             "reactions": post.reactions,
@@ -504,18 +570,21 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     db.commit()
     db.refresh(ad)
     
-    # Store explicit Real Estate Details for Flutter UI exposure
+    # Extract dynamic properties for normalized Real Estate Details table
+    dyn = ai_attrs.get("dynamic_data", {})
     try:
         re_detail = models.AdRealEstateDetail(
             ad_id=ad.id,
-            bathrooms=ai_attrs.get("bathrooms"),
-            furnished=str(ai_attrs.get("furnished")) if ai_attrs.get("furnished") is not None else None,
-            build_area=ai_attrs.get("area") or ai_attrs.get("build_area"),
-            floor=str(ai_attrs.get("floor")) if ai_attrs.get("floor") is not None else None,
-            rent_duration=str(ai_attrs.get("rent_duration")) if ai_attrs.get("rent_duration") is not None else None,
-            key_features=ai_attrs.get("key_features", []),
-            additional_features=ai_attrs.get("building_features", []) + ai_attrs.get("target_audience", []),
-            nearby_locations=[]
+            bathrooms=int(dyn.get("bathrooms", 0)) if str(dyn.get("bathrooms", "")).isdigit() else ai_attrs.get("bathrooms"),
+            furnished=str(dyn.get("furnishing")) if dyn.get("furnishing") else str(ai_attrs.get("furnished", "")),
+            build_area=dyn.get("area") or ai_attrs.get("area"),
+            floor=str(dyn.get("floor")) if dyn.get("floor") else str(ai_attrs.get("floor", "")),
+            rent_duration=str(dyn.get("rent_duration")) if dyn.get("rent_duration") else str(ai_attrs.get("rent_duration", "")),
+            view_orientation=str(dyn.get("facade")) if dyn.get("facade") else None,
+            building_age=str(dyn.get("age")) if dyn.get("age") else None,
+            key_features=dyn.get("main_features", []) + ai_attrs.get("key_features", []),
+            additional_features=dyn.get("extra_features", []) + dyn.get("target_tenants", []) + dyn.get("property_restrictions", []),
+            nearby_locations=dyn.get("nearby", [])
         )
         db.add(re_detail)
         db.commit()
@@ -613,13 +682,8 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                     unique_key_url = f"story_{match2.group(1)}"
         
         unique_key_text = None
-        if post.text and len(post.text) > 30:
-            unique_key_text = f"text_{post.text[:250]}"
-
         is_intra_dup = False
         if unique_key_url and unique_key_url in seen_in_batch_urls:
-            is_intra_dup = True
-        if unique_key_text and unique_key_text in seen_in_batch_texts:
             is_intra_dup = True
             
         if is_intra_dup:
@@ -628,7 +692,6 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             continue
             
         if unique_key_url: seen_in_batch_urls.add(unique_key_url)
-        if unique_key_text: seen_in_batch_texts.add(unique_key_text)
 
         raw_text = post.text or ""
         clean_text = re.sub(r'[\s-]', '', raw_text)
