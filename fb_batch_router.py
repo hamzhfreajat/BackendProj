@@ -303,7 +303,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost]) -> List[dict]:
                 time.sleep(sleep_time)
 
             logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={api_key_gemini}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
@@ -321,7 +321,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost]) -> List[dict]:
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
                 if isinstance(item, dict): 
-                    item["ai_model"] = "gemini-2.5-flash-lite"
+                    item["ai_model"] = "gemini-1.5-flash-8b"
                     item["raw_unparsed_chunk_layer"] = raw.strip()
             return parsed
 
@@ -346,8 +346,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = _build_categories_block(db)
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size optimized (15) to reduce overall API calls to Gemini (prevents 429s)
-    CHUNK_SIZE = 15
+    # Keep chunk size optimized (30) to reduce overall API token costs dramatically by dividing the system prompt weight.
+    CHUNK_SIZE = 30
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
