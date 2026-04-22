@@ -89,8 +89,12 @@ For EACH post, extract:
 - category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, or if the post is NOT offering real estate).
 - rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture')
 - suggested_tags: (list[string]) 2-4 important keywords mentioned.
-- attributes: (object) Extract the following ONLY if explicitly mentioned:
-  area (int), rooms (int), bathrooms (int), furnished (string), floor (string), rent_duration (string), key_features (list[string]), building_features (list[string]), target_audience (list[string]).
+- attributes: (object) Extract basic properties into this object. Also CRITICALLY, create a nested "dynamic_data" object containing these EXACT keys if mentioned:
+  {
+      "dynamic_data": { 
+          "area": (int), "bedrooms": (string), "bathrooms": (string), "furnishing": (string), "rent_duration": (string), "floor": (string), "age": (string), "main_features": (list[string]), "extra_features": (list[string]), "nearby": (list[string]), "facade": (string), "target_tenants": (list[string]), "property_restrictions": (list[string]), "building_fees_status": (list[string]), "water_supply": (list[string]), "cooling_features": (list[string]), "heating_features": (list[string]), "security_deposit_type": (string)
+      }
+  }
 
 NOTE: Short-term, daily, and weekly furnished rentals perfectly valid! DO NOT reject them.
 
@@ -346,8 +350,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = _build_categories_block(db)
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size optimized (30) to reduce overall API token costs dramatically by dividing the system prompt weight.
-    CHUNK_SIZE = 30
+    # Keep chunk size explicitly huge (50) to divide the heavy System Prompt token cost to absolute zero per post.
+    CHUNK_SIZE = 50
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
