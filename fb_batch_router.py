@@ -81,10 +81,13 @@ _GEMINI_BATCH_PROMPT = """Extract real-estate data. Output ONLY a JSON array.
 For EACH post extract:
 - i: (int) index
 - p: (float) price (0.0 if missing)
-- l: (str) 'City, Neighborhood' (e.g., 'عمان, طبربور', 'اربد, الحي الشرقي'). MUST include neighborhood if mentioned!
+- l: (str) 'City, Neighborhood' Pick EXACTLY from these allowed locations:
+{locations_block}
 - ph: (str/null) phone
 - tt: (str) highly professional and formal real-estate title (max 6 words, e.g. 'شقة فاخرة للبيع في عبدون')
-- c: (str) EXACTLY ONE of: [{categories_block}]. Empty if SEEKING/wanted.
+- c: (str) EXACTLY ONE category NAME from:
+{categories_block}
+(Empty if SEEKING/wanted).
 - t: (list[str]) 1-2 keywords
 - d: (object) EXACT keys:
   {{"a":(int) area, "bd":(str) bedrooms, "bt":(str) bathrooms, "f":(str) furnishing, "rd":(str) rent_duration, "fl":(str) floor, "ag":(str) age, "mf":[(str)] main_features}}
@@ -177,7 +180,7 @@ def _check_and_update_gemini_daily_limit() -> bool:
         return True # Fail open safely if disk write fails
 
 
-def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
+def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, locations_block: str) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
     api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
@@ -188,6 +191,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
     prompt = _GEMINI_BATCH_PROMPT.format(
         categories_block=categories_block,
+        locations_block=locations_block,
         posts_block=_build_posts_block(chunk_posts)
     )
 
@@ -391,8 +395,10 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
 def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     """Process all posts in chunks to avoid token limits, running concurrently."""
-    # Use a vastly abridged category list for the AI to pick from (saves thousands of tokens while preserving accuracy)
-    categories_block = "'شقق للبيع', 'ستوديوهات للبيع', 'فلل وقصور', 'بيوت مستقلة للبيع', 'شقق للإيجار', 'ستوديوهات للإيجار', 'بيوت مستقلة للإيجار', 'ملحق / روف', 'أراضي', 'مزارع', 'شاليهات / منتجعات', 'مكاتب للإيجار', 'محلات ومعارض للإيجار', 'مخازن ومستودعات', 'سكن مشترك', 'سكن طلاب', 'سكن طالبات'"
+    from extraction_constants import REAL_ESTATE_CATEGORIES, LOCATIONS
+    # Use full database schema lists to force AI to match app filters perfectly
+    categories_block = REAL_ESTATE_CATEGORIES
+    locations_block = LOCATIONS
     
     # Send ALL non-duplicate posts to AI safely in chunks
     # Keep chunk size explicitly to 20 to heavily reduce request count and overhead tokens.
@@ -402,7 +408,7 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     def process_single_chunk(chunk):
         try:
             logger.info(f"Sending chunk of {len(chunk)} posts to AI...")
-            res = _ai_process_chunk(chunk, categories_block)
+            res = _ai_process_chunk(chunk, categories_block, locations_block)
             if len(res) < len(chunk):
                 # If AI returned fewer results, pad with an explicit error to avoid silent blanks
                 res.extend([{"ai_chunk_error": "AI returned fewer items than requested (possible truncation)"}] * (len(chunk) - len(res)))
