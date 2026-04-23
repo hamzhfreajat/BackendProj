@@ -83,6 +83,7 @@ For EACH post extract:
 - p: (float) price (0.0 if missing)
 - l: (str) 'City, Neighborhood' (e.g., 'عمان, طبربور', 'اربد, الحي الشرقي'). MUST include neighborhood if mentioned!
 - ph: (str/null) phone
+- tt: (str) short catchy title (max 5 words)
 - c: (str) EXACTLY ONE of: [{categories_block}]. Empty if SEEKING/wanted.
 - t: (list[str]) 1-2 keywords
 - d: (object) EXACT keys:
@@ -242,6 +243,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     expanded_parsed.append({
                         "index": item.get("i"),
                         "price": item.get("p", 0.0),
+                        "title": item.get("tt", ""),
                         "location": item.get("l", ""),
                         "phone_number": item.get("ph"),
                         "category_name": c_val,
