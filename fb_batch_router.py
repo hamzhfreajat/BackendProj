@@ -81,7 +81,7 @@ _GEMINI_BATCH_PROMPT = """Extract real-estate data. Output ONLY a JSON array.
 For EACH post extract:
 - i: (int) index
 - p: (float) price (0.0 if missing)
-- l: (str) 'City, Region' (Rule: Numbered zones belong to العقبة)
+- l: (str) 'City, Neighborhood' (e.g., 'عمان, طبربور', 'اربد, الحي الشرقي'). MUST include neighborhood if mentioned!
 - ph: (str/null) phone
 - c: (str) EXACTLY ONE of: [{categories_block}]. Empty if SEEKING/wanted.
 - t: (list[str]) 1-2 keywords
