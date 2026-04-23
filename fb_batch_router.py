@@ -28,11 +28,9 @@ from dotenv import load_dotenv
 _this_dir = pathlib.Path(__file__).resolve().parent
 load_dotenv(_this_dir / ".env", override=True)
 
-# Fallback: hardcode the key if env var is still missing
-_FALLBACK_KEY = "AIzaSyAL6lRd1L-T7P7XhB158xZGWoQgtsKQGa8"
+# Fetch keys directly from environment variables. Do not hardcode them.
 if not os.getenv("GOOGLE_API_KEY"):
-    os.environ["GOOGLE_API_KEY"] = _FALLBACK_KEY
-
+    logger.warning("GOOGLE_API_KEY is missing from environment. AI processing might fail.")
 # Project imports
 from database import get_db
 import models
