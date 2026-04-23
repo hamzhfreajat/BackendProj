@@ -77,21 +77,64 @@ class FbBatchResponse(BaseModel):
 
 # -- Gemini: ONE call for ALL posts ------------------------------------------
 
-_GEMINI_BATCH_PROMPT = """Extract real-estate data. Output ONLY a JSON array.
-For EACH post extract:
-- i: (int) index
-- p: (float) price (0.0 if missing)
-- l: (str) 'City, Neighborhood' (e.g., 'عمان, طبربور', 'اربد, الحي الشرقي'). MUST include neighborhood if mentioned!
-- ph: (str/null) phone
-- tt: (str) Create a highly professional, premium Arabic real-estate title. Do NOT blindly copy text. (max 8 words, e.g. 'شقة فاخرة ومميزة للبيع في طبربور')
-- c: (str) EXACTLY ONE category NAME from:
-{categories_block}
-(Empty if SEEKING/wanted).
-- t: (list[str]) 1-2 keywords
-- d: (object) EXACT keys:
-  {{"a":(int) area, "bd":(str) bedrooms, "bt":(str) bathrooms, "f":(str) furnishing, "rd":(str) rent_duration, "fl":(str) floor, "ag":(str) age, "mf":[(str)] main_features}}
+_GEMINI_BATCH_PROMPT = """You are an AI assistant that extracts structured classified-ad data from Facebook posts.
 
-POSTS:
+Below is a numbered list of Facebook posts representing real classified ads (usually referencing locations in Jordan).
+For EACH post, extract the following fields:
+- index        (int) -- the post number as given
+- title        (string, max 120 chars) -- a concise, clear ad title
+- description  (string) -- rewrite and regenerate the description from scratch using the best SEO optimization language and highly engaging Arabic phrasing. Do NOT copy the original text directly. Make it sound like a premium, professional classified ad.
+- price        (float) -- Extract the exact numeric price. Support eastern arabic numbers (e.g. ٥٠ دينار is 50.0). Look carefully for implicit rent/sale numbers. Return 0.0 ONLY if strictly missing. Do not return strings!
+- location     (string) -- The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. إربد, لواء بني كنانة, عقربا, حوض البلد). Keep empty if not found.
+- phone_number (string or null) -- phone number if mentioned
+- category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a property or room.
+- suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
+- attributes (object) -- Extract these specific property/shared-room features if mentioned:
+    - rooms (int) -- Number of rooms
+    - bathrooms (int) -- Number of bathrooms
+    - furnished (string) -- Match exactly: مفروشة, غير مفروشة, مفروش جزئياً
+    - floor (string) -- Match exactly: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, 1, 2, 3, 4, 5, 6, 7
+    - key_features (list[string]) -- Match exactly if possible: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج
+    - room_type (string) -- غرفة خاصة, غرفة مشتركة, سرير في غرفة, استوديو ملحق بالسكن
+    - target_audience (list[string]) -- شباب, طلاب, بنات, عائلات
+    - room_capacity (string) -- شخص واحد, شخصين
+    - current_occupants (int) -- Number of people currently in apartment
+    - rent_duration (string) -- Match exactly: يومي, أسبوعي, شهري, كل 3 أشهر, كل أربع أشهر, كل 5 أشهر, كل 6 أشهر, سنوي
+    - rent_includes (list[string]) -- الكهرباء, الماء, الإنترنت, التدفئة
+    - payment_frequency (string) -- دفع شهري, دفع كل 3 شهور
+    - insurance_required (bool)
+    - bathroom_type (string) -- حمام ماستر, حمام مشترك
+    - room_contents (list[string]) -- سرير مفرد, خزانة, شاشة
+    - room_features (list[string]) -- مكيف مستقل, رديتر, بلكونة
+    - shared_spaces (list[string]) -- صالة جلوس واسعة, طاولة طعام
+    - kitchen_appliances (list[string]) -- ثلاجة, مايكرويف, غسالة
+    - laundry_appliances (list[string]) -- غسالة, نشافة
+    - smoking_rules (string) -- التدخين مسموح, يمنع التدخين
+    - quietness_rules (string) -- سكن هادئ جداً, سكن مرن
+    - guests_rules (string) -- مسموح بالزوار, يمنع الزوار
+    - pets_rules (string) -- مسموح, يمنع
+    - cleaning_rules (string)
+    - building_age (string) -- Match exactly: 0 - 11 شهر, 1 - 5 سنوات, 6 - 9 سنوات, 10 - 19 سنوات, +20 سنة
+    - building_features (list[string]) -- Match exactly if possible: يوجد مصعد, حديقة, موقف سيارات, حارس / أمن وحماية, كراج تفك, منطقة شواء, نظام كهرباء احتياطي للطوارئ, بركة سباحة, انتركم
+    - land_type (string) -- Match exactly: سكنية, تجارية, زراعية, صناعية, استثمارية, سياحية, مختلطة, أخرى
+    - zoning_classification (string) -- Match exactly: سكن أ, سكن ب, سكن ج, سكن د, تجاري, زراعي, صناعي, أخرى
+    - facade (string) -- Match exactly: شمالية, جنوبية, شرقية, غربية, شمالية شرقية, شمالية غربية, جنوبية شرقية, جنوبية غربية
+    - geometric_shape (string) -- Match exactly: مستطيل, مربع, غير منتظم, زاوية / شارعَين
+    - topography (string) -- Match exactly: مستوية, منحدرة, جبلية, واد
+    - available_services (list[string]) -- Match exactly: ماء, كهرباء, صرف صحي, إنترنت, شوارع معبدة
+    - ownership_type (string) -- Match exactly: ملك, تفويض, أخرى
+    - is_mortgaged (string) -- Match exactly: نعم, لا
+    - installment_possible (string) -- Match exactly: نعم, لا
+    - nearby_places (list[string]) -- جامعة, سوبر ماركت, قريبة من الباص
+
+Return a JSON ARRAY where each element corresponds to one post.
+Respond ONLY with valid JSON. No explanation, no markdown fences, no extra text.
+
+=== CATEGORIES LIST ===
+{categories_block}
+=======================
+
+=== POSTS ===
 {posts_block}
 """
 
@@ -221,38 +264,27 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             if isinstance(parsed, list):
                 for item in parsed:
                     if not isinstance(item, dict): continue
-                    if "category_name" in item:
-                        # Model ignored single-letter keys, use as is
-                        expanded_parsed.append(item)
-                        continue
 
-                    c_val = item.get("c", "")
-                    if c_val is None:
-                        c_val = ""
-                    dyn = item.get("d", {})
-                    if not isinstance(dyn, dict): dyn = {}
-                    
-                    expanded_dyn = {}
-                    if dyn.get("a") is not None: expanded_dyn["area"] = dyn["a"]
-                    if dyn.get("bd") is not None: expanded_dyn["bedrooms"] = dyn["bd"]
-                    if dyn.get("bt") is not None: expanded_dyn["bathrooms"] = dyn["bt"]
-                    if dyn.get("f") is not None: expanded_dyn["furnishing"] = dyn["f"]
-                    if dyn.get("rd") is not None: expanded_dyn["rent_duration"] = dyn["rd"]
-                    if dyn.get("fl") is not None: expanded_dyn["floor"] = dyn["fl"]
-                    if dyn.get("ag") is not None: expanded_dyn["age"] = dyn["ag"]
-                    if dyn.get("mf") is not None: expanded_dyn["main_features"] = dyn["mf"]
+                    cat_id = item.get("category_id")
+                    rej_reason = ""
+                    if cat_id == 0:
+                        rej_reason = "Seeking property, explicitly rejected by AI rule"
+
+                    raw_attrs = item.get("attributes", {})
+                    if not isinstance(raw_attrs, dict): raw_attrs = {}
 
                     expanded_parsed.append({
-                        "index": item.get("i"),
-                        "price": item.get("p", 0.0),
-                        "title": item.get("tt", ""),
-                        "location": item.get("l", ""),
-                        "phone_number": item.get("ph"),
-                        "category_name": c_val,
-                        "suggested_tags": item.get("t") or [],
-                        "rejection_reason": "Not property" if not c_val else "",
+                        "index": item.get("index") or item.get("i"),
+                        "price": item.get("price") or item.get("p", 0.0),
+                        "title": item.get("title") or item.get("tt", ""),
+                        "description": item.get("description", ""),
+                        "location": item.get("location") or item.get("l", ""),
+                        "phone_number": item.get("phone_number") or item.get("ph"),
+                        "category_id": cat_id,
+                        "suggested_tags": item.get("suggested_tags") or item.get("t", []),
+                        "rejection_reason": rej_reason,
                         "attributes": {
-                            "dynamic_data": expanded_dyn
+                            "dynamic_data": raw_attrs
                         }
                     })
                 parsed = expanded_parsed
@@ -393,8 +425,9 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
 def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     """Process all posts in chunks to avoid token limits, running concurrently."""
-    # Use a vastly abridged category list for the AI to pick from (saves thousands of tokens while preserving accuracy)
-    categories_block = "'شقق للبيع', 'ستوديوهات للبيع', 'فلل وقصور', 'بيوت مستقلة للبيع', 'شقق للإيجار', 'ستوديوهات للإيجار', 'بيوت مستقلة للإيجار', 'ملحق / روف', 'أراضي', 'مزارع', 'شاليهات / منتجعات', 'مكاتب للإيجار', 'محلات ومعارض للإيجار', 'مخازن ومستودعات', 'سكن مشترك', 'سكن طلاب', 'سكن طالبات'"
+    from extraction_constants import REAL_ESTATE_CATEGORIES
+    # Supply exactly the categories list the user's prompt needs (includes mapping IDs)
+    categories_block = REAL_ESTATE_CATEGORIES
     
     # Send ALL non-duplicate posts to AI safely in chunks
     # Keep chunk size explicitly to 20 to heavily reduce request count and overhead tokens.
