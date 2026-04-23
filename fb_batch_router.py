@@ -82,8 +82,13 @@ _GEMINI_BATCH_PROMPT = """You are an AI assistant that extracts structured class
 Below is a numbered list of Facebook posts representing real classified ads (usually referencing locations in Jordan).
 For EACH post, extract the following fields:
 - index        (int) -- the post number as given
-- title        (string, max 120 chars) -- a concise, clear ad title
-- description  (string) -- rewrite and regenerate the description from scratch using the best SEO optimization language and highly engaging Arabic phrasing. Do NOT copy the original text directly. Make it sound like a premium, professional classified ad.
+- title        (string, max 120 chars) -- Create a highly attractive, professional Arabic ad title. Use powerful keywords (e.g. "شقة فاخرة", "فرصة استثمارية"). Use exactly ONE relevant emoji (like 🌟, 🏠, or 🔥) at the beginning of the title.
+- description  (string) -- You MUST completely rewrite the description into a highly structured, luxurious, and professional Arabic real estate ad. 
+CRITICAL DESCRIPTION RULES:
+1. Start with an engaging, enthusiastic opening hook using emojis (e.g. ✨ فرصة لا تعوض للسكن الراقي...).
+2. Reorganize all property details into clear, bulleted sections using emojis (like 📍 الموقع, 📏 المساحة, 🛏️ التفاصيل الداخلية, 🌟 المميزات).
+3. End with a strong Call-To-Action (CTA) encouraging the reader to contact quickly (e.g. 📞 بادر بالاتصال الآن!).
+4. Ensure the language used is premium, SEO-optimized, and sounds like an elite real estate agency. Do NOT just copy the source text!
 - price        (float) -- Extract the exact numeric price. Support eastern arabic numbers (e.g. ٥٠ دينار is 50.0). Look carefully for implicit rent/sale numbers. Return 0.0 ONLY if strictly missing. Do not return strings!
 - location     (string) -- The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. إربد, لواء بني كنانة, عقربا, حوض البلد). Keep empty if not found.
 - phone_number (string or null) -- phone number if mentioned
