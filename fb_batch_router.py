@@ -305,53 +305,69 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
             
         return all_parsed
 
-    # 2. Try Gemini Exclusively (Infinite Retry with increasing backoff)
-    if not api_key_gemini:
-        raise RuntimeError("No Gemini API key provided. Fallbacks are disabled by user request.")
+    # 2. Try DeepSeek (if DEEPSEEK_API_KEY is provided), else try Gemini
+    api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key_gemini and not api_key_deepseek:
+        raise RuntimeError("No AI API keys provided (Gemini or DeepSeek).")
 
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            global _LAST_GEMINI_CALL
-            sleep_time = 0.0
-            with _GEMINI_LOCK:
-                if not _check_and_update_gemini_daily_limit():
-                    logger.warning("Gemini Daily Limit (999) Reached! Failing.")
-                    raise RuntimeError("Gemini Daily Limit Reached")
-
-                # Ensure 5.0 sec gap between requests (max 12 RPM)
-                now = time.time()
-                elapsed = now - _LAST_GEMINI_CALL
-                if elapsed < 5.0:
-                    sleep_time = 5.0 - elapsed
-                    _LAST_GEMINI_CALL = now + sleep_time
-                else:
-                    _LAST_GEMINI_CALL = now
-
-            if sleep_time > 0:
-                logger.info(f"Rate limiting Gemini: Sleeping {sleep_time:.2f}s outside lock to respect RPM limit")
-                time.sleep(sleep_time)
-
-            logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "responseMimeType": "application/json",
-                    "maxOutputTokens": 8192
+            if api_key_deepseek:
+                logger.info(f"Trying DeepSeek AI (Attempt {attempt+1}/{max_retries})...")
+                url = "https://api.deepseek.com/chat/completions"
+                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key_deepseek}"}
+                payload = {
+                    "model": "deepseek-chat",
+                    "messages": [{"role": "system", "content": prompt}]
                 }
-            }
-            
-            res = requests.post(url, json=payload, headers=headers, timeout=60)
-            res.raise_for_status()
+                res = requests.post(url, json=payload, headers=headers, timeout=90)
+                res.raise_for_status()
+                data = res.json()
+                raw = data["choices"][0]["message"]["content"]
+                ai_model_used = "deepseek-chat"
+            else:
+                global _LAST_GEMINI_CALL
+                sleep_time = 0.0
+                with _GEMINI_LOCK:
+                    if not _check_and_update_gemini_daily_limit():
+                        logger.warning("Gemini Daily Limit (999) Reached! Failing.")
+                        raise RuntimeError("Gemini Daily Limit Reached")
 
-            data = res.json()
-            raw = data["candidates"][0]["content"]["parts"][0]["text"]
+                    # Ensure 5.0 sec gap between requests (max 12 RPM)
+                    now = time.time()
+                    elapsed = now - _LAST_GEMINI_CALL
+                    if elapsed < 5.0:
+                        sleep_time = 5.0 - elapsed
+                        _LAST_GEMINI_CALL = now + sleep_time
+                    else:
+                        _LAST_GEMINI_CALL = now
+
+                if sleep_time > 0:
+                    logger.info(f"Rate limiting Gemini: Sleeping {sleep_time:.2f}s outside lock to respect RPM limit")
+                    time.sleep(sleep_time)
+
+                logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
+                headers = {"Content-Type": "application/json"}
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "maxOutputTokens": 8192
+                    }
+                }
+                
+                res = requests.post(url, json=payload, headers=headers, timeout=60)
+                res.raise_for_status()
+                data = res.json()
+                raw = data["candidates"][0]["content"]["parts"][0]["text"]
+                ai_model_used = "gemini-2.5-flash-lite"
+
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
                 if isinstance(item, dict): 
-                    item["ai_model"] = "gemini-2.5-flash-lite"
+                    item["ai_model"] = ai_model_used
                     item["raw_unparsed_chunk_layer"] = raw.strip()
             return parsed
 
@@ -377,8 +393,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = "'شقق للبيع', 'ستوديوهات للبيع', 'فلل وقصور', 'بيوت مستقلة للبيع', 'شقق للإيجار', 'ستوديوهات للإيجار', 'بيوت مستقلة للإيجار', 'ملحق / روف', 'أراضي', 'مزارع', 'شاليهات / منتجعات', 'مكاتب للإيجار', 'محلات ومعارض للإيجار', 'مخازن ومستودعات', 'سكن مشترك', 'سكن طلاب', 'سكن طالبات'"
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size explicitly to 10 to prevent Gemini maxOutputTokens (8192) truncation for heavy Arabic JSON arrays.
-    CHUNK_SIZE = 10
+    # Keep chunk size explicitly to 20 to heavily reduce request count and overhead tokens.
+    CHUNK_SIZE = 20
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
