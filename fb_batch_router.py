@@ -348,7 +348,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
 def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     """Process all posts in chunks to avoid token limits, running concurrently."""
-    categories_block = _build_categories_block(db)
+    categories_block = REAL_ESTATE_CATEGORIES
     
     # Send ALL non-duplicate posts to AI safely in chunks
     # Keep chunk size explicitly huge (50) to divide the heavy System Prompt token cost to absolute zero per post.
@@ -720,7 +720,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         logger.info(f"AI returned {len(ai_results)} results")
     except Exception as e:
         logger.error(f"AI failed: {e}. Falling back to default data.")
-        ai_results = [{}] * len(posts_to_process)
+        ai_results = [{"ai_chunk_error": f"SYSTEM_ERROR: {str(e)}"}] * len(posts_to_process)
 
     # Step 3: Save each AI result to the database
     for j, post in enumerate(posts_to_process):
