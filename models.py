@@ -218,7 +218,7 @@ class Ad(Base):
 
     owner = relationship("User", back_populates="ads")
     category = relationship("Category", back_populates="ads")
-    real_estate_detail = relationship("AdRealEstateDetail", back_populates="ad", uselist=False)
+    real_estate_detail = relationship("AdRealEstateDetail", back_populates="ad", uselist=False, cascade="all, delete-orphan")
     linked_tags = relationship("Tag", secondary=ad_tags, back_populates="ads")
     viewed_by_users = relationship("User", secondary=user_viewed_ads, back_populates="viewed_ads")
 
