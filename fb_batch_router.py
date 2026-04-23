@@ -29,7 +29,7 @@ _this_dir = pathlib.Path(__file__).resolve().parent
 load_dotenv(_this_dir / ".env", override=True)
 
 # Fallback: hardcode the key if env var is still missing
-_FALLBACK_KEY = "AIzaSyDtwk07CKyqD6dnxcwBhRgf_2GbP8HHmBo"
+_FALLBACK_KEY = "AIzaSyAL6lRd1L-T7P7XhB158xZGWoQgtsKQGa8"
 if not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = _FALLBACK_KEY
 
@@ -351,8 +351,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = REAL_ESTATE_CATEGORIES
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size explicitly huge (50) to divide the heavy System Prompt token cost to absolute zero per post.
-    CHUNK_SIZE = 50
+    # Keep chunk size explicitly to 20 to prevent Gemini maxOutputTokens (8192) truncation for heavy Arabic JSON arrays.
+    CHUNK_SIZE = 20
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
