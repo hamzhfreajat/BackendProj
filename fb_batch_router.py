@@ -603,19 +603,47 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     
     # Extract dynamic properties for normalized Real Estate Details table
     dyn = ai_attrs.get("dynamic_data", {})
+    if not isinstance(dyn, dict): dyn = {}
+    
+    # Safely extract area as integer
+    raw_area = dyn.get("area") or ai_attrs.get("area")
+    build_area_val = None
+    if raw_area is not None:
+        area_str = str(raw_area)
+        # Extract just the digits
+        digits = ''.join([c for c in area_str if c.isdigit()])
+        if digits:
+            build_area_val = int(digits)
+
+    # Safely concatenate feature arrays ensuring no NoneType errors
+    mf_dyn = dyn.get("main_features") or []
+    if not isinstance(mf_dyn, list): mf_dyn = []
+    kf_ai = ai_attrs.get("key_features") or []
+    if not isinstance(kf_ai, list): kf_ai = []
+    
+    ef_dyn = dyn.get("extra_features") or []
+    if not isinstance(ef_dyn, list): ef_dyn = []
+    tt_dyn = dyn.get("target_tenants") or []
+    if not isinstance(tt_dyn, list): tt_dyn = []
+    pr_dyn = dyn.get("property_restrictions") or []
+    if not isinstance(pr_dyn, list): pr_dyn = []
+    
+    nb_dyn = dyn.get("nearby") or []
+    if not isinstance(nb_dyn, list): nb_dyn = []
+
     try:
         re_detail = models.AdRealEstateDetail(
             ad_id=ad.id,
             bathrooms=int(dyn.get("bathrooms", 0)) if str(dyn.get("bathrooms", "")).isdigit() else ai_attrs.get("bathrooms"),
             furnished=str(dyn.get("furnishing")) if dyn.get("furnishing") else str(ai_attrs.get("furnished", "")),
-            build_area=dyn.get("area") or ai_attrs.get("area"),
+            build_area=build_area_val,
             floor=str(dyn.get("floor")) if dyn.get("floor") else str(ai_attrs.get("floor", "")),
             rent_duration=str(dyn.get("rent_duration")) if dyn.get("rent_duration") else str(ai_attrs.get("rent_duration", "")),
             view_orientation=str(dyn.get("facade")) if dyn.get("facade") else None,
             building_age=str(dyn.get("age")) if dyn.get("age") else None,
-            key_features=dyn.get("main_features", []) + ai_attrs.get("key_features", []),
-            additional_features=dyn.get("extra_features", []) + dyn.get("target_tenants", []) + dyn.get("property_restrictions", []),
-            nearby_locations=dyn.get("nearby", [])
+            key_features=mf_dyn + kf_ai,
+            additional_features=ef_dyn + tt_dyn + pr_dyn,
+            nearby_locations=nb_dyn
         )
         db.add(re_detail)
         db.commit()
