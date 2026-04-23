@@ -91,11 +91,11 @@ For EACH post, extract:
 - rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture')
 - suggested_tags: (list[string]) 2-4 important keywords mentioned.
 - attributes: (object) Extract basic properties into this object. Also CRITICALLY, create a nested "dynamic_data" object containing these EXACT keys if mentioned:
-  {
-      "dynamic_data": { 
+  {{
+      "dynamic_data": {{ 
           "area": (int), "bedrooms": (string), "bathrooms": (string), "furnishing": (string), "rent_duration": (string), "floor": (string), "age": (string), "main_features": (list[string]), "extra_features": (list[string]), "nearby": (list[string]), "facade": (string), "target_tenants": (list[string]), "property_restrictions": (list[string]), "building_fees_status": (list[string]), "water_supply": (list[string]), "cooling_features": (list[string]), "heating_features": (list[string]), "security_deposit_type": (string)
-      }
-  }
+      }}
+  }}
 
 NOTE: Short-term, daily, and weekly furnished rentals perfectly valid! DO NOT reject them.
 
@@ -191,7 +191,7 @@ def _check_and_update_gemini_daily_limit() -> bool:
         return True # Fail open safely if disk write fails
 
 
-def _ai_process_chunk(chunk_posts: List[FbPost]) -> List[dict]:
+def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
     api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
@@ -308,7 +308,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost]) -> List[dict]:
                 time.sleep(sleep_time)
 
             logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={api_key_gemini}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
@@ -326,7 +326,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost]) -> List[dict]:
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
                 if isinstance(item, dict): 
-                    item["ai_model"] = "gemini-1.5-flash-8b"
+                    item["ai_model"] = "gemini-2.5-flash-lite"
                     item["raw_unparsed_chunk_layer"] = raw.strip()
             return parsed
 
@@ -358,7 +358,7 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     def process_single_chunk(chunk):
         try:
             logger.info(f"Sending chunk of {len(chunk)} posts to AI...")
-            res = _ai_process_chunk(chunk)
+            res = _ai_process_chunk(chunk, categories_block)
             if len(res) < len(chunk):
                 # If AI returned fewer results, pad with an explicit error to avoid silent blanks
                 res.extend([{"ai_chunk_error": "AI returned fewer items than requested (possible truncation)"}] * (len(chunk) - len(res)))
