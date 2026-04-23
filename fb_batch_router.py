@@ -90,7 +90,7 @@ CRITICAL DESCRIPTION RULES:
 3. End with a strong Call-To-Action (CTA) encouraging the reader to contact quickly (e.g. 📞 بادر بالاتصال الآن!).
 4. Ensure the language used is premium, SEO-optimized, and sounds like an elite real estate agency. Do NOT just copy the source text!
 - price        (float) -- Extract the exact numeric price. Support eastern arabic numbers (e.g. ٥٠ دينار is 50.0). Look carefully for implicit rent/sale numbers. Return 0.0 ONLY if strictly missing. Do not return strings!
-- location     (string) -- The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. إربد, لواء بني كنانة, عقربا, حوض البلد). Keep empty if not found.
+-location      (string) -- The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. إربد, لواء بني كنانة, عقربا, حوض البلد). Keep empty if not found.
 - phone_number (string or null) -- phone number if mentioned
 - category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a property or room.
 - suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
