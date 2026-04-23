@@ -13,6 +13,14 @@ def get_location_map():
             locations[city] = regions
     return locations
 
+import re
+def normalize_arabic(text):
+    if not text: return ""
+    text = re.sub(r'[إأآا]', 'ا', text)
+    text = re.sub(r'ة', 'ه', text)
+    text = re.sub(r'ي$', 'ى', text)
+    return text
+
 def get_category_map():
     # Parse REAL_ESTATE_CATEGORIES string into dict
     categories = {}
@@ -30,15 +38,20 @@ def map_location(ai_location_str, city_regions_map):
         return ""
         
     ai_loc = ai_location_str.strip()
+    ai_loc_norm = normalize_arabic(ai_loc).replace(" ", "")
     
     # Simple substring matching
     for city, regions in city_regions_map.items():
+        city_norm = normalize_arabic(city).replace(" ", "")
+        
         # First check if any region matches
         for req in regions:
-            if req in ai_loc:
+            req_norm = normalize_arabic(req).replace(" ", "")
+            if req_norm in ai_loc_norm or (len(ai_loc_norm)>3 and ai_loc_norm in req_norm):
                 return f"{city}, {req}"
+                
         # Then check if city matches
-        if city in ai_loc:
+        if city_norm in ai_loc_norm:
             return f"{city}, أخرى"
             
     return ""
