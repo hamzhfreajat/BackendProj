@@ -852,13 +852,18 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             continue
 
         # 2. Skip if AI determined this is a "Looking for" post or rejected it explicitly
-        if isinstance(ai_data, dict) and (ai_data.get("category_id") == 0 or not ai_data.get("category_name")):
-            skipped += 1
-            reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate")
-            logger.info(f"Post #{idx} rejected: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res, used_ai_model)
-            results.append(PostResult(index=idx, status="skipped", reason=reason))
-            continue
+        if isinstance(ai_data, dict):
+            is_explicit_reject = ai_data.get("category_id") == 0 or bool(ai_data.get("rejection_reason"))
+            # For older outputs that still relied on missing category_name as a reject signal
+            is_legacy_reject = not ai_data.get("category_id") and not ai_data.get("category_name")
+            
+            if is_explicit_reject or is_legacy_reject:
+                skipped += 1
+                reason = ai_data.get("rejection_reason") or "AI determined post is not offering real estate"
+                logger.info(f"Post #{idx} rejected: {reason}")
+                _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res, used_ai_model)
+                results.append(PostResult(index=idx, status="skipped", reason=reason))
+                continue
 
         try:
             post.images = _upload_imgs_to_r2(post.images)
