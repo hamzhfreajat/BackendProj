@@ -84,7 +84,7 @@ For EACH post extract:
 - l: (str) 'City, Neighborhood' Pick EXACTLY from these allowed locations:
 {locations_block}
 - ph: (str/null) phone
-- tt: (str) highly professional and formal real-estate title (max 6 words, e.g. 'شقة فاخرة للبيع في عبدون')
+- tt: (str) Create a highly professional, premium Arabic real-estate title. Do NOT blindly copy text. (max 8 words, e.g. 'شقة فاخرة ومميزة للبيع في طبربور')
 - c: (str) EXACTLY ONE category NAME from:
 {categories_block}
 (Empty if SEEKING/wanted).
