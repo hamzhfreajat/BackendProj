@@ -29,6 +29,8 @@ _this_dir = pathlib.Path(__file__).resolve().parent
 load_dotenv(_this_dir / ".env", override=True)
 
 # Fetch keys directly from environment variables. Do not hardcode them.
+logger = logging.getLogger(__name__)
+
 if not os.getenv("GOOGLE_API_KEY"):
     logger.warning("GOOGLE_API_KEY is missing from environment. AI processing might fail.")
 # Project imports
@@ -36,8 +38,6 @@ from database import get_db
 import models
 from models import SourceType
 import schemas
-
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["fb-batch"])
 
 print(f"[fb_batch_router] LOADED — will use source_type = {SourceType.SCRAPER_BOT}")
@@ -77,28 +77,16 @@ class FbBatchResponse(BaseModel):
 
 # -- Gemini: ONE call for ALL posts ------------------------------------------
 
-_GEMINI_BATCH_PROMPT = """You are an expert data extractor. Extract classified-ad data from the given Facebook posts and respond ONLY with a JSON array.
-
-For EACH post, extract:
-- index: (int) the given post number
-- title: (string) generate a concise, professional arabic title
-- price: (float) numeric price (0.0 if missing)
-- location: (string) e.g. 'عمان, عبدون'. IMPORTANT RULE: Numbered zones (المنطقة الثالثة, الخامسة, etc.) belong to العقبة (Aqaba), NOT Amman! Output format: 'العقبة, المنطقة الثالثة'. Empty if missing.
-- phone_number: (string or null)
-- category_id: (int) Map to the deepest specific sub-category ID from the list below. (Rule: Use 0 if the author is SEEKING/ASKING for an apartment, or if the post is NOT offering real estate).
-- rejection_reason: (string) If category_id is 0, provide the exact reason why here. (e.g. 'Seeking apartment', 'Selling furniture')
-- suggested_tags: (list[string]) 2-4 important keywords mentioned.
-- attributes: (object) Extract basic properties into this object. Also CRITICALLY, create a nested "dynamic_data" object containing these EXACT keys if mentioned:
-  {{
-      "dynamic_data": {{ 
-          "area": (int), "bedrooms": (string), "bathrooms": (string), "furnishing": (string), "rent_duration": (string), "floor": (string), "age": (string), "main_features": (list[string]), "extra_features": (list[string]), "nearby": (list[string]), "facade": (string), "target_tenants": (list[string]), "property_restrictions": (list[string]), "building_fees_status": (list[string]), "water_supply": (list[string]), "cooling_features": (list[string]), "heating_features": (list[string]), "security_deposit_type": (string)
-      }}
-  }}
-
-NOTE: Short-term, daily, and weekly furnished rentals perfectly valid! DO NOT reject them.
-
-CATEGORIES:
-{categories_block}
+_GEMINI_BATCH_PROMPT = """Extract real-estate data. Output ONLY a JSON array.
+For EACH post extract:
+- i: (int) index
+- p: (float) price (0.0 if missing)
+- l: (str) 'City, Region' (Rule: Numbered zones belong to العقبة)
+- ph: (str/null) phone
+- c: (str) EXACTLY ONE of: [{categories_block}]. Empty if SEEKING/wanted.
+- t: (list[str]) 1-2 keywords
+- d: (object) EXACT keys:
+  {{"a":(int) area, "bd":(str) bedrooms, "bt":(str) bathrooms, "f":(str) furnishing, "rd":(str) rent_duration, "fl":(str) floor, "ag":(str) age, "mf":[(str)] main_features}}
 
 POSTS:
 {posts_block}
@@ -150,8 +138,7 @@ def _build_posts_block(posts: List[FbPost]) -> str:
     for i, p in enumerate(posts):
         idx = p.index or (i + 1)
         lines.append(f"--- Post #{idx} ---")
-        lines.append(f"Text: {(p.text or '')[:800]}")
-        lines.append(f"Images: {len(p.images) if p.images else 0}")
+        lines.append(f"Text: {(p.text or '')[:300]}")
         lines.append("")
     return "\n".join(lines)
 
@@ -225,6 +212,46 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 parsed = parsed["posts"]
             elif isinstance(parsed, dict):
                 parsed = [parsed]
+                
+            # Expand shortened keys to original format so _save_ad_to_db doesn't break
+            expanded_parsed = []
+            if isinstance(parsed, list):
+                for item in parsed:
+                    if not isinstance(item, dict): continue
+                    if "category_name" in item:
+                        # Model ignored single-letter keys, use as is
+                        expanded_parsed.append(item)
+                        continue
+
+                    c_val = item.get("c", "")
+                    if c_val is None:
+                        c_val = ""
+                    dyn = item.get("d", {})
+                    if not isinstance(dyn, dict): dyn = {}
+                    
+                    expanded_dyn = {}
+                    if dyn.get("a") is not None: expanded_dyn["area"] = dyn["a"]
+                    if dyn.get("bd") is not None: expanded_dyn["bedrooms"] = dyn["bd"]
+                    if dyn.get("bt") is not None: expanded_dyn["bathrooms"] = dyn["bt"]
+                    if dyn.get("f") is not None: expanded_dyn["furnishing"] = dyn["f"]
+                    if dyn.get("rd") is not None: expanded_dyn["rent_duration"] = dyn["rd"]
+                    if dyn.get("fl") is not None: expanded_dyn["floor"] = dyn["fl"]
+                    if dyn.get("ag") is not None: expanded_dyn["age"] = dyn["ag"]
+                    if dyn.get("mf") is not None: expanded_dyn["main_features"] = dyn["mf"]
+
+                    expanded_parsed.append({
+                        "index": item.get("i"),
+                        "price": item.get("p", 0.0),
+                        "location": item.get("l", ""),
+                        "phone_number": item.get("ph"),
+                        "category_name": c_val,
+                        "suggested_tags": item.get("t") or [],
+                        "rejection_reason": "Not property" if not c_val else "",
+                        "attributes": {
+                            "dynamic_data": expanded_dyn
+                        }
+                    })
+                parsed = expanded_parsed
                 
             logger.info("JSON successfully parsed.")
             return parsed
@@ -346,11 +373,12 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
 def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     """Process all posts in chunks to avoid token limits, running concurrently."""
-    categories_block = REAL_ESTATE_CATEGORIES
+    # Use a vastly abridged category list for the AI to pick from (saves thousands of tokens while preserving accuracy)
+    categories_block = "'شقق للبيع', 'ستوديوهات للبيع', 'فلل وقصور', 'بيوت مستقلة للبيع', 'شقق للإيجار', 'ستوديوهات للإيجار', 'بيوت مستقلة للإيجار', 'ملحق / روف', 'أراضي', 'مزارع', 'شاليهات / منتجعات', 'مكاتب للإيجار', 'محلات ومعارض للإيجار', 'مخازن ومستودعات', 'سكن مشترك', 'سكن طلاب', 'سكن طالبات'"
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size explicitly to 20 to prevent Gemini maxOutputTokens (8192) truncation for heavy Arabic JSON arrays.
-    CHUNK_SIZE = 20
+    # Keep chunk size explicitly to 10 to prevent Gemini maxOutputTokens (8192) truncation for heavy Arabic JSON arrays.
+    CHUNK_SIZE = 10
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
@@ -743,20 +771,11 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             continue
 
         # 2. Skip if AI determined this is a "Looking for" post or rejected it explicitly
-        if isinstance(ai_data, dict) and ai_data.get("category_id") == 0:
+        if isinstance(ai_data, dict) and (ai_data.get("category_id") == 0 or not ai_data.get("category_name")):
             skipped += 1
-            reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate (category_id=0)")
+            reason = ai_data.get("rejection_reason", "AI determined post is not offering real estate")
             logger.info(f"Post #{idx} rejected: {reason}")
             _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res, used_ai_model)
-            results.append(PostResult(index=idx, status="skipped", reason=reason))
-            continue
-
-        # 3. Finally, if AI just returned empty properties (like no title), complain
-        if not ai_data or not ai_data.get("title"):
-            skipped += 1
-            reason = "AI returned missing or incomplete JSON (no title)"
-            logger.info(f"Post #{idx} skipped: {reason}")
-            _log_training_data(db, post.text or "", ai_data, "failed", reason, raw_res, used_ai_model)
             results.append(PostResult(index=idx, status="skipped", reason=reason))
             continue
 

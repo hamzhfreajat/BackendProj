@@ -30,10 +30,9 @@ except ImportError:
     import google.generativeai as genai
     _USE_NEW_SDK = False
 
-# Fallback: hardcode the key if env var is missing
-_FALLBACK_KEY = "AIzaSyDtwk07CKyqD6dnxcwBhRgf_2GbP8HHmBo"
+# Rely entirely on coolify .env environment variables for API keys
 if not os.getenv("GOOGLE_API_KEY"):
-    os.environ["GOOGLE_API_KEY"] = _FALLBACK_KEY
+    print("WARNING: GOOGLE_API_KEY is not set in the environment.")
 
 app = FastAPI(title="Classifieds Backend API")
 
