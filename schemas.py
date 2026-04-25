@@ -350,6 +350,7 @@ class DashboardInsightsOut(BaseModel):
     recent_activity: list
     filter_analytics: list
     location_stats: list
+    real_estate_stats: list
 
 class PersonalizedAdsOut(BaseModel):
     title: str

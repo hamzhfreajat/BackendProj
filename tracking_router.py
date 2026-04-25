@@ -144,13 +144,25 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
         })
         
     location_stats_list.sort(key=lambda x: x["total_ads"], reverse=True)
+
+    # 6. Real Estate Category Stats
+    from sqlalchemy.sql import or_
+    real_estate_cats = db.query(
+        models.Category.name,
+        func.count(models.Ad.id)
+    ).outerjoin(models.Ad, models.Category.id == models.Ad.category_id).filter(
+        or_(models.Category.id.in_([2, 3]), models.Category.parent_id.in_([2, 3]))
+    ).group_by(models.Category.id).order_by(func.count(models.Ad.id).desc()).all()
+    
+    real_estate_stats = [{"name": c_name, "count": count} for c_name, count in real_estate_cats]
            
     return {
         "total_logs": total_logs,
         "top_categories": top_categories,
         "recent_activity": recent_activity,
         "filter_analytics": filter_analytics[:50], # return top 50 for insights
-        "location_stats": location_stats_list
+        "location_stats": location_stats_list,
+        "real_estate_stats": real_estate_stats
     }
 
 @router.get("/personalized_ads", response_model=List[schemas.PersonalizedAdsOut])
