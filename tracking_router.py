@@ -150,7 +150,7 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
     
     all_cats_query = db.query(
         models.Category.id,
-        models.Category.name_ar,
+        models.Category.name,
         models.Category.parent_id,
         func.count(models.Ad.id).label('count')
     ).outerjoin(models.Ad, models.Category.id == models.Ad.category_id).group_by(models.Category.id).all()
@@ -158,7 +158,7 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
     cat_dict = {}
     for row in all_cats_query:
         cat_dict[row.id] = {
-            "name": row.name_ar,
+            "name": row.name,
             "parent_id": row.parent_id,
             "count": row.count,
         }
