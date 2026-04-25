@@ -8,7 +8,7 @@ from database import get_db
 import models
 import schemas
 import jwt
-from auth import SECRET_KEY, ALGORITHM
+from auth import SECRET_KEY, ALGORITHM, get_current_user
 
 router = APIRouter(prefix="/api/tracking", tags=["Tracking & Dashboard"])
 
@@ -48,7 +48,7 @@ def log_user_event(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/insights", response_model=schemas.DashboardInsightsOut)
-def get_dashboard_insights(db: Session = Depends(get_db)):
+def get_dashboard_insights(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # 1. Total Logs
     total_logs = db.query(models.UserActivityLog).count()
     

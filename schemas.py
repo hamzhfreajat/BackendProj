@@ -83,6 +83,10 @@ class UserReview(UserReviewBase):
 # AUTHENTICATION SCHEMAS
 class RequestOTP(BaseModel):
     mobile_number: str
+    
+class AdminLogin(BaseModel):
+    username: str
+    password: str
 
 class VerifyOTP(BaseModel):
     mobile_number: str

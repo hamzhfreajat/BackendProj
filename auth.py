@@ -9,6 +9,15 @@ from sqlalchemy import func
 import models
 import schemas
 from database import get_db
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -130,6 +139,30 @@ def request_otp(data: schemas.RequestOTP, request: Request, db: Session = Depend
     print(f"{'='*40}\n")
 
     return {"status": "success", "message": "OTP sent successfully"}
+
+@router.post("/admin-login", response_model=schemas.AuthResponse)
+def admin_login(data: schemas.AdminLogin, db: Session = Depends(get_db)):
+    """
+    Standard Username & Password login specifically designed for strictly Admin Dashboard access.
+    """
+    user = db.query(models.User).filter(
+        models.User.username == data.username,
+        models.User.user_type == "admin"
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+        
+    if not user.hashed_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials configuration. Contact system admin.")
+        
+    if not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+        
+    # Valid login credentials verified! Mint a new Dashboard JWT token.
+    access_token = create_access_token(data={"sub": str(user.id), "username": user.username, "type": "admin"})
+
+    return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/verify-otp", response_model=schemas.AuthResponse)
 def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
