@@ -146,15 +146,62 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
     location_stats_list.sort(key=lambda x: x["total_ads"], reverse=True)
 
     # 6. Real Estate Category Stats
-    from sqlalchemy.sql import or_
-    real_estate_cats = db.query(
-        models.Category.name,
-        func.count(models.Ad.id)
-    ).outerjoin(models.Ad, models.Category.id == models.Ad.category_id).filter(
-        or_(models.Category.id.in_([2, 3]), models.Category.parent_id.in_([2, 3]))
-    ).group_by(models.Category.id).order_by(func.count(models.Ad.id).desc()).all()
+    roots_to_track = [3, 2, 10313] # عقارات للإيجار, عقارات للبيع, أراضي (by user request)
     
-    real_estate_stats = [{"name": c_name, "count": count} for c_name, count in real_estate_cats]
+    all_cats_query = db.query(
+        models.Category.id,
+        models.Category.name_ar,
+        models.Category.parent_id,
+        func.count(models.Ad.id).label('count')
+    ).outerjoin(models.Ad, models.Category.id == models.Ad.category_id).group_by(models.Category.id).all()
+    
+    cat_dict = {}
+    for row in all_cats_query:
+        cat_dict[row.id] = {
+            "name": row.name_ar,
+            "parent_id": row.parent_id,
+            "count": row.count,
+        }
+        
+    def get_subtree_sum(node_id, visited=None):
+        if visited is None: visited = set()
+        if node_id in visited: return 0
+        visited.add(node_id)
+        if node_id not in cat_dict: return 0
+        total = cat_dict[node_id]['count']
+        for child_id, child_data in cat_dict.items():
+            if child_data['parent_id'] == node_id:
+                total += get_subtree_sum(child_id, visited)
+        return total
+
+    real_estate_stats = []
+    
+    for root_id in roots_to_track:
+        if root_id in cat_dict:
+            root_data = cat_dict[root_id]
+            children_list = []
+            root_total = root_data['count'] 
+            
+            for cid, cdata in cat_dict.items():
+                if cdata['parent_id'] == root_id:
+                    c_sum = get_subtree_sum(cid)
+                    root_total += c_sum
+                    children_list.append({
+                        "name": cdata['name'],
+                        "count": c_sum
+                    })
+                    
+            # Sort children by count descending
+            children_list.sort(key=lambda x: x["count"], reverse=True)
+            
+            # Use specific "الأراضي" label if it's the id 10313 root
+            display_name = "الأراضي" if root_id == 10313 else root_data['name']
+            
+            real_estate_stats.append({
+                "name": display_name,
+                "total_count": root_total,
+                "children": children_list
+            })
            
     return {
         "total_logs": total_logs,
