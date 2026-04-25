@@ -92,16 +92,34 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
            filter_analytics.append(f.filters_json)
            
     # 5. Location Stats
+    # Ensure all static cities and regions exist so 0-count regions are shown
+    all_cities = db.query(models.City).all()
+    all_regions = db.query(models.Region).all()
+    
+    location_breakdown = {}
+    city_map = {}
+    
+    for c in all_cities:
+        city_map[c.id] = c.name_ar
+        location_breakdown[c.name_ar] = {"total": 0, "regions": {}}
+        
+    for r in all_regions:
+        if r.city_id in city_map:
+            c_name = city_map[r.city_id]
+            location_breakdown[c_name]["regions"][r.name_ar] = 0
+
     loc_stats_query = db.query(
         models.Ad.location,
         func.count(models.Ad.id).label('count')
     ).group_by(models.Ad.location).order_by(func.count(models.Ad.id).desc()).all()
     
-    location_breakdown = {}
     for loc_str, count in loc_stats_query:
         if not loc_str:
             continue
         parts = [p.strip() for p in loc_str.split(',')]
+        if not parts:
+            continue
+            
         city_name = parts[0]
         region_name = parts[1] if len(parts) > 1 else 'أخرى'
         
@@ -112,6 +130,7 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
         
         if region_name not in location_breakdown[city_name]["regions"]:
             location_breakdown[city_name]["regions"][region_name] = 0
+            
         location_breakdown[city_name]["regions"][region_name] += count
         
     location_stats_list = []
