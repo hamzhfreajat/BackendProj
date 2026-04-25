@@ -349,6 +349,7 @@ class DashboardInsightsOut(BaseModel):
     top_categories: list
     recent_activity: list
     filter_analytics: list
+    location_stats: list
 
 class PersonalizedAdsOut(BaseModel):
     title: str

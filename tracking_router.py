@@ -91,11 +91,47 @@ def get_dashboard_insights(db: Session = Depends(get_db)):
         if f.filters_json:
            filter_analytics.append(f.filters_json)
            
+    # 5. Location Stats
+    loc_stats_query = db.query(
+        models.Ad.location,
+        func.count(models.Ad.id).label('count')
+    ).group_by(models.Ad.location).order_by(func.count(models.Ad.id).desc()).all()
+    
+    location_breakdown = {}
+    for loc_str, count in loc_stats_query:
+        if not loc_str:
+            continue
+        parts = [p.strip() for p in loc_str.split(',')]
+        city_name = parts[0]
+        region_name = parts[1] if len(parts) > 1 else 'أخرى'
+        
+        if city_name not in location_breakdown:
+            location_breakdown[city_name] = {"total": 0, "regions": {}}
+            
+        location_breakdown[city_name]["total"] += count
+        
+        if region_name not in location_breakdown[city_name]["regions"]:
+            location_breakdown[city_name]["regions"][region_name] = 0
+        location_breakdown[city_name]["regions"][region_name] += count
+        
+    location_stats_list = []
+    for city, data in location_breakdown.items():
+        regions_list = [{"name": r_name, "count": r_count} for r_name, r_count in data["regions"].items()]
+        regions_list.sort(key=lambda x: x["count"], reverse=True)
+        location_stats_list.append({
+            "city": city,
+            "total_ads": data["total"],
+            "regions": regions_list
+        })
+        
+    location_stats_list.sort(key=lambda x: x["total_ads"], reverse=True)
+           
     return {
         "total_logs": total_logs,
         "top_categories": top_categories,
         "recent_activity": recent_activity,
-        "filter_analytics": filter_analytics[:50] # return top 50 for insights
+        "filter_analytics": filter_analytics[:50], # return top 50 for insights
+        "location_stats": location_stats_list
     }
 
 @router.get("/personalized_ads", response_model=List[schemas.PersonalizedAdsOut])
