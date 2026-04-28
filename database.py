@@ -22,7 +22,9 @@ SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{DB_USER}:{encoded_password}@{D
 # eliminating the 3-hour "time ago" parsing discrepancy in Flutter.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"options": "-c timezone=Asia/Amman"}
+    connect_args={"options": "-c timezone=Asia/Amman"},
+    pool_pre_ping=True,
+    pool_recycle=300
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

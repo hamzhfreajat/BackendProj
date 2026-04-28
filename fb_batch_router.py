@@ -91,6 +91,11 @@ CRITICAL DESCRIPTION RULES:
 4. Ensure the language used is premium, SEO-optimized, and sounds like an elite real estate agency. Do NOT just copy the source text!
 - price        (float) -- Extract the exact numeric price. Support eastern arabic numbers (e.g. ٥٠ دينار is 50.0). Look carefully for implicit rent/sale numbers. Return 0.0 ONLY if strictly missing. Do not return strings!
 -location      (string) -- The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. إربد, لواء بني كنانة, عقربا, حوض البلد). Keep empty if not found.
+CRITICAL LOCATION RULES:
+1. In Aqaba (العقبة), "المنطقة الأولى" maps to "العقبة, السكنية 1", "المنطقة الثانية" maps to "العقبة, السكنية 2", "المنطقة الثالثة" maps to "العقبة, السكنية 3", "المنطقة الرابعة" maps to "العقبة, السكنية 4", "الخامسة" to "العقبة, السكنية 5", "السادسة" to "العقبة, السكنية 6", "السابعة" to "العقبة, السكنية 7", "الثامنة" to "العقبة, السكنية 8", "التاسعة" to "العقبة, السكنية 9", and "العاشرة" to "العقبة, السكنية 10".
+2. "الدوار الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن" belong strictly to "عمان" (Amman). Example: "عمان, الدوار السابع".
+3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
+4. If an ad mentions being near or at a specific university (e.g., "قرب الجامعة الأردنية", "بجانب الجامعة الألمانية"), map the location directly to that university's region (e.g., "عمان, الجامعة الأردنية", "مادبا, الجامعة الألمانية الأردنية").
 - phone_number (string or null) -- phone number if mentioned
 - category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a property or room.
 - suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
@@ -166,7 +171,12 @@ Now, process the following post. Respond ONLY with a JSON object.
 Extract:
 - title: (string) generate a concise, professional arabic title (Empty if category_id is 0)
 - price: (float) numeric price (0.0 if missing)
-- location: (string) Extract the exact city and region found in the post. Format as "City, Region" (e.g. "عمان, عبدون") if known, otherwise just output the region name.
+- location: (string) Extract the exact city and region found in the post. Format as "City, Region" (e.g. "عمان, عبدون") if known, otherwise just output the region name. 
+  CRITICAL LOCATION RULES: 
+  1. In Aqaba, "المنطقة الثالثة" maps to "العقبة, السكنية 3", "الرابعة" to "العقبة, السكنية 4", "الخامسة" to "العقبة, السكنية 5", "السادسة" to "العقبة, السكنية 6", "السابعة" to "العقبة, السكنية 7", "الثامنة" to "العقبة, السكنية 8", "التاسعة" to "العقبة, السكنية 9", "العاشرة" to "العقبة, السكنية 10".
+  2. "الدوار الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن" belong strictly to "عمان". 
+  3. "شفا بدران" belongs to "عمان". Do NOT confuse it with "بدر".
+  4. If the ad is near a university, map the location directly to that university (e.g. "مادبا, الجامعة الألمانية الأردنية").
 - phone_number: (string or null) Look closely for 10-digit numbers.
 - category_name: (string) Extract the exact real estate category (e.g. 'شقق للبيع', 'أراضي للإيجار', 'ستوديوهات'). Use empty string if author is SEEKING or if not offering real estate.
 - rejection_reason: (string) If not offering real estate, provide exact reason why here.
@@ -225,6 +235,59 @@ def _check_and_update_gemini_daily_limit() -> bool:
         return True
     except Exception:
         return True # Fail open safely if disk write fails
+
+
+def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api_key: str) -> Optional[List[dict]]:
+    prompt = f"""
+    You are an expert Jordanian real estate and location assistant.
+    I will provide you a list of ads that currently have "Others" or "أخرى" as their location.
+    I will also provide you a list of ALL valid regions in Jordan in the format "City, Region".
+    
+    Your task is to read the title, description, and raw_description of each ad, and determine the exact valid region from the provided list.
+    If you cannot determine the exact region from the text, return the closest matching valid region based on the city, or keep it as is if completely unknown, but try your best to find a valid region from the list.
+    
+    CRITICAL LOCATION RULES:
+    1. In Aqaba (العقبة), "المنطقة الأولى" maps to "العقبة, السكنية 1", "المنطقة الثانية" maps to "العقبة, السكنية 2", "المنطقة الثالثة" maps to "العقبة, السكنية 3", "المنطقة الرابعة" maps to "العقبة, السكنية 4", "الخامسة" to "العقبة, السكنية 5", "السادسة" to "العقبة, السكنية 6", "السابعة" to "العقبة, السكنية 7", "الثامنة" to "العقبة, السكنية 8", "التاسعة" to "العقبة, السكنية 9", and "العاشرة" to "العقبة, السكنية 10".
+    2. "الدوار الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن" belong strictly to "عمان" (Amman). 
+    3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
+    4. If an ad mentions being near or at a specific university, map the location directly to that university's region (e.g. "مادبا, الجامعة الألمانية الأردنية").
+    
+    Valid Regions List:
+    {json.dumps(regions_list, ensure_ascii=False)}
+    
+    Ads:
+    {json.dumps(ads_data, ensure_ascii=False)}
+    
+    Return ONLY a JSON array of objects with "ad_id" and "new_location".
+    Example:
+    [
+        {{"ad_id": 123, "new_location": "عمان, دابوق"}},
+        {{"ad_id": 124, "new_location": "إربد, الحصن"}}
+    ]
+    Do not return any markdown wrappers like ```json, just the raw JSON.
+    """
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.1,
+            "responseMimeType": "application/json",
+        }
+    }
+    
+    res = requests.post(url, json=payload, headers=headers, timeout=60)
+    res.raise_for_status()
+    data = res.json()
+    raw = data["candidates"][0]["content"]["parts"][0]["text"]
+    
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+            
+    return json.loads(raw.strip())
 
 
 def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
@@ -561,7 +624,40 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     # Map explicit Region Locs
     location_map = get_location_map()
     ai_loc_str = ai_data.get("location", "")
-    mapped_location = map_location(ai_loc_str, location_map) or default_location or ""
+    mapped_location = map_location(ai_loc_str, location_map)
+    
+    # DYNAMIC REGION ADDITION
+    if (not mapped_location or "أخرى" in mapped_location) and ai_loc_str and "," in ai_loc_str:
+        parts = [p.strip() for p in ai_loc_str.split(",", 1)]
+        if len(parts) == 2:
+            city_name, region_name = parts
+            if region_name and region_name != "أخرى" and region_name.lower() != "other" and region_name != "غير محدد":
+                from models import City, Region
+                city_obj = db.query(City).filter(City.name_ar == city_name).first()
+                if city_obj:
+                    existing_region = db.query(Region).filter(
+                        Region.city_id == city_obj.id,
+                        Region.name_ar == region_name
+                    ).first()
+                    if not existing_region:
+                        try:
+                            new_region = Region(
+                                city_id=city_obj.id,
+                                name_ar=region_name,
+                                name_en=region_name
+                            )
+                            db.add(new_region)
+                            db.commit()
+                            logger.info(f"Dynamically added new region '{region_name}' to city '{city_name}'")
+                            mapped_location = f"{city_name}, {region_name}"
+                        except Exception as e:
+                            db.rollback()
+                            logger.error(f"Failed to add dynamic region: {e}")
+                    else:
+                        mapped_location = f"{city_name}, {region_name}"
+
+    if not mapped_location:
+        mapped_location = default_location or ""
 
     # Generate smarter fallback title if AI extraction failed
     ad_title = ai_data.get("title")
@@ -833,6 +929,46 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     except Exception as e:
         logger.error(f"AI failed: {e}. Falling back to default data.")
         ai_results = [{"ai_chunk_error": f"SYSTEM_ERROR: {str(e)}"}] * len(posts_to_process)
+
+    # Step 2.5: Gemini Fallback for "Other" locations
+    api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if api_key_gemini:
+        fallback_indices = []
+        fallback_ads_data = []
+        
+        location_map = get_location_map()
+        for j, post in enumerate(posts_to_process):
+            if j < len(ai_results) and isinstance(ai_results[j], dict):
+                ai_data = ai_results[j]
+                if not ai_data.get("ai_chunk_error") and ai_data.get("category_id") != 0 and not ai_data.get("rejection_reason"):
+                    ai_loc_str = ai_data.get("location", "")
+                    mapped_loc = map_location(ai_loc_str, location_map) or req.default_location or ""
+                    if not mapped_loc or "أخرى" in mapped_loc or "other" in mapped_loc.lower():
+                        fallback_indices.append(j)
+                        fallback_ads_data.append({
+                            "ad_id": j,  # Temporary ID just for matching
+                            "title": ai_data.get("title", ""),
+                            "description": ai_data.get("description", ""),
+                            "raw_description": post.text or "",
+                            "current_location": ai_loc_str
+                        })
+        
+        if fallback_ads_data:
+            logger.info(f"Triggering Gemini fallback for {len(fallback_ads_data)} posts with 'Other' locations...")
+            try:
+                from models import Region, City
+                regions = db.query(Region).join(City).all()
+                regions_list = [f"{r.city.name_ar}, {r.name_ar}" for r in regions]
+                
+                updates = _gemini_location_fallback(fallback_ads_data, regions_list, api_key_gemini)
+                if updates:
+                    update_map = {item['ad_id']: item['new_location'] for item in updates if 'ad_id' in item and 'new_location' in item}
+                    for j in fallback_indices:
+                        if j in update_map:
+                            ai_results[j]["location"] = update_map[j]
+                            logger.info(f"Gemini fallback fixed location for post {j} -> {update_map[j]}")
+            except Exception as e:
+                logger.error(f"Gemini location fallback failed: {e}")
 
     # Step 3: Save each AI result to the database
     for j, post in enumerate(posts_to_process):

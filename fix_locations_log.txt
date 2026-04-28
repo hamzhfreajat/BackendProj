@@ -1,0 +1,25 @@
+Starting location fix process...
+Found 788 valid regions.
+Found 103 ads remaining to process.
+Processing batch 1 (20 ads)...
+  Batch 1 committed. Total successes so far: 10
+Processing batch 2 (20 ads)...
+    Dynamically added new region 'دوار الكيلو' to city 'عمان'
+    Dynamically added new region 'قصر العوادين' to city 'إربد'
+    Dynamically added new region 'زبدى فركوح' to city 'إربد'
+    Failed to add dynamic region: 'charmap' codec can't encode character '\ufffd' in position 44: character maps to <undefined>
+    Dynamically added new region 'شارع عشرين' to city 'المفرق'
+    Failed to add dynamic region: 'charmap' codec can't encode character '\ufffd' in position 71: character maps to <undefined>
+  Batch 2 committed. Total successes so far: 18
+Processing batch 3 (20 ads)...
+    Dynamically added new region 'الدوار التاسع' to city 'عمان'
+  Batch 3 committed. Total successes so far: 21
+Processing batch 4 (20 ads)...
+    Dynamically added new region 'خربة الوهادنة' to city 'عجلون'
+    Dynamically added new region 'بصة زريق' to city 'جرش'
+  Batch 4 committed. Total successes so far: 38
+Processing batch 5 (20 ads)...
+  Batch 5 committed. Total successes so far: 43
+Processing batch 6 (3 ads)...
+  Batch 6 committed. Total successes so far: 45
+Finished processing. Successfully updated 45 ads. Failed to process/update 0 ads.

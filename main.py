@@ -171,20 +171,31 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
     
     if location:
         target_loc = location[-1]
-        if target_loc == "محافظة العاصمة":
-            target_loc = "عمان"
-        elif target_loc.startswith("محافظة "):
-            target_loc = target_loc.replace("محافظة ", "")
-            
-        filters = [models.Ad.location.ilike(f"%{target_loc}%")]
+        parent_loc = location[-2] if len(location) > 1 else None
         
-        city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
-        if city:
-            for region in city.regions:
-                if len(region.name_ar) > 2:
-                    filters.append(models.Ad.location.ilike(f"%{region.name_ar}%"))
+        if target_loc == "محافظة العاصمة": target_loc = "عمان"
+        elif target_loc.startswith("محافظة "): target_loc = target_loc.replace("محافظة ", "")
+        
+        if parent_loc:
+            if parent_loc == "محافظة العاصمة": parent_loc = "عمان"
+            elif parent_loc.startswith("محافظة "): parent_loc = parent_loc.replace("محافظة ", "")
+            
+        filters = []
+        if target_loc == "أخرى" and parent_loc:
+            filters.append(models.Ad.location.ilike(f"{parent_loc}, أخرى%"))
+            filters.append(models.Ad.location.ilike(f"{parent_loc}, other%"))
+        else:
+            city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
+            if city:
+                filters.append(models.Ad.location.ilike(f"{target_loc}%"))
+            else:
+                if parent_loc:
+                    filters.append(models.Ad.location.ilike(f"{parent_loc}, {target_loc}%"))
+                else:
+                    filters.append(models.Ad.location.ilike(f"%{target_loc}%"))
                     
-        ad_query = ad_query.filter(or_(*filters))
+        if filters:
+            ad_query = ad_query.filter(or_(*filters))
         
     ad_counts = ad_query.group_by(models.Ad.category_id).all()
         
@@ -477,22 +488,30 @@ def read_ads(
         query = query.filter(models.Ad.title.ilike(f"%{search}%") | models.Ad.description.ilike(f"%{search}%"))
         
     if location:
-        filters = []
-        for loc in location:
-            target_loc = loc
-            if target_loc == "محافظة العاصمة":
-                target_loc = "عمان"
-            elif target_loc.startswith("محافظة "):
-                target_loc = target_loc.replace("محافظة ", "")
-                
-            filters.append(models.Ad.location.ilike(f"%{target_loc}%"))
+        target_loc = location[-1]
+        parent_loc = location[-2] if len(location) > 1 else None
+        
+        if target_loc == "محافظة العاصمة": target_loc = "عمان"
+        elif target_loc.startswith("محافظة "): target_loc = target_loc.replace("محافظة ", "")
+        
+        if parent_loc:
+            if parent_loc == "محافظة العاصمة": parent_loc = "عمان"
+            elif parent_loc.startswith("محافظة "): parent_loc = parent_loc.replace("محافظة ", "")
             
+        filters = []
+        if target_loc == "أخرى" and parent_loc:
+            filters.append(models.Ad.location.ilike(f"{parent_loc}, أخرى%"))
+            filters.append(models.Ad.location.ilike(f"{parent_loc}, other%"))
+        else:
             city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
             if city:
-                for region in city.regions:
-                    if len(region.name_ar) > 2:
-                        filters.append(models.Ad.location.ilike(f"%{region.name_ar}%"))
-                        
+                filters.append(models.Ad.location.ilike(f"{target_loc}%"))
+            else:
+                if parent_loc:
+                    filters.append(models.Ad.location.ilike(f"{parent_loc}, {target_loc}%"))
+                else:
+                    filters.append(models.Ad.location.ilike(f"%{target_loc}%"))
+                    
         if filters:
             query = query.filter(or_(*filters))
         
@@ -656,20 +675,31 @@ def get_ads_count(
         
     if location:
         target_loc = location[-1]
-        if target_loc == "محافظة العاصمة":
-            target_loc = "عمان"
-        elif target_loc.startswith("محافظة "):
-            target_loc = target_loc.replace("محافظة ", "")
-            
-        filters = [models.Ad.location.ilike(f"%{target_loc}%")]
+        parent_loc = location[-2] if len(location) > 1 else None
         
-        city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
-        if city:
-            for region in city.regions:
-                if len(region.name_ar) > 2:
-                    filters.append(models.Ad.location.ilike(f"%{region.name_ar}%"))
+        if target_loc == "محافظة العاصمة": target_loc = "عمان"
+        elif target_loc.startswith("محافظة "): target_loc = target_loc.replace("محافظة ", "")
+        
+        if parent_loc:
+            if parent_loc == "محافظة العاصمة": parent_loc = "عمان"
+            elif parent_loc.startswith("محافظة "): parent_loc = parent_loc.replace("محافظة ", "")
+            
+        filters = []
+        if target_loc == "أخرى" and parent_loc:
+            filters.append(models.Ad.location.ilike(f"{parent_loc}, أخرى%"))
+            filters.append(models.Ad.location.ilike(f"{parent_loc}, other%"))
+        else:
+            city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
+            if city:
+                filters.append(models.Ad.location.ilike(f"{target_loc}%"))
+            else:
+                if parent_loc:
+                    filters.append(models.Ad.location.ilike(f"{parent_loc}, {target_loc}%"))
+                else:
+                    filters.append(models.Ad.location.ilike(f"%{target_loc}%"))
                     
-        query = query.filter(or_(*filters))
+        if filters:
+            query = query.filter(or_(*filters))
         
     if min_price is not None:
         query = query.filter(models.Ad.price >= min_price)

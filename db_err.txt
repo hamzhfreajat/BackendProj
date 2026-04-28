@@ -1,7 +1,0 @@
-(psycopg.errors.NumericValueOutOfRange) integer out of range
-[SQL: SELECT categories.id AS categories_id, categories.parent_id AS categories_parent_id, categories.name AS categories_name, categories.description AS categories_description, categories.icon_name AS categories_icon_name, categories.color_hex AS categories_color_hex, categories.background_url AS categories_background_url, categories.tag AS categories_tag, categories.slugs AS categories_slugs, categories.order_index AS categories_order_index 
-FROM categories 
-WHERE categories.id = %(id_1)s::INTEGER 
- LIMIT %(param_1)s::INTEGER]
-[parameters: {'id_1': 120302020101, 'param_1': 1}]
-(Background on this error at: https://sqlalche.me/e/20/9h9h)
