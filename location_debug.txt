@@ -1,0 +1,30 @@
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: ['أخرى']
+read_ads called with location: ['أخرى']
+read_ads called with location: ['أخرى']
+read_ads called with location: ['عمان', 'أخرى']
+read_ads called with location: ['العقبة', 'أخرى']
+read_ads called with location: ['العقبة', 'أخرى']
+read_ads called with location: ['العقبة', 'أخرى']
+read_ads called with location: None
+read_ads called with location: ['عمان', 'أخرى']
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: ['إربد', 'ابان']
+read_ads called with location: ['عمان', 'أخرى']
+read_ads called with location: ['العقبة']
+read_ads called with location: ['عمان', 'أخرى']
+read_ads called with location: ['العقبة']
+read_ads called with location: ['عمان']
+read_ads called with location: ['عمان']
+read_ads called with location: ['عمان']
+read_ads called with location: ['عمان', 'أخرى']
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: ['عمان', 'عبدون']

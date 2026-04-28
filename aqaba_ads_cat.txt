@@ -1,0 +1,6 @@
+Category شقق للإيجار (ID 301): 11
+Category شاليهات / منتجعات (ID 315): 1
+Category ستوديو فندقي / مخدوم (ID 3023): 1
+Category شقق للبيع (ID 10301): 2
+Category أخرى (ID 10999): 2
+Category شقة فندقية (ID 19331): 1
