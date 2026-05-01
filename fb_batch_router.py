@@ -100,6 +100,7 @@ CRITICAL LOCATION RULES:
 - category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a property or room.
 - suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
 - attributes (object) -- Extract these specific property/shared-room features if mentioned:
+    - area (int) -- Property area in square meters (if mentioned, e.g., 150)
     - rooms (int) -- Number of rooms
     - bathrooms (int) -- Number of bathrooms
     - furnished (string) -- Match exactly: مفروشة, غير مفروشة, مفروش جزئياً

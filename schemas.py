@@ -215,6 +215,8 @@ class Ad(AdBase):
     is_published: bool = False
     linked_tags: Optional[List[Tag]] = []
     
+    owner: Optional[User] = None
+    
     source_type: str = "ORGANIC_USER"
     source_url: Optional[str] = None
     raw_description: Optional[str] = None
