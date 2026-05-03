@@ -468,9 +468,22 @@ def perform_bulk_action(
 @app.get("/api/search/trending")
 def get_trending_searches(db: Session = Depends(get_db)):
     """Returns top popular searches and brands."""
-    return [
-        "تويوتا", "ايفون", "bmw", "فورد فيوجن", "مرسيدس", "بريوس", "سيارات اقساط", "كامري", "اكسنت", "شقق للايجار"
-    ]
+    tags = db.query(models.Tag.name, func.count(models.ad_tags.c.ad_id)) \
+             .join(models.ad_tags) \
+             .group_by(models.Tag.id) \
+             .order_by(func.count(models.ad_tags.c.ad_id).desc()) \
+             .limit(10).all()
+    
+    trending = []
+    for tag in tags:
+        name = tag[0].split(":", 1)[-1].replace("_", " ")
+        if name not in trending:
+            trending.append(name)
+            
+    if not trending:
+        return []
+        
+    return trending
 
 @app.get("/api/search/autocomplete")
 def search_autocomplete(q: str, db: Session = Depends(get_db)):
