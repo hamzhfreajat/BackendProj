@@ -28,3 +28,7 @@ read_ads called with location: None
 read_ads called with location: None
 read_ads called with location: None
 read_ads called with location: ['عمان', 'عبدون']
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None

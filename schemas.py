@@ -334,6 +334,12 @@ class AdminNotificationCreate(BaseModel):
     body: str
     type: Optional[str] = "admin_alert"
 
+class ChatAlertCreate(BaseModel):
+    target_user_id: int
+    sender_name: str
+    message_preview: str
+    ad_id: str
+
 # TRACKING SCHEMAS
 class LogEventRequest(BaseModel):
     action_type: str

@@ -461,6 +461,63 @@ def perform_bulk_action(
     db.commit()
     return {"message": f"Action '{req.action}' performed on {len(ads)} ads"}
 
+# ============================================================
+# SEARCH & AUTOCOMPLETE
+# ============================================================
+
+@app.get("/api/search/trending")
+def get_trending_searches(db: Session = Depends(get_db)):
+    """Returns top popular searches and brands."""
+    return [
+        "تويوتا", "ايفون", "bmw", "فورد فيوجن", "مرسيدس", "بريوس", "سيارات اقساط", "كامري", "اكسنت", "شقق للايجار"
+    ]
+
+@app.get("/api/search/autocomplete")
+def search_autocomplete(q: str, db: Session = Depends(get_db)):
+    if not q or len(q) < 2:
+        return {"categories": [], "suggestions": []}
+    
+    # 1. Match Categories
+    cats = db.query(models.Category).filter(models.Category.name.ilike(f"%{q}%")).limit(5).all()
+    cat_results = [{"id": c.id, "name": c.name, "icon_name": c.icon_name} for c in cats]
+    
+    # 2. Match Tags & extract exact ad count for each
+    tags_query = db.query(models.Tag, func.count(models.ad_tags.c.ad_id).label("count")) \
+             .join(models.ad_tags, models.Tag.id == models.ad_tags.c.tag_id) \
+             .filter(models.Tag.name.ilike(f"%{q}%")) \
+             .group_by(models.Tag.id) \
+             .order_by(func.count(models.ad_tags.c.ad_id).desc()) \
+             .limit(10).all()
+             
+    suggestions = []
+    seen = set()
+    for tag, count in tags_query:
+        name = tag.name.split(":", 1)[-1] if ":" in tag.name else tag.name
+        name = name.replace("_", " ")
+        if name not in seen and name.strip():
+            seen.add(name)
+            suggestions.append({"text": name, "count": count})
+            if len(suggestions) >= 5:
+                break
+                
+    # If not enough tags found, match Ads titles as suggestions
+    if len(suggestions) < 5:
+        # Fallback to simple matching
+        ads = db.query(models.Ad.title, func.count(models.Ad.id).label("count")) \
+                .filter(models.Ad.title.ilike(f"%{q}%"), models.Ad.is_published == True) \
+                .group_by(models.Ad.title) \
+                .order_by(func.count(models.Ad.id).desc()) \
+                .limit(5).all()
+                
+        for ad_title, count in ads:
+            if ad_title not in seen and ad_title.strip():
+                seen.add(ad_title)
+                suggestions.append({"text": ad_title, "count": count})
+                if len(suggestions) >= 8:
+                    break
+                    
+    return {"categories": cat_results, "suggestions": suggestions}
+
 @app.get("/api/ads", response_model=List[schemas.Ad])
 def read_ads(
     skip: int = 0, 

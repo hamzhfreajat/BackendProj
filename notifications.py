@@ -266,6 +266,32 @@ def mark_all_as_read(
     return {"status": "success"}
 
 
+@router.post("/chat-alert")
+def send_chat_alert(
+    data: schemas.ChatAlertCreate,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Trigger a push notification for a chat message."""
+    target_user = db.query(models.User).filter(models.User.id == data.target_user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+
+    title = f"رسالة جديدة من {data.sender_name}"
+    
+    background_tasks.add_task(
+        send_personal_notification,
+        target_user_id=data.target_user_id,
+        title=title,
+        body=data.message_preview,
+        notification_type="chat_message",
+        reference_id=int(data.ad_id) if data.ad_id.isdigit() else None
+    )
+    
+    return {"status": "success", "message": "Chat alert queued."}
+
+
 @router.post("/admin/send")
 def send_admin_notification(
     data: schemas.AdminNotificationCreate,
