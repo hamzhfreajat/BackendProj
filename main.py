@@ -482,17 +482,18 @@ def norm_col(col):
     return c
 
 SEARCH_SYNONYMS = {
-    "سياره": ["سياره", "مركبه", "عربيه"],
-    "سيارات": ["سيارات", "مركبات", "عربيات"],
-    "شقه": ["شقه", "استوديو", "سكن", "منزل"],
-    "شقق": ["شقق", "استوديوهات", "سكنات", "منازل", "بيوت"],
-    "بيت": ["بيت", "منزل", "فيلا"],
-    "بيوت": ["بيوت", "منازل", "فلل"],
-    "جوال": ["جوال", "موبايل", "تلفون", "هاتف"],
-    "جوالات": ["جوالات", "موبايلات", "تلفونات", "هواتف"],
-    "وظايف": ["وظايف", "عمل", "شغل", "توظيف"],
-    "بنات": ["بنات", "اناث"],
-    "شباب": ["شباب", "ذكور"]
+    "سياره": ["سياره", "سيارات", "مركبه", "عربيه"],
+    "سيارات": ["سيارات", "سياره", "مركبات", "عربيات"],
+    "شقه": ["شقه", "شقق", "استوديو", "سكن", "منزل"],
+    "شقق": ["شقق", "شقه", "استوديوهات", "سكنات", "منازل", "بيوت"],
+    "بيت": ["بيت", "بيوت", "منزل", "فيلا"],
+    "بيوت": ["بيوت", "بيت", "منازل", "فلل"],
+    "جوال": ["جوال", "جوالات", "موبايل", "تلفون", "هاتف"],
+    "جوالات": ["جوالات", "جوال", "موبايلات", "تلفونات", "هواتف"],
+    "وظايف": ["وظايف", "عمل", "شغل", "توظيف", "وظيفه"],
+    "وظيفه": ["وظيفه", "وظايف", "عمل", "شغل", "توظيف"],
+    "بنات": ["بنات", "اناث", "بنت", "انثي"],
+    "شباب": ["شباب", "ذكور", "شاب", "ذكر"]
 }
 
 def expand_term_with_synonyms(term):
@@ -503,6 +504,8 @@ def expand_term_with_synonyms(term):
         if norm in v:
             return v
     return [norm]
+
+LOCATIONS_CACHE = None
 
 @app.get("/api/search/trending")
 def get_trending_searches(db: Session = Depends(get_db)):
@@ -624,13 +627,22 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     words_to_remove.add(w)
             remaining_terms -= words_to_remove
             
-            locations = ["عمان", "اربد", "الزرقاء", "العقبة", "المفرق", "جرش", "عجلون", "البلقاء", "مادبا", "الكرك", "الطفيلة", "معان"]
-            for loc in locations:
-                if loc in remaining_terms:
+            # Extract Location using dynamic Cities and Regions from DB
+            global LOCATIONS_CACHE
+            if LOCATIONS_CACHE is None:
+                cities = [c[0] for c in db.query(models.City.name_ar).all()]
+                regions = [r[0] for r in db.query(models.Region.name_ar).all()]
+                locs = list(set(cities + regions))
+                locs.sort(key=len, reverse=True)
+                LOCATIONS_CACHE = locs
+                
+            for loc in LOCATIONS_CACHE:
+                # Use subset to capture multi-word locations regardless of set order
+                loc_words = set(loc.split())
+                if loc_words and loc_words.issubset(remaining_terms):
                     inferred_loc = loc
-                    remaining_terms.discard(loc)
+                    remaining_terms -= loc_words
                     break
-                    
             # Check multi-word quick tags before single-word
             multi_quick_tags = {
                 "غير مفروشه": "furnished:غير مفروشة", 
@@ -678,7 +690,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     "remaining_query": remaining_search
                 })
         else:
-            real_count = get_ads_count(search=q, db=db)
+            real_count = get_ads_count(search=q, location=None, tags=None, db=db)
             existing_texts = [s['text'] for s in suggestions]
             if q not in existing_texts:
                 suggestions.insert(0, {"text": q, "count": real_count, "type": "text"})
