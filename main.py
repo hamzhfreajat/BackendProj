@@ -602,6 +602,9 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         inferred_tags = []
         
         remaining_terms = set(norm_q.split())
+        expanded_remaining = set(remaining_terms)
+        for term in remaining_terms:
+            expanded_remaining.update(expand_term_with_synonyms(term))
         
         # 1. Direct Category Match
         all_cats = db.query(models.Category).all()
@@ -609,7 +612,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         for cat in all_cats:
             cat_norm = norm_str(cat.name)
             cat_terms = set(cat_norm.split())
-            if cat_terms and cat_terms.issubset(remaining_terms):
+            if cat_terms and cat_terms.issubset(expanded_remaining):
                 priority = 1 if cat_norm in norm_q else 0
                 cat_matches.append((cat.id, len(cat_terms), cat.name, priority, cat_terms))
                 
@@ -617,7 +620,13 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
             cat_matches.sort(key=lambda x: (x[3], x[1]), reverse=True)
             inferred_cat_id = cat_matches[0][0]
             inferred_cat_name = cat_matches[0][2]
-            remaining_terms -= cat_matches[0][4]
+            
+            words_to_remove = set()
+            for w in remaining_terms:
+                w_syns = expand_term_with_synonyms(w)
+                if any(syn in cat_matches[0][4] for syn in [w] + w_syns):
+                    words_to_remove.add(w)
+            remaining_terms -= words_to_remove
         else:
             # 2. Synonym Category Match
             for k, synonyms in SEARCH_SYNONYMS.items():
@@ -682,7 +691,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
             LOCATIONS_CACHE = locs
             
         for loc in LOCATIONS_CACHE:
-            loc_words = loc.split()
+            loc_words = norm_str(loc).split()
             matched_words = set()
             match = True
             for lw in loc_words:
@@ -849,10 +858,13 @@ def read_ads(
             term_filters = []
             for ext in expanded_terms:
                 term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
+                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
                 term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
                 term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
+                term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
                 
-                relevance_cases.append(case((norm_col(models.Ad.title).ilike(f"%{ext}%"), 3), else_=0))
+                relevance_cases.append(case((norm_col(models.Ad.title).ilike(f"%{ext}%"), 4), else_=0))
+                relevance_cases.append(case((models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")), 3), else_=0))
                 relevance_cases.append(case((models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")), 2), else_=0))
                 relevance_cases.append(case((norm_col(models.Ad.description).ilike(f"%{ext}%"), 1), else_=0))
                 
@@ -1058,13 +1070,13 @@ def get_ads_count(
     category_id: int = None, 
     section: str = None, 
     search: str = None,
-    location: List[str] = Query(None),
+    location: List[str] = None,
     min_price: float = None,
     max_price: float = None,
     is_hot: bool = None,
     is_published: bool = None,
     source_type: str = None,
-    tags: List[str] = Query(None),
+    tags: List[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Ad)
@@ -1093,8 +1105,10 @@ def get_ads_count(
             term_filters = []
             for ext in expanded_terms:
                 term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
+                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
                 term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
                 term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
+                term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
                 
             query = query.filter(or_(*term_filters))
         
