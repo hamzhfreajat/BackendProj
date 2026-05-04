@@ -655,7 +655,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                         remaining_terms.discard(word)
                         
             # Noise Reduction (using normalized words)
-            noise_words = {"في", "مع", "من", "للبيع", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "مباشره", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه"}
+            noise_words = {"في", "مع", "من", "للبيع", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه"}
             remaining_terms -= noise_words
             
             # Extract Location using dynamic Cities and Regions from DB
@@ -684,8 +684,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 "طابق ثالث": "floor:3",
                 "طابق رابع": "floor:4",
                 "طابق خامس": "floor:5",
-                "تحت الانشاء": "building_age:تحت الإنشاء",
-                "من المالك": "seller_type:المالك"
+                "تحت الانشاء": "building_age:تحت الإنشاء"
             }
             for k, v in multi_quick_tags.items():
                 tag_words = set(k.split())
@@ -699,7 +698,9 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 "بالتقسيط": "installment_possible:نعم",
                 "تقسيط": "installment_possible:نعم",
                 "جديده": "building_age:جديد لم يسكن",
-                "ارضيه": "floor:الطابق الأرضي"
+                "ارضيه": "floor:الطابق الأرضي",
+                "مسبح": "main_features:مسبح",
+                "ومسبح": "main_features:مسبح"
             }
             for k, v in single_quick_tags.items():
                 if k in remaining_terms:
