@@ -514,6 +514,196 @@ def expand_term_with_synonyms(term):
 
 LOCATIONS_CACHE = None
 
+def parse_smart_search_query(q: str, db: Session):
+    norm_q = norm_str(q)
+    inferred_cat_id = None
+    inferred_cat_name = None
+    inferred_loc = None
+    inferred_tags = []
+    
+    raw_search_terms = set(norm_q.split())
+    search_terms = set()
+    for t in raw_search_terms:
+        search_terms.add(t)
+        search_terms.update(expand_term_with_synonyms(t))
+        if t == 'استوديوهات': search_terms.add('ستوديوهات')
+        if t == 'ستوديوهات': search_terms.add('استوديوهات')
+    
+    remaining_terms = set(norm_q.split())
+    expanded_remaining = set(remaining_terms)
+    for term in remaining_terms:
+        expanded_remaining.update(expand_term_with_synonyms(term))
+    
+    # 1. Direct Category Match
+    all_cats = db.query(models.Category).all()
+    cat_matches = []
+    for cat in all_cats:
+        cat_norm = norm_str(cat.name)
+        cat_terms = set(cat_norm.split())
+        if cat_terms and cat_terms.issubset(expanded_remaining):
+            priority = 1 if cat_norm in norm_q else 0
+            cat_matches.append((cat.id, len(cat_terms), cat.name, priority, cat_terms))
+            
+    if cat_matches:
+        cat_matches.sort(key=lambda x: (x[3], x[1], x[0]), reverse=True)
+        inferred_cat_id = cat_matches[0][0]
+        inferred_cat_name = cat_matches[0][2]
+        
+        words_to_remove = set()
+        for w in remaining_terms:
+            w_syns = expand_term_with_synonyms(w)
+            if any(syn in cat_matches[0][4] for syn in [w] + w_syns):
+                words_to_remove.add(w)
+        remaining_terms -= words_to_remove
+    else:
+        # 2. Synonym Category Match
+        for k, synonyms in SEARCH_SYNONYMS.items():
+            for syn in synonyms:
+                if syn in remaining_terms:
+                    synonym_match = db.query(models.Category).filter(models.Category.name.ilike(f"%{k}%")).order_by(func.length(models.Category.name)).first()
+                    if synonym_match:
+                        inferred_cat_id = synonym_match.id
+                        inferred_cat_name = synonym_match.name
+                        remaining_terms.discard(syn)
+                        break
+            if inferred_cat_id:
+                break
+        
+    import re
+    
+    # Extract Price
+    price_match = re.search(r'(?:بسعر|سعر|لا يتجاوز|اقل من|بحدود)\s*(\d+)\s*(ألف|الف|000)?(?!\s*متر|\s*م\b|\s*m\b)', q)
+    if not price_match:
+        price_match = re.search(r'(\d+)\s*(ألف|الف)(?!\s*متر|\s*م\b|\s*m\b)', q)
+    if price_match:
+        base_price = int(price_match.group(1))
+        if price_match.lastgroup and price_match.group(price_match.lastindex) in ["ألف", "الف"]:
+            base_price *= 1000
+        elif price_match.group(0).endswith("ألف") or price_match.group(0).endswith("الف"):
+             base_price *= 1000
+        inferred_tags.append(f"max_price:{base_price}")
+        for word in price_match.group(0).split():
+            remaining_terms.discard(word)
+            
+    # Extract Area
+    area_match = re.search(r'(?:مساحة|مساحتها|بمساحة)?\s*(\d+)\s*(?:متر|م\b|m\b)', q)
+    if area_match:
+        remaining_terms.add(area_match.group(1))
+        for word in area_match.group(0).split():
+            if word != area_match.group(1):
+                remaining_terms.discard(word)
+                
+    # Extract Bedrooms
+    bed_match = re.search(r'(\d+)\s*(?:نوم|غرف)', q)
+    if bed_match:
+        inferred_tags.append(f"bedrooms:{bed_match.group(1)}")
+        for w in bed_match.group(0).split():
+            remaining_terms.discard(w)
+    elif "غرفتين" in remaining_terms:
+        inferred_tags.append("bedrooms:2")
+        remaining_terms.discard("غرفتين")
+        if "وصاله" in remaining_terms: remaining_terms.discard("وصاله")
+        if "وصالة" in remaining_terms: remaining_terms.discard("وصالة")
+    
+    # Noise Reduction (using normalized words)
+    noise_words = {"في", "مع", "من", "او", "لا", "الى", "لل", "على", "عن", "ب", "ل", "و", "ف", "ك"}
+    remaining_terms -= noise_words
+    
+    # Extract Location using dynamic Cities and Regions from DB
+    global LOCATIONS_CACHE
+    if LOCATIONS_CACHE is None:
+        cities = [c[0] for c in db.query(models.City.name_ar).all()]
+        regions = [r[0] for r in db.query(models.Region.name_ar).all()]
+        locs = list(set(cities + regions))
+        locs.sort(key=len, reverse=True)
+        LOCATIONS_CACHE = locs
+        
+    for loc in LOCATIONS_CACHE:
+        loc_words = norm_str(loc).split()
+        matched_words = set()
+        match = True
+        for lw in loc_words:
+            found_term = None
+            for term in remaining_terms:
+                if term == lw:
+                    found_term = term
+                    break
+                if term.endswith(lw) and len(term) <= len(lw) + 2 and term[:-len(lw)] in ['ب', 'ل', 'و', 'ف', 'كال']:
+                    found_term = term
+                    break
+                if lw.startswith('ال') and term == f"لل{lw[2:]}":
+                    found_term = term
+                    break
+            if found_term:
+                matched_words.add(found_term)
+            else:
+                match = False
+                break
+        
+        if match:
+            inferred_loc = loc
+            remaining_terms -= matched_words
+            break
+            
+    # Check multi-word quick tags before single-word
+    multi_quick_tags = {
+        "غير مفروشه": "furnished:غير مفروشة", 
+        "طابق ارضي": "floor:الطابق الأرضي",
+        "شبه ارضي": "floor:طابق شبه أرضي",
+        "طابق اول": "floor:1",
+        "طابق ثاني": "floor:2",
+        "طابق ثالث": "floor:3",
+        "طابق رابع": "floor:4",
+        "طابق خامس": "floor:5",
+        "طابق اخير": "floor:الطابق الأخير",
+        "تحت الانشاء": "building_age:تحت الإنشاء",
+        "ايجار يومي": "rent_duration:يومي",
+        "ايجار شهري": "rent_duration:شهري",
+        "ايجار سنوي": "rent_duration:سنوي",
+        "للايجار اليومي": "rent_duration:يومي",
+        "للايجار الشهري": "rent_duration:شهري",
+        "للايجار السنوي": "rent_duration:سنوي",
+        "بدون عموله": "seller_type:المالك",
+        "بدون وسيط": "seller_type:المالك",
+        "طاقه شمسيه": "main_features:طاقة شمسية",
+        "تدفئه مركزيه": "main_features:تدفئة",
+        "تحت البلاط": "main_features:تدفئة",
+        "بئر ماء": "main_features:بئر ماء",
+        "مطبخ راكب": "main_features:مطبخ راكب",
+        "غير مفروش": "furnished:غير مفروشة"
+    }
+    for k, v in multi_quick_tags.items():
+        tag_words = set(k.split())
+        if tag_words.issubset(remaining_terms):
+            inferred_tags.append(v)
+            remaining_terms -= tag_words
+                
+    # Check single-word quick tags
+    single_quick_tags = {
+        "مفروشه": "furnished:مفروشة",
+        "مفروش": "furnished:مفروشة",
+        "بالتقسيط": "installment_possible:نعم",
+        "تقسيط": "installment_possible:نعم",
+        "جديده": "building_age:جديد لم يسكن",
+        "ارضيه": "floor:الطابق الأرضي",
+        "مسبح": "main_features:مسبح",
+        "ومسبح": "main_features:مسبح",
+        "تكييف": "main_features:تكييف",
+        "مصعد": "main_features:مصعد",
+        "كراج": "main_features:كراج",
+        "انترنت": "main_features:إنترنت",
+        "استوديو": "bedrooms:0",
+        "استوديوهات": "bedrooms:0"
+    }
+    for k, v in single_quick_tags.items():
+        if k in remaining_terms:
+            inferred_tags.append(v)
+            remaining_terms.discard(k)
+            
+    remaining_search = " ".join(remaining_terms) if remaining_terms else None
+    
+    return inferred_cat_id, inferred_cat_name, inferred_loc, inferred_tags, remaining_search
+
 @app.get("/api/search/trending")
 def get_trending_searches(db: Session = Depends(get_db)):
     """Returns top popular searches and brands."""
@@ -592,168 +782,6 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                         
     # Always include the user's exact query with accurate counts and NLP extraction
     if len(q) >= 3:
-        raw_search_terms = set(norm_q.split())
-        search_terms = set()
-        for t in raw_search_terms:
-            search_terms.add(t)
-            search_terms.update(expand_term_with_synonyms(t))
-            if t == 'استوديوهات': search_terms.add('ستوديوهات')
-            if t == 'ستوديوهات': search_terms.add('استوديوهات')
-            
-        inferred_cat_id = None
-        inferred_cat_name = None
-        inferred_loc = None
-        inferred_tags = []
-        
-        remaining_terms = set(norm_q.split())
-        expanded_remaining = set(remaining_terms)
-        for term in remaining_terms:
-            expanded_remaining.update(expand_term_with_synonyms(term))
-        
-        # 1. Direct Category Match
-        all_cats = db.query(models.Category).all()
-        cat_matches = []
-        for cat in all_cats:
-            cat_norm = norm_str(cat.name)
-            cat_terms = set(cat_norm.split())
-            if cat_terms and cat_terms.issubset(expanded_remaining):
-                priority = 1 if cat_norm in norm_q else 0
-                cat_matches.append((cat.id, len(cat_terms), cat.name, priority, cat_terms))
-                
-        if cat_matches:
-            cat_matches.sort(key=lambda x: (x[3], x[1], x[0]), reverse=True)
-            inferred_cat_id = cat_matches[0][0]
-            inferred_cat_name = cat_matches[0][2]
-            
-            words_to_remove = set()
-            for w in remaining_terms:
-                w_syns = expand_term_with_synonyms(w)
-                if any(syn in cat_matches[0][4] for syn in [w] + w_syns):
-                    words_to_remove.add(w)
-            remaining_terms -= words_to_remove
-        else:
-            # 2. Synonym Category Match
-            for k, synonyms in SEARCH_SYNONYMS.items():
-                for syn in synonyms:
-                    if syn in remaining_terms:
-                        synonym_match = db.query(models.Category).filter(models.Category.name.ilike(f"%{k}%")).order_by(func.length(models.Category.name)).first()
-                        if synonym_match:
-                            inferred_cat_id = synonym_match.id
-                            inferred_cat_name = synonym_match.name
-                            remaining_terms.discard(syn)
-                            break
-                if inferred_cat_id:
-                    break
-            
-        import re
-        
-        # Extract Price
-        price_match = re.search(r'(?:بسعر|سعر|لا يتجاوز|اقل من|بحدود)\s*(\d+)\s*(ألف|الف|000)?(?!\s*متر|\s*م\b|\s*m\b)', q)
-        if not price_match:
-            price_match = re.search(r'(\d+)\s*(ألف|الف)(?!\s*متر|\s*م\b|\s*m\b)', q)
-        if price_match:
-            base_price = int(price_match.group(1))
-            if price_match.lastgroup and price_match.group(price_match.lastindex) in ["ألف", "الف"]:
-                base_price *= 1000
-            elif price_match.group(0).endswith("ألف") or price_match.group(0).endswith("الف"):
-                 base_price *= 1000
-            inferred_tags.append(f"max_price:{base_price}")
-            for word in price_match.group(0).split():
-                remaining_terms.discard(word)
-                
-        # Extract Area
-        area_match = re.search(r'(?:مساحة|مساحتها|بمساحة)?\s*(\d+)\s*(?:متر|م\b|m\b)', q)
-        if area_match:
-            remaining_terms.add(area_match.group(1))
-            for word in area_match.group(0).split():
-                if word != area_match.group(1):
-                    remaining_terms.discard(word)
-                    
-        # Extract Bedrooms
-        bed_match = re.search(r'(\d+)\s*(?:نوم|غرف)', q)
-        if bed_match:
-            inferred_tags.append(f"bedrooms:{bed_match.group(1)}")
-            for w in bed_match.group(0).split():
-                remaining_terms.discard(w)
-        elif "غرفتين" in remaining_terms:
-            inferred_tags.append("bedrooms:2")
-            remaining_terms.discard("غرفتين")
-            if "وصاله" in remaining_terms: remaining_terms.discard("وصاله")
-            if "وصالة" in remaining_terms: remaining_terms.discard("وصالة")
-        
-        # Noise Reduction (using normalized words)
-        noise_words = {"في", "مع", "من", "او", "لا", "الى", "لل", "على", "عن", "ب", "ل", "و", "ف", "ك"}
-        remaining_terms -= noise_words
-        
-        # Extract Location using dynamic Cities and Regions from DB
-        global LOCATIONS_CACHE
-        if LOCATIONS_CACHE is None:
-            cities = [c[0] for c in db.query(models.City.name_ar).all()]
-            regions = [r[0] for r in db.query(models.Region.name_ar).all()]
-            locs = list(set(cities + regions))
-            locs.sort(key=len, reverse=True)
-            LOCATIONS_CACHE = locs
-            
-        for loc in LOCATIONS_CACHE:
-            loc_words = norm_str(loc).split()
-            matched_words = set()
-            match = True
-            for lw in loc_words:
-                found_term = None
-                for term in remaining_terms:
-                    if term == lw:
-                        found_term = term
-                        break
-                    if term.endswith(lw) and len(term) <= len(lw) + 2 and term[:-len(lw)] in ['ب', 'ل', 'و', 'ف', 'كال']:
-                        found_term = term
-                        break
-                    if lw.startswith('ال') and term == f"لل{lw[2:]}":
-                        found_term = term
-                        break
-                if found_term:
-                    matched_words.add(found_term)
-                else:
-                    match = False
-                    break
-            
-            if match:
-                inferred_loc = loc
-                remaining_terms -= matched_words
-                break
-        # Check multi-word quick tags before single-word
-        multi_quick_tags = {
-            "غير مفروشه": "furnished:غير مفروشة", 
-            "طابق ارضي": "floor:الطابق الأرضي",
-            "شبه ارضي": "floor:طابق شبه أرضي",
-            "طابق اول": "floor:1",
-            "طابق ثاني": "floor:2",
-            "طابق ثالث": "floor:3",
-            "طابق رابع": "floor:4",
-            "طابق خامس": "floor:5",
-            "طابق اخير": "floor:الطابق الأخير",
-            "تحت الانشاء": "building_age:تحت الإنشاء",
-            "ايجار يومي": "rent_duration:يومي",
-            "ايجار شهري": "rent_duration:شهري",
-            "ايجار سنوي": "rent_duration:سنوي",
-            "للايجار اليومي": "rent_duration:يومي",
-            "للايجار الشهري": "rent_duration:شهري",
-            "للايجار السنوي": "rent_duration:سنوي",
-            "بدون عموله": "seller_type:المالك",
-            "بدون وسيط": "seller_type:المالك",
-            "طاقه شمسيه": "main_features:طاقة شمسية",
-            "تدفئه مركزيه": "main_features:تدفئة",
-            "تحت البلاط": "main_features:تدفئة",
-            "بئر ماء": "main_features:بئر ماء",
-            "مطبخ راكب": "main_features:مطبخ راكب",
-            "غير مفروش": "furnished:غير مفروشة"
-        }
-        for k, v in multi_quick_tags.items():
-            tag_words = set(k.split())
-            if tag_words.issubset(remaining_terms):
-                inferred_tags.append(v)
-                remaining_terms -= tag_words
-                    
-        # Check single-word quick tags
         single_quick_tags = {
             "مفروشه": "furnished:مفروشة",
             "مفروش": "furnished:مفروشة",
@@ -835,40 +863,40 @@ def read_ads(
     relevance_cases = []
     
     if search:
-        norm_s = norm_str(search)
+        inferred_cat_id, inferred_cat_name, inferred_loc, inferred_tags, remaining_search = parse_smart_search_query(search, db)
         
-        if not category_id:
-            search_terms = set(norm_s.split())
-            all_cats = db.query(models.Category).all()
-            inferred = []
-            for cat in all_cats:
-                cat_norm = norm_str(cat.name)
-                cat_terms = set(cat_norm.split())
-                if cat_terms and cat_terms.issubset(search_terms):
-                    inferred.append((cat.id, len(cat_terms)))
-            if inferred:
-                inferred.sort(key=lambda x: x[1], reverse=True)
-                category_id = inferred[0][0]
-                
-        terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
-        
-        for term in terms:
-            expanded_terms = expand_term_with_synonyms(term)
+        if not category_id and inferred_cat_id:
+            category_id = inferred_cat_id
             
-            term_filters = []
-            for ext in expanded_terms:
-                term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
-                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
-                term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
-                term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
-                term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
+        if not location and inferred_loc:
+            location = [inferred_loc]
+            
+        if inferred_tags:
+            if tags is None:
+                tags = []
+            tags.extend(inferred_tags)
+            
+        if remaining_search:
+            norm_s = norm_str(remaining_search)
+            terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
+            
+            for term in terms:
+                expanded_terms = expand_term_with_synonyms(term)
                 
-                relevance_cases.append(case((norm_col(models.Ad.title).ilike(f"%{ext}%"), 4), else_=0))
-                relevance_cases.append(case((models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")), 3), else_=0))
-                relevance_cases.append(case((models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")), 2), else_=0))
-                relevance_cases.append(case((norm_col(models.Ad.description).ilike(f"%{ext}%"), 1), else_=0))
-                
-            query = query.filter(or_(*term_filters))
+                term_filters = []
+                for ext in expanded_terms:
+                    term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
+                    term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
+                    term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
+                    term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
+                    term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
+                    
+                    relevance_cases.append(case((norm_col(models.Ad.title).ilike(f"%{ext}%"), 4), else_=0))
+                    relevance_cases.append(case((models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")), 3), else_=0))
+                    relevance_cases.append(case((models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")), 2), else_=0))
+                    relevance_cases.append(case((norm_col(models.Ad.description).ilike(f"%{ext}%"), 1), else_=0))
+                    
+                query = query.filter(or_(*term_filters))
         
     if location:
         parent_loc = None
@@ -952,49 +980,49 @@ def read_ads(
                 continue
             elif prefix == "area":
                 for val in values:
-                    conds.append(models.Ad.attributes['building_area'].astext.ilike(f"%{val}%"))
-                    conds.append(models.Ad.attributes['land_area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['building_area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['land_area'].astext.ilike(f"%{val}%"))
             elif prefix == "bedrooms":
                 for val in values:
                     if val == '+6':
-                        conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.cast(Integer) >= 6)
                     elif val == 'ستوديو':
-                        conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == 0)
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.cast(Integer) == 0)
                     else:
-                        conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.cast(Integer) == int(val))
             elif prefix == "bathrooms":
                 for val in values:
                     if val == '+6':
-                        conds.append(models.Ad.attributes['bathrooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.cast(Integer) >= 6)
                     else:
-                        conds.append(models.Ad.attributes['bathrooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.cast(Integer) == int(val))
             elif prefix == "furnished":
                 for val in values:
-                    conds.append(models.Ad.attributes['furnished'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['furnished'].astext == val)
             elif prefix == "floor":
                 for val in values:
-                    conds.append(models.Ad.attributes['floor'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == val)
             elif prefix == "age":
                 for val in values:
-                    conds.append(models.Ad.attributes['building_age'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['building_age'].astext == val)
             elif prefix == "rent_duration":
                 for val in values:
-                    conds.append(models.Ad.attributes['rent_duration'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['rent_duration'].astext == val)
             elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible"]:
                 for val in values:
-                    conds.append(models.Ad.attributes[prefix].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data'][prefix].astext == val)
             elif prefix == "available_services":
                 for val in values:
-                    conds.append(models.Ad.attributes['available_services'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['available_services'].astext.ilike(f"%{val}%"))
             elif prefix == "main_features":
                 for val in values:
                     conds = [
-                        models.Ad.attributes['key_features'].astext.ilike(f"%{val}%"),
-                        models.Ad.attributes['building_features'].astext.ilike(f"%{val}%")
+                        models.Ad.attributes['dynamic_data']['key_features'].astext.ilike(f"%{val}%"),
+                        models.Ad.attributes['dynamic_data']['building_features'].astext.ilike(f"%{val}%")
                     ]
             elif prefix == "extra_features":
                 for val in values:
-                    conds.append(models.Ad.attributes['building_features'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['building_features'].astext.ilike(f"%{val}%"))
             else:
                 # Unrecognized prefix, treat as generic tags
                 for val in values:
@@ -1082,35 +1110,35 @@ def get_ads_count(
     query = db.query(models.Ad)
     
     if search:
-        norm_s = norm_str(search)
+        inferred_cat_id, inferred_cat_name, inferred_loc, inferred_tags, remaining_search = parse_smart_search_query(search, db)
         
-        if not category_id:
-            search_terms = set(norm_s.split())
-            all_cats = db.query(models.Category).all()
-            inferred = []
-            for cat in all_cats:
-                cat_norm = norm_str(cat.name)
-                cat_terms = set(cat_norm.split())
-                if cat_terms and cat_terms.issubset(search_terms):
-                    inferred.append((cat.id, len(cat_terms)))
-            if inferred:
-                inferred.sort(key=lambda x: x[1], reverse=True)
-                category_id = inferred[0][0]
-                
-        terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
-        
-        for term in terms:
-            expanded_terms = expand_term_with_synonyms(term)
+        if not category_id and inferred_cat_id:
+            category_id = inferred_cat_id
             
-            term_filters = []
-            for ext in expanded_terms:
-                term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
-                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
-                term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
-                term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
-                term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
+        if not location and inferred_loc:
+            location = [inferred_loc]
+            
+        if inferred_tags:
+            if tags is None:
+                tags = []
+            tags.extend(inferred_tags)
+            
+        if remaining_search:
+            norm_s = norm_str(remaining_search)
+            terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
+            
+            for term in terms:
+                expanded_terms = expand_term_with_synonyms(term)
                 
-            query = query.filter(or_(*term_filters))
+                term_filters = []
+                for ext in expanded_terms:
+                    term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
+                    term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
+                    term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
+                    term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
+                    term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
+                    
+                query = query.filter(or_(*term_filters))
         
     if location:
         parent_loc = None
@@ -1194,49 +1222,64 @@ def get_ads_count(
                 continue
             elif prefix == "area":
                 for val in values:
-                    conds.append(models.Ad.attributes['building_area'].astext.ilike(f"%{val}%"))
-                    conds.append(models.Ad.attributes['land_area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['building_area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['land_area'].astext.ilike(f"%{val}%"))
             elif prefix == "bedrooms":
                 for val in values:
                     if val == '+6':
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.cast(Integer) >= 6)
                     elif val == 'ستوديو':
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == 0)
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%ستوديو%'))
                     else:
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.cast(Integer) == int(val))
             elif prefix == "bathrooms":
                 for val in values:
                     if val == '+6':
                         conds.append(models.Ad.attributes['bathrooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.cast(Integer) >= 6)
                     else:
                         conds.append(models.Ad.attributes['bathrooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.cast(Integer) == int(val))
             elif prefix == "furnished":
                 for val in values:
                     conds.append(models.Ad.attributes['furnished'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['furnishing'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['furnished'].astext == val)
             elif prefix == "floor":
                 for val in values:
                     conds.append(models.Ad.attributes['floor'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == val)
             elif prefix == "age":
                 for val in values:
                     conds.append(models.Ad.attributes['building_age'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['age'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['building_age'].astext == val)
             elif prefix == "rent_duration":
                 for val in values:
                     conds.append(models.Ad.attributes['rent_duration'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['rent_duration'].astext == val)
             elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible"]:
                 for val in values:
-                    conds.append(models.Ad.attributes[prefix].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data'][prefix].astext == val)
             elif prefix == "available_services":
                 for val in values:
-                    conds.append(models.Ad.attributes['available_services'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['available_services'].astext.ilike(f"%{val}%"))
             elif prefix == "main_features":
                 for val in values:
                     conds = [
                         models.Ad.attributes['key_features'].astext.ilike(f"%{val}%"),
+                        models.Ad.attributes['dynamic_data']['main_features'].astext.ilike(f"%{val}%"),
+                        models.Ad.attributes['dynamic_data']['key_features'].astext.ilike(f"%{val}%"),
                         models.Ad.attributes['building_features'].astext.ilike(f"%{val}%")
                     ]
             elif prefix == "extra_features":
                 for val in values:
                     conds.append(models.Ad.attributes['building_features'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['extra_features'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['building_features'].astext.ilike(f"%{val}%"))
             else:
                 for val in values:
                     query = query.filter(models.Ad.linked_tags.any(models.Tag.name == f"{prefix}:{val}"))
