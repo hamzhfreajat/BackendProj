@@ -621,7 +621,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 cat_matches.append((cat.id, len(cat_terms), cat.name, priority, cat_terms))
                 
         if cat_matches:
-            cat_matches.sort(key=lambda x: (x[3], x[1]), reverse=True)
+            cat_matches.sort(key=lambda x: (x[3], x[1], x[0]), reverse=True)
             inferred_cat_id = cat_matches[0][0]
             inferred_cat_name = cat_matches[0][2]
             
