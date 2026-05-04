@@ -654,8 +654,20 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     if word != area_match.group(1):
                         remaining_terms.discard(word)
                         
+            # Extract Bedrooms
+            bed_match = re.search(r'(\d+)\s*(?:نوم|غرف)', q)
+            if bed_match:
+                inferred_tags.append(f"bedrooms:{bed_match.group(1)}")
+                for w in bed_match.group(0).split():
+                    remaining_terms.discard(w)
+            elif "غرفتين" in remaining_terms:
+                inferred_tags.append("bedrooms:2")
+                remaining_terms.discard("غرفتين")
+                if "وصاله" in remaining_terms: remaining_terms.discard("وصاله")
+                if "وصالة" in remaining_terms: remaining_terms.discard("وصالة")
+            
             # Noise Reduction (using normalized words)
-            noise_words = {"في", "مع", "من", "للبيع", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه"}
+            noise_words = {"في", "مع", "من", "للبيع", "للايجار", "او", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه", "مغري", "مناسب", "اقتصادي", "رخيصه", "محروق", "مستعجل", "عاجل", "للتفاوض", "قابل", "مفروز", "سند", "مستقل", "طابو", "معفيه", "رسوم", "عموله", "وسيط", "بدون", "شامله", "شامل", "مجهزه", "كامل", "للبناء", "اعاده", "ممتاز", "ثابت", "شهري", "دخل", "عائد", "استثماري"}
             remaining_terms -= noise_words
             
             # Extract Location using dynamic Cities and Regions from DB
@@ -684,7 +696,24 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 "طابق ثالث": "floor:3",
                 "طابق رابع": "floor:4",
                 "طابق خامس": "floor:5",
-                "تحت الانشاء": "building_age:تحت الإنشاء"
+                "طابق اخير": "floor:الطابق الأخير",
+                "تحت الانشاء": "building_age:تحت الإنشاء",
+                "ايجار يومي": "rent_duration:يومي",
+                "ايجار شهري": "rent_duration:شهري",
+                "ايجار سنوي": "rent_duration:سنوي",
+                "للايجار اليومي": "rent_duration:يومي",
+                "للايجار الشهري": "rent_duration:شهري",
+                "للايجار السنوي": "rent_duration:سنوي",
+                "بدون عموله": "seller_type:المالك",
+                "بدون وسيط": "seller_type:المالك",
+                "طاقه شمسيه": "main_features:طاقة شمسية",
+                "تدفئه مركزيه": "main_features:تدفئة",
+                "تحت البلاط": "main_features:تدفئة",
+                "بئر ماء": "main_features:بئر ماء",
+                "مطبخ راكب": "main_features:مطبخ راكب",
+                "سكن طالبات": "target_audience:إناث فقط",
+                "سكن شباب": "target_audience:ذكور فقط",
+                "غير مفروش": "furnished:غير مفروشة"
             }
             for k, v in multi_quick_tags.items():
                 tag_words = set(k.split())
@@ -695,12 +724,21 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
             # Check single-word quick tags
             single_quick_tags = {
                 "مفروشه": "furnished:مفروشة",
+                "مفروش": "furnished:مفروشة",
                 "بالتقسيط": "installment_possible:نعم",
                 "تقسيط": "installment_possible:نعم",
                 "جديده": "building_age:جديد لم يسكن",
                 "ارضيه": "floor:الطابق الأرضي",
                 "مسبح": "main_features:مسبح",
-                "ومسبح": "main_features:مسبح"
+                "ومسبح": "main_features:مسبح",
+                "تكييف": "main_features:تكييف",
+                "مصعد": "main_features:مصعد",
+                "كراج": "main_features:كراج",
+                "انترنت": "main_features:إنترنت",
+                "استوديو": "bedrooms:0",
+                "استوديوهات": "bedrooms:0",
+                "طلاب": "target_audience:ذكور فقط",
+                "طالبات": "target_audience:إناث فقط"
             }
             for k, v in single_quick_tags.items():
                 if k in remaining_terms:
