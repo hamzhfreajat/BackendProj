@@ -582,7 +582,14 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                         
     # Always include the user's exact query with accurate counts and NLP extraction
     if len(q) >= 3:
-        search_terms = set(norm_q.split())
+        raw_search_terms = set(norm_q.split())
+        search_terms = set()
+        for t in raw_search_terms:
+            search_terms.add(t)
+            search_terms.update(expand_term_with_synonyms(t))
+            if t == 'استوديوهات': search_terms.add('ستوديوهات')
+            if t == 'ستوديوهات': search_terms.add('استوديوهات')
+            
         inferred_cat_id = None
         inferred_cat_name = None
         inferred_loc = None
@@ -594,31 +601,62 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
             cat_norm = norm_str(cat.name)
             cat_terms = set(cat_norm.split())
             if cat_terms and cat_terms.issubset(search_terms):
-                cat_matches.append((cat.id, len(cat_terms), cat.name))
+                # prioritize exact substring match of the category name in the original query if possible
+                priority = 1 if cat_norm in norm_q else 0
+                cat_matches.append((cat.id, len(cat_terms), cat.name, priority))
         
         if cat_matches:
-            cat_matches.sort(key=lambda x: x[1], reverse=True)
+            # Sort by priority, then by length of matched terms
+            cat_matches.sort(key=lambda x: (x[3], x[1]), reverse=True)
             inferred_cat_id = cat_matches[0][0]
             inferred_cat_name = cat_matches[0][2]
-            search_terms -= set(norm_str(inferred_cat_name).split())
             
-        locations = ["عمان", "اربد", "الزرقاء", "العقبة", "المفرق", "جرش", "عجلون", "البلقاء", "مادبا", "الكرك", "الطفيلة", "معان"]
-        for loc in locations:
-            if loc in search_terms:
-                inferred_loc = loc
-                search_terms.discard(loc)
-                break
-                
-        quick_tags = {"مفروشه": "furnished:مفروشة", "غير مفروشه": "furnished:غير مفروشة"}
-        for k, v in quick_tags.items():
-            if k in search_terms:
-                inferred_tags.append(v)
-                search_terms.discard(k)
-                
-        remaining_search = " ".join(search_terms) if search_terms else None
-        
-        # Calculate real count based on parsed logic or fallback to generic
-        if inferred_cat_id:
+            # Use original terms for tracking what's remaining
+            remaining_terms = set(norm_q.split())
+            cat_words = set(norm_str(inferred_cat_name).split())
+            # Remove category words and their synonyms from remaining terms
+            words_to_remove = set()
+            for w in remaining_terms:
+                w_syns = expand_term_with_synonyms(w)
+                if w == 'استوديوهات': w_syns.append('ستوديوهات')
+                if w == 'ستوديوهات': w_syns.append('استوديوهات')
+                if any(syn in cat_words for syn in [w] + w_syns):
+                    words_to_remove.add(w)
+            remaining_terms -= words_to_remove
+            
+            locations = ["عمان", "اربد", "الزرقاء", "العقبة", "المفرق", "جرش", "عجلون", "البلقاء", "مادبا", "الكرك", "الطفيلة", "معان"]
+            for loc in locations:
+                if loc in remaining_terms:
+                    inferred_loc = loc
+                    remaining_terms.discard(loc)
+                    break
+                    
+            # Check multi-word quick tags before single-word
+            multi_quick_tags = {
+                "غير مفروشه": "furnished:غير مفروشة", 
+                "طابق ارضي": "floor:الطابق الأرضي",
+                "شبه ارضي": "floor:طابق شبه أرضي",
+                "طابق اول": "floor:1",
+                "طابق ثاني": "floor:2",
+                "طابق ثالث": "floor:3",
+                "طابق رابع": "floor:4",
+                "طابق خامس": "floor:5"
+            }
+            for k, v in multi_quick_tags.items():
+                tag_words = set(k.split())
+                if tag_words.issubset(remaining_terms):
+                    inferred_tags.append(v)
+                    remaining_terms -= tag_words
+                        
+            # Check single-word quick tags
+            single_quick_tags = {"مفروشه": "furnished:مفروشة"}
+            for k, v in single_quick_tags.items():
+                if k in remaining_terms:
+                    inferred_tags.append(v)
+                    remaining_terms.discard(k)
+                    
+            remaining_search = " ".join(remaining_terms) if remaining_terms else None
+            
             real_count = get_ads_count(
                 category_id=inferred_cat_id,
                 location=[inferred_loc] if inferred_loc else None,
@@ -627,7 +665,6 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 db=db
             )
             
-            # Avoid duplicate if it matches an existing text suggestion exactly
             existing_texts = [s['text'] for s in suggestions]
             if q not in existing_texts:
                 suggestions.insert(0, {
