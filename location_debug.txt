@@ -32,3 +32,9 @@ read_ads called with location: None
 read_ads called with location: None
 read_ads called with location: None
 read_ads called with location: None
+read_ads called with location: annotation=List[str] required=False default=None alias='location' json_schema_extra={}
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None

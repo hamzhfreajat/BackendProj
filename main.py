@@ -625,7 +625,6 @@ def read_ads(
             term_filters = []
             for ext in expanded_terms:
                 term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
-                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
                 term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
                 term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
                 
@@ -844,7 +843,6 @@ def get_ads_count(
             term_filters = []
             for ext in expanded_terms:
                 term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
-                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
                 term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
                 term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
                 
