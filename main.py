@@ -481,6 +481,29 @@ def norm_col(col):
     c = func.replace(c, 'ى', 'ي')
     return c
 
+SEARCH_SYNONYMS = {
+    "سياره": ["سياره", "مركبه", "عربيه"],
+    "سيارات": ["سيارات", "مركبات", "عربيات"],
+    "شقه": ["شقه", "استوديو", "سكن", "منزل"],
+    "شقق": ["شقق", "استوديوهات", "سكنات", "منازل", "بيوت"],
+    "بيت": ["بيت", "منزل", "فيلا"],
+    "بيوت": ["بيوت", "منازل", "فلل"],
+    "جوال": ["جوال", "موبايل", "تلفون", "هاتف"],
+    "جوالات": ["جوالات", "موبايلات", "تلفونات", "هواتف"],
+    "وظايف": ["وظايف", "عمل", "شغل", "توظيف"],
+    "بنات": ["بنات", "اناث"],
+    "شباب": ["شباب", "ذكور"]
+}
+
+def expand_term_with_synonyms(term):
+    norm = norm_str(term)
+    if norm in SEARCH_SYNONYMS:
+        return SEARCH_SYNONYMS[norm]
+    for k, v in SEARCH_SYNONYMS.items():
+        if norm in v:
+            return v
+    return [norm]
+
 @app.get("/api/search/trending")
 def get_trending_searches(db: Session = Depends(get_db)):
     """Returns top popular searches and brands."""
@@ -589,18 +612,28 @@ def read_ads(
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
         
+    from sqlalchemy.sql.expression import case
+    relevance_cases = []
+    
     if search:
         norm_s = norm_str(search)
         terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
         
         for term in terms:
-            term_filter = (
-                norm_col(models.Ad.title).ilike(f"%{term}%") | 
-                norm_col(models.Ad.description).ilike(f"%{term}%") |
-                norm_col(models.Ad.location).ilike(f"%{term}%") |
-                models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{term}%"))
-            )
-            query = query.filter(term_filter)
+            expanded_terms = expand_term_with_synonyms(term)
+            
+            term_filters = []
+            for ext in expanded_terms:
+                term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
+                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
+                term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
+                term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
+                
+                relevance_cases.append(case((norm_col(models.Ad.title).ilike(f"%{ext}%"), 3), else_=0))
+                relevance_cases.append(case((models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")), 2), else_=0))
+                relevance_cases.append(case((norm_col(models.Ad.description).ilike(f"%{ext}%"), 1), else_=0))
+                
+            query = query.filter(or_(*term_filters))
         
     if location:
         parent_loc = None
@@ -759,11 +792,13 @@ def read_ads(
     )
     
     # Define priority booleans for Postgres sorting
-    from sqlalchemy.sql.expression import case
     has_image  = case((models.Ad.image_url != None, 1), else_=0)
     has_price  = case((models.Ad.price > 0, 1), else_=0)
 
-    if sort_by == 'price_asc':
+    if search and relevance_cases and (sort_by == 'recommended' or sort_by is None):
+        relevance_score = sum(relevance_cases)
+        query = query.order_by(relevance_score.desc(), models.Ad.is_hot.desc(), has_image.desc(), has_price.desc(), models.Ad.views.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+    elif sort_by == 'price_asc':
         query = query.order_by(models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
         query = query.order_by(models.Ad.price.desc(), models.Ad.id.desc())
@@ -804,13 +839,16 @@ def get_ads_count(
         terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
         
         for term in terms:
-            term_filter = (
-                norm_col(models.Ad.title).ilike(f"%{term}%") | 
-                norm_col(models.Ad.description).ilike(f"%{term}%") |
-                norm_col(models.Ad.location).ilike(f"%{term}%") |
-                models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{term}%"))
-            )
-            query = query.filter(term_filter)
+            expanded_terms = expand_term_with_synonyms(term)
+            
+            term_filters = []
+            for ext in expanded_terms:
+                term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
+                term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
+                term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
+                term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
+                
+            query = query.filter(or_(*term_filters))
         
     if location:
         parent_loc = None
