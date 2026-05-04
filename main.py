@@ -1230,13 +1230,18 @@ def get_ads_count(
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) >= 6)
                         conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%6%'))
                         conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%7%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%6%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%7%'))
                     elif val == 'ستوديو':
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == 0)
                         conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%ستوديو%'))
                         conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%0%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%ستوديو%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%0%'))
                     else:
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == int(val))
                         conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike(f"%{val}%"))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike(f"%{val}%"))
             elif prefix == "bathrooms":
                 for val in values:
                     if val == '+6':
