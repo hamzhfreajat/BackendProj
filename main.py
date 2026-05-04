@@ -580,9 +580,71 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     if len(suggestions) >= 8:
                         break
                         
-    # Always include the user's exact query if it's not suggested
-    if norm_q not in [norm_str(s['text']) for s in suggestions] and len(q) >= 3:
-        suggestions.insert(0, {"text": q, "count": 0, "type": "text"})
+    # Always include the user's exact query with accurate counts and NLP extraction
+    if len(q) >= 3:
+        search_terms = set(norm_q.split())
+        inferred_cat_id = None
+        inferred_cat_name = None
+        inferred_loc = None
+        inferred_tags = []
+        
+        all_cats = db.query(models.Category).all()
+        cat_matches = []
+        for cat in all_cats:
+            cat_norm = norm_str(cat.name)
+            cat_terms = set(cat_norm.split())
+            if cat_terms and cat_terms.issubset(search_terms):
+                cat_matches.append((cat.id, len(cat_terms), cat.name))
+        
+        if cat_matches:
+            cat_matches.sort(key=lambda x: x[1], reverse=True)
+            inferred_cat_id = cat_matches[0][0]
+            inferred_cat_name = cat_matches[0][2]
+            search_terms -= set(norm_str(inferred_cat_name).split())
+            
+        locations = ["عمان", "اربد", "الزرقاء", "العقبة", "المفرق", "جرش", "عجلون", "البلقاء", "مادبا", "الكرك", "الطفيلة", "معان"]
+        for loc in locations:
+            if loc in search_terms:
+                inferred_loc = loc
+                search_terms.discard(loc)
+                break
+                
+        quick_tags = {"مفروشه": "furnished:مفروشة", "غير مفروشه": "furnished:غير مفروشة"}
+        for k, v in quick_tags.items():
+            if k in search_terms:
+                inferred_tags.append(v)
+                search_terms.discard(k)
+                
+        remaining_search = " ".join(search_terms) if search_terms else None
+        
+        # Calculate real count based on parsed logic or fallback to generic
+        if inferred_cat_id:
+            real_count = get_ads_count(
+                category_id=inferred_cat_id,
+                location=[inferred_loc] if inferred_loc else None,
+                tags=inferred_tags if inferred_tags else None,
+                search=remaining_search,
+                db=db
+            )
+            
+            # Avoid duplicate if it matches an existing text suggestion exactly
+            existing_texts = [s['text'] for s in suggestions]
+            if q not in existing_texts:
+                suggestions.insert(0, {
+                    "text": q, 
+                    "count": real_count, 
+                    "type": "smart_search",
+                    "inferred_category_id": inferred_cat_id,
+                    "inferred_category_name": inferred_cat_name,
+                    "inferred_location": inferred_loc,
+                    "inferred_tags": inferred_tags,
+                    "remaining_query": remaining_search
+                })
+        else:
+            real_count = get_ads_count(search=q, db=db)
+            existing_texts = [s['text'] for s in suggestions]
+            if q not in existing_texts:
+                suggestions.insert(0, {"text": q, "count": real_count, "type": "text"})
                     
     return {"categories": cat_results, "suggestions": suggestions}
 
