@@ -465,6 +465,22 @@ def perform_bulk_action(
 # SEARCH & AUTOCOMPLETE
 # ============================================================
 
+from sqlalchemy.sql.expression import literal
+
+def norm_str(s):
+    if not s: return s
+    for a, b in [('أ', 'ا'), ('إ', 'ا'), ('آ', 'ا'), ('ة', 'ه'), ('ى', 'ي')]:
+        s = s.replace(a, b)
+    return s
+
+def norm_col(col):
+    c = func.replace(col, 'أ', 'ا')
+    c = func.replace(c, 'إ', 'ا')
+    c = func.replace(c, 'آ', 'ا')
+    c = func.replace(c, 'ة', 'ه')
+    c = func.replace(c, 'ى', 'ي')
+    return c
+
 @app.get("/api/search/trending")
 def get_trending_searches(db: Session = Depends(get_db)):
     """Returns top popular searches and brands."""
@@ -475,10 +491,12 @@ def get_trending_searches(db: Session = Depends(get_db)):
              .limit(10).all()
     
     trending = []
+    seen = set()
     for tag in tags:
         name = tag[0].split(":", 1)[-1].replace("_", " ")
-        if name not in trending:
-            trending.append(name)
+        if name not in seen:
+            seen.add(name)
+            trending.append({"text": name, "raw_value": tag[0]})
             
     if not trending:
         return []
@@ -489,15 +507,20 @@ def get_trending_searches(db: Session = Depends(get_db)):
 def search_autocomplete(q: str, db: Session = Depends(get_db)):
     if not q or len(q) < 2:
         return {"categories": [], "suggestions": []}
+        
+    norm_q = norm_str(q)
     
     # 1. Match Categories
-    cats = db.query(models.Category).filter(models.Category.name.ilike(f"%{q}%")).limit(5).all()
+    cats = db.query(models.Category).filter(
+        norm_col(models.Category.name).ilike(f"%{norm_q}%") | 
+        literal(norm_q).ilike(func.concat('%', norm_col(models.Category.name), '%'))
+    ).limit(5).all()
     cat_results = [{"id": c.id, "name": c.name, "icon_name": c.icon_name} for c in cats]
     
     # 2. Match Tags & extract exact ad count for each
     tags_query = db.query(models.Tag, func.count(models.ad_tags.c.ad_id).label("count")) \
              .join(models.ad_tags, models.Tag.id == models.ad_tags.c.tag_id) \
-             .filter(models.Tag.name.ilike(f"%{q}%")) \
+             .filter(norm_col(models.Tag.name).ilike(f"%{norm_q}%") | literal(norm_q).ilike(func.concat('%', norm_col(models.Tag.name), '%'))) \
              .group_by(models.Tag.id) \
              .order_by(func.count(models.ad_tags.c.ad_id).desc()) \
              .limit(10).all()
@@ -509,25 +532,34 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         name = name.replace("_", " ")
         if name not in seen and name.strip():
             seen.add(name)
-            suggestions.append({"text": name, "count": count})
+            suggestions.append({"text": name, "count": count, "type": "tag", "raw_value": tag.name})
             if len(suggestions) >= 5:
                 break
                 
-    # If not enough tags found, match Ads titles as suggestions
+    # If not enough tags found, match Ads titles as suggestions using tokenized words
     if len(suggestions) < 5:
-        # Fallback to simple matching
-        ads = db.query(models.Ad.title, func.count(models.Ad.id).label("count")) \
-                .filter(models.Ad.title.ilike(f"%{q}%"), models.Ad.is_published == True) \
-                .group_by(models.Ad.title) \
-                .order_by(func.count(models.Ad.id).desc()) \
-                .limit(5).all()
+        terms = [t for t in norm_q.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
+        if terms:
+            ads_query = db.query(models.Ad.title, func.count(models.Ad.id).label("count")) \
+                    .filter(models.Ad.is_published == True)
+            
+            for term in terms:
+                ads_query = ads_query.filter(norm_col(models.Ad.title).ilike(f"%{term}%"))
                 
-        for ad_title, count in ads:
-            if ad_title not in seen and ad_title.strip():
-                seen.add(ad_title)
-                suggestions.append({"text": ad_title, "count": count})
-                if len(suggestions) >= 8:
-                    break
+            ads = ads_query.group_by(models.Ad.title) \
+                    .order_by(func.count(models.Ad.id).desc()) \
+                    .limit(5).all()
+                    
+            for ad_title, count in ads:
+                if ad_title not in seen and ad_title.strip():
+                    seen.add(ad_title)
+                    suggestions.append({"text": ad_title, "count": count, "type": "text"})
+                    if len(suggestions) >= 8:
+                        break
+                        
+    # Always include the user's exact query if it's not suggested
+    if norm_q not in [norm_str(s['text']) for s in suggestions] and len(q) >= 3:
+        suggestions.insert(0, {"text": q, "count": 0, "type": "text"})
                     
     return {"categories": cat_results, "suggestions": suggestions}
 
@@ -558,7 +590,17 @@ def read_ads(
         query = query.filter(models.Ad.user_id == user_id)
         
     if search:
-        query = query.filter(models.Ad.title.ilike(f"%{search}%") | models.Ad.description.ilike(f"%{search}%"))
+        norm_s = norm_str(search)
+        terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
+        
+        for term in terms:
+            term_filter = (
+                norm_col(models.Ad.title).ilike(f"%{term}%") | 
+                norm_col(models.Ad.description).ilike(f"%{term}%") |
+                norm_col(models.Ad.location).ilike(f"%{term}%") |
+                models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{term}%"))
+            )
+            query = query.filter(term_filter)
         
     if location:
         parent_loc = None
@@ -758,7 +800,17 @@ def get_ads_count(
     query = db.query(models.Ad)
     
     if search:
-        query = query.filter(models.Ad.title.ilike(f"%{search}%") | models.Ad.description.ilike(f"%{search}%"))
+        norm_s = norm_str(search)
+        terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
+        
+        for term in terms:
+            term_filter = (
+                norm_col(models.Ad.title).ilike(f"%{term}%") | 
+                norm_col(models.Ad.description).ilike(f"%{term}%") |
+                norm_col(models.Ad.location).ilike(f"%{term}%") |
+                models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{term}%"))
+            )
+            query = query.filter(term_filter)
         
     if location:
         parent_loc = None
