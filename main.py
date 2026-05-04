@@ -617,6 +617,20 @@ def read_ads(
     
     if search:
         norm_s = norm_str(search)
+        
+        if not category_id:
+            search_terms = set(norm_s.split())
+            all_cats = db.query(models.Category).all()
+            inferred = []
+            for cat in all_cats:
+                cat_norm = norm_str(cat.name)
+                cat_terms = set(cat_norm.split())
+                if cat_terms and cat_terms.issubset(search_terms):
+                    inferred.append((cat.id, len(cat_terms)))
+            if inferred:
+                inferred.sort(key=lambda x: x[1], reverse=True)
+                category_id = inferred[0][0]
+                
         terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
         
         for term in terms:
@@ -835,6 +849,20 @@ def get_ads_count(
     
     if search:
         norm_s = norm_str(search)
+        
+        if not category_id:
+            search_terms = set(norm_s.split())
+            all_cats = db.query(models.Category).all()
+            inferred = []
+            for cat in all_cats:
+                cat_norm = norm_str(cat.name)
+                cat_terms = set(cat_norm.split())
+                if cat_terms and cat_terms.issubset(search_terms):
+                    inferred.append((cat.id, len(cat_terms)))
+            if inferred:
+                inferred.sort(key=lambda x: x[1], reverse=True)
+                category_id = inferred[0][0]
+                
         terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
         
         for term in terms:
