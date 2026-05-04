@@ -753,7 +753,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 tags=inferred_tags if inferred_tags else None,
                 search=remaining_search,
                 db=db
-            )
+            )['total_count']
             
             existing_texts = [s['text'] for s in suggestions]
             if q not in existing_texts:
@@ -768,7 +768,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     "remaining_query": remaining_search
                 })
         else:
-            real_count = get_ads_count(search=q, location=None, tags=None, db=db)
+            real_count = get_ads_count(search=q, location=None, tags=None, db=db)['total_count']
             existing_texts = [s['text'] for s in suggestions]
             if q not in existing_texts:
                 suggestions.insert(0, {"text": q, "count": real_count, "type": "text"})
