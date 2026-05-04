@@ -601,172 +601,193 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         inferred_loc = None
         inferred_tags = []
         
+        remaining_terms = set(norm_q.split())
+        
+        # 1. Direct Category Match
         all_cats = db.query(models.Category).all()
         cat_matches = []
         for cat in all_cats:
             cat_norm = norm_str(cat.name)
             cat_terms = set(cat_norm.split())
-            if cat_terms and cat_terms.issubset(search_terms):
-                # prioritize exact substring match of the category name in the original query if possible
+            if cat_terms and cat_terms.issubset(remaining_terms):
                 priority = 1 if cat_norm in norm_q else 0
-                cat_matches.append((cat.id, len(cat_terms), cat.name, priority))
-        
+                cat_matches.append((cat.id, len(cat_terms), cat.name, priority, cat_terms))
+                
         if cat_matches:
-            # Sort by priority, then by length of matched terms
             cat_matches.sort(key=lambda x: (x[3], x[1]), reverse=True)
             inferred_cat_id = cat_matches[0][0]
             inferred_cat_name = cat_matches[0][2]
+            remaining_terms -= cat_matches[0][4]
+        else:
+            # 2. Synonym Category Match
+            for k, synonyms in SEARCH_SYNONYMS.items():
+                for syn in synonyms:
+                    if syn in remaining_terms:
+                        synonym_match = db.query(models.Category).filter(models.Category.name.ilike(f"%{k}%")).order_by(func.length(models.Category.name)).first()
+                        if synonym_match:
+                            inferred_cat_id = synonym_match.id
+                            inferred_cat_name = synonym_match.name
+                            remaining_terms.discard(syn)
+                            break
+                if inferred_cat_id:
+                    break
             
-            # Use original terms for tracking what's remaining
-            remaining_terms = set(norm_q.split())
-            cat_words = set(norm_str(inferred_cat_name).split())
-            # Remove category words and their synonyms from remaining terms
-            words_to_remove = set()
-            for w in remaining_terms:
-                w_syns = expand_term_with_synonyms(w)
-                if w == 'استوديوهات': w_syns.append('ستوديوهات')
-                if w == 'ستوديوهات': w_syns.append('استوديوهات')
-                if any(syn in cat_words for syn in [w] + w_syns):
-                    words_to_remove.add(w)
-            remaining_terms -= words_to_remove
-            
-            import re
-            
-            # Extract Price
-            price_match = re.search(r'(?:بسعر|سعر|لا يتجاوز|اقل من|بحدود)\s*(\d+)\s*(ألف|الف|000)?', q)
-            if not price_match:
-                price_match = re.search(r'(\d+)\s*(ألف|الف)', q)
-            if price_match:
-                base_price = int(price_match.group(1))
-                if price_match.lastgroup and price_match.group(price_match.lastindex) in ["ألف", "الف"]:
-                    base_price *= 1000
-                elif price_match.group(0).endswith("ألف") or price_match.group(0).endswith("الف"):
-                     base_price *= 1000
-                inferred_tags.append(f"max_price:{base_price}")
-                for word in price_match.group(0).split():
+        import re
+        
+        # Extract Price
+        price_match = re.search(r'(?:بسعر|سعر|لا يتجاوز|اقل من|بحدود)\s*(\d+)\s*(ألف|الف|000)?', q)
+        if not price_match:
+            price_match = re.search(r'(\d+)\s*(ألف|الف)', q)
+        if price_match:
+            base_price = int(price_match.group(1))
+            if price_match.lastgroup and price_match.group(price_match.lastindex) in ["ألف", "الف"]:
+                base_price *= 1000
+            elif price_match.group(0).endswith("ألف") or price_match.group(0).endswith("الف"):
+                 base_price *= 1000
+            inferred_tags.append(f"max_price:{base_price}")
+            for word in price_match.group(0).split():
+                remaining_terms.discard(word)
+                
+        # Extract Area
+        area_match = re.search(r'(?:مساحة|مساحتها|بمساحة)?\s*(\d+)\s*(?:متر|م\b|m\b)', q)
+        if area_match:
+            remaining_terms.add(area_match.group(1))
+            for word in area_match.group(0).split():
+                if word != area_match.group(1):
                     remaining_terms.discard(word)
                     
-            # Extract Area
-            area_match = re.search(r'(?:مساحة|مساحتها|بمساحة)?\s*(\d+)\s*(?:متر|م\b|m\b)', q)
-            if area_match:
-                remaining_terms.add(area_match.group(1))
-                for word in area_match.group(0).split():
-                    if word != area_match.group(1):
-                        remaining_terms.discard(word)
-                        
-            # Extract Bedrooms
-            bed_match = re.search(r'(\d+)\s*(?:نوم|غرف)', q)
-            if bed_match:
-                inferred_tags.append(f"bedrooms:{bed_match.group(1)}")
-                for w in bed_match.group(0).split():
-                    remaining_terms.discard(w)
-            elif "غرفتين" in remaining_terms:
-                inferred_tags.append("bedrooms:2")
-                remaining_terms.discard("غرفتين")
-                if "وصاله" in remaining_terms: remaining_terms.discard("وصاله")
-                if "وصالة" in remaining_terms: remaining_terms.discard("وصالة")
+        # Extract Bedrooms
+        bed_match = re.search(r'(\d+)\s*(?:نوم|غرف)', q)
+        if bed_match:
+            inferred_tags.append(f"bedrooms:{bed_match.group(1)}")
+            for w in bed_match.group(0).split():
+                remaining_terms.discard(w)
+        elif "غرفتين" in remaining_terms:
+            inferred_tags.append("bedrooms:2")
+            remaining_terms.discard("غرفتين")
+            if "وصاله" in remaining_terms: remaining_terms.discard("وصاله")
+            if "وصالة" in remaining_terms: remaining_terms.discard("وصالة")
+        
+        # Noise Reduction (using normalized words)
+        noise_words = {"في", "مع", "من", "للبيع", "للايجار", "او", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه", "مغري", "مناسب", "اقتصادي", "رخيصه", "محروق", "مستعجل", "عاجل", "للتفاوض", "قابل", "مفروز", "سند", "مستقل", "طابو", "معفيه", "رسوم", "عموله", "وسيط", "بدون", "شامله", "شامل", "مجهزه", "كامل", "للبناء", "اعاده", "ممتاز", "ثابت", "شهري", "دخل", "عائد", "استثماري"}
+        remaining_terms -= noise_words
+        
+        # Extract Location using dynamic Cities and Regions from DB
+        global LOCATIONS_CACHE
+        if LOCATIONS_CACHE is None:
+            cities = [c[0] for c in db.query(models.City.name_ar).all()]
+            regions = [r[0] for r in db.query(models.Region.name_ar).all()]
+            locs = list(set(cities + regions))
+            locs.sort(key=len, reverse=True)
+            LOCATIONS_CACHE = locs
             
-            # Noise Reduction (using normalized words)
-            noise_words = {"في", "مع", "من", "للبيع", "للايجار", "او", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه", "مغري", "مناسب", "اقتصادي", "رخيصه", "محروق", "مستعجل", "عاجل", "للتفاوض", "قابل", "مفروز", "سند", "مستقل", "طابو", "معفيه", "رسوم", "عموله", "وسيط", "بدون", "شامله", "شامل", "مجهزه", "كامل", "للبناء", "اعاده", "ممتاز", "ثابت", "شهري", "دخل", "عائد", "استثماري"}
-            remaining_terms -= noise_words
-            
-            # Extract Location using dynamic Cities and Regions from DB
-            global LOCATIONS_CACHE
-            if LOCATIONS_CACHE is None:
-                cities = [c[0] for c in db.query(models.City.name_ar).all()]
-                regions = [r[0] for r in db.query(models.Region.name_ar).all()]
-                locs = list(set(cities + regions))
-                locs.sort(key=len, reverse=True)
-                LOCATIONS_CACHE = locs
-                
-            for loc in LOCATIONS_CACHE:
-                # Use subset to capture multi-word locations regardless of set order
-                loc_words = set(loc.split())
-                if loc_words and loc_words.issubset(remaining_terms):
-                    inferred_loc = loc
-                    remaining_terms -= loc_words
+        for loc in LOCATIONS_CACHE:
+            loc_words = loc.split()
+            matched_words = set()
+            match = True
+            for lw in loc_words:
+                found_term = None
+                for term in remaining_terms:
+                    if term == lw:
+                        found_term = term
+                        break
+                    if term.endswith(lw) and len(term) <= len(lw) + 2 and term[:-len(lw)] in ['ب', 'ل', 'و', 'ف', 'كال']:
+                        found_term = term
+                        break
+                    if lw.startswith('ال') and term == f"لل{lw[2:]}":
+                        found_term = term
+                        break
+                if found_term:
+                    matched_words.add(found_term)
+                else:
+                    match = False
                     break
-            # Check multi-word quick tags before single-word
-            multi_quick_tags = {
-                "غير مفروشه": "furnished:غير مفروشة", 
-                "طابق ارضي": "floor:الطابق الأرضي",
-                "شبه ارضي": "floor:طابق شبه أرضي",
-                "طابق اول": "floor:1",
-                "طابق ثاني": "floor:2",
-                "طابق ثالث": "floor:3",
-                "طابق رابع": "floor:4",
-                "طابق خامس": "floor:5",
-                "طابق اخير": "floor:الطابق الأخير",
-                "تحت الانشاء": "building_age:تحت الإنشاء",
-                "ايجار يومي": "rent_duration:يومي",
-                "ايجار شهري": "rent_duration:شهري",
-                "ايجار سنوي": "rent_duration:سنوي",
-                "للايجار اليومي": "rent_duration:يومي",
-                "للايجار الشهري": "rent_duration:شهري",
-                "للايجار السنوي": "rent_duration:سنوي",
-                "بدون عموله": "seller_type:المالك",
-                "بدون وسيط": "seller_type:المالك",
-                "طاقه شمسيه": "main_features:طاقة شمسية",
-                "تدفئه مركزيه": "main_features:تدفئة",
-                "تحت البلاط": "main_features:تدفئة",
-                "بئر ماء": "main_features:بئر ماء",
-                "مطبخ راكب": "main_features:مطبخ راكب",
-                "سكن طالبات": "target_audience:إناث فقط",
-                "سكن شباب": "target_audience:ذكور فقط",
-                "غير مفروش": "furnished:غير مفروشة"
-            }
-            for k, v in multi_quick_tags.items():
-                tag_words = set(k.split())
-                if tag_words.issubset(remaining_terms):
-                    inferred_tags.append(v)
-                    remaining_terms -= tag_words
-                        
-            # Check single-word quick tags
-            single_quick_tags = {
-                "مفروشه": "furnished:مفروشة",
-                "مفروش": "furnished:مفروشة",
-                "بالتقسيط": "installment_possible:نعم",
-                "تقسيط": "installment_possible:نعم",
-                "جديده": "building_age:جديد لم يسكن",
-                "ارضيه": "floor:الطابق الأرضي",
-                "مسبح": "main_features:مسبح",
-                "ومسبح": "main_features:مسبح",
-                "تكييف": "main_features:تكييف",
-                "مصعد": "main_features:مصعد",
-                "كراج": "main_features:كراج",
-                "انترنت": "main_features:إنترنت",
-                "استوديو": "bedrooms:0",
-                "استوديوهات": "bedrooms:0",
-                "طلاب": "target_audience:ذكور فقط",
-                "طالبات": "target_audience:إناث فقط"
-            }
-            for k, v in single_quick_tags.items():
-                if k in remaining_terms:
-                    inferred_tags.append(v)
-                    remaining_terms.discard(k)
+            
+            if match:
+                inferred_loc = loc
+                remaining_terms -= matched_words
+                break
+        # Check multi-word quick tags before single-word
+        multi_quick_tags = {
+            "غير مفروشه": "furnished:غير مفروشة", 
+            "طابق ارضي": "floor:الطابق الأرضي",
+            "شبه ارضي": "floor:طابق شبه أرضي",
+            "طابق اول": "floor:1",
+            "طابق ثاني": "floor:2",
+            "طابق ثالث": "floor:3",
+            "طابق رابع": "floor:4",
+            "طابق خامس": "floor:5",
+            "طابق اخير": "floor:الطابق الأخير",
+            "تحت الانشاء": "building_age:تحت الإنشاء",
+            "ايجار يومي": "rent_duration:يومي",
+            "ايجار شهري": "rent_duration:شهري",
+            "ايجار سنوي": "rent_duration:سنوي",
+            "للايجار اليومي": "rent_duration:يومي",
+            "للايجار الشهري": "rent_duration:شهري",
+            "للايجار السنوي": "rent_duration:سنوي",
+            "بدون عموله": "seller_type:المالك",
+            "بدون وسيط": "seller_type:المالك",
+            "طاقه شمسيه": "main_features:طاقة شمسية",
+            "تدفئه مركزيه": "main_features:تدفئة",
+            "تحت البلاط": "main_features:تدفئة",
+            "بئر ماء": "main_features:بئر ماء",
+            "مطبخ راكب": "main_features:مطبخ راكب",
+            "سكن طالبات": "target_audience:إناث فقط",
+            "سكن شباب": "target_audience:ذكور فقط",
+            "غير مفروش": "furnished:غير مفروشة"
+        }
+        for k, v in multi_quick_tags.items():
+            tag_words = set(k.split())
+            if tag_words.issubset(remaining_terms):
+                inferred_tags.append(v)
+                remaining_terms -= tag_words
                     
-            remaining_search = " ".join(remaining_terms) if remaining_terms else None
-            
-            real_count = get_ads_count(
-                category_id=inferred_cat_id,
-                location=[inferred_loc] if inferred_loc else None,
-                tags=inferred_tags if inferred_tags else None,
-                search=remaining_search,
-                db=db
-            )['total_count']
-            
-            existing_texts = [s['text'] for s in suggestions]
-            if q not in existing_texts:
-                suggestions.insert(0, {
-                    "text": q, 
-                    "count": real_count, 
-                    "type": "smart_search",
-                    "inferred_category_id": inferred_cat_id,
-                    "inferred_category_name": inferred_cat_name,
-                    "inferred_location": inferred_loc,
-                    "inferred_tags": inferred_tags,
-                    "remaining_query": remaining_search
-                })
+        # Check single-word quick tags
+        single_quick_tags = {
+            "مفروشه": "furnished:مفروشة",
+            "مفروش": "furnished:مفروشة",
+            "بالتقسيط": "installment_possible:نعم",
+            "تقسيط": "installment_possible:نعم",
+            "جديده": "building_age:جديد لم يسكن",
+            "ارضيه": "floor:الطابق الأرضي",
+            "مسبح": "main_features:مسبح",
+            "ومسبح": "main_features:مسبح",
+            "تكييف": "main_features:تكييف",
+            "مصعد": "main_features:مصعد",
+            "كراج": "main_features:كراج",
+            "انترنت": "main_features:إنترنت",
+            "استوديو": "bedrooms:0",
+            "استوديوهات": "bedrooms:0",
+            "طلاب": "target_audience:ذكور فقط",
+            "طالبات": "target_audience:إناث فقط"
+        }
+        for k, v in single_quick_tags.items():
+            if k in remaining_terms:
+                inferred_tags.append(v)
+                remaining_terms.discard(k)
+                
+        remaining_search = " ".join(remaining_terms) if remaining_terms else None
+        
+        real_count = get_ads_count(
+            category_id=inferred_cat_id,
+            location=[inferred_loc] if inferred_loc else None,
+            tags=inferred_tags if inferred_tags else None,
+            search=remaining_search,
+            db=db
+        )['total_count']
+        
+        existing_texts = [s['text'] for s in suggestions]
+        if q not in existing_texts:
+            suggestions.insert(0, {
+                "text": q, 
+                "count": real_count, 
+                "type": "smart_search",
+                "inferred_category_id": inferred_cat_id,
+                "inferred_category_name": inferred_cat_name,
+                "inferred_location": inferred_loc,
+                "inferred_tags": inferred_tags,
+                "remaining_query": remaining_search
+            })
         else:
             real_count = get_ads_count(search=q, location=None, tags=None, db=db)['total_count']
             existing_texts = [s['text'] for s in suggestions]
