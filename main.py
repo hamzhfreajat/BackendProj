@@ -1098,13 +1098,13 @@ def get_ads_count(
     category_id: int = None, 
     section: str = None, 
     search: str = None,
-    location: List[str] = None,
+    location: List[str] = Query(None),
     min_price: float = None,
     max_price: float = None,
     is_hot: bool = None,
     is_published: bool = None,
     source_type: str = None,
-    tags: List[str] = None,
+    tags: List[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Ad)
