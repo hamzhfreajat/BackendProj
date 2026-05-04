@@ -486,8 +486,11 @@ SEARCH_SYNONYMS = {
     "سيارات": ["سيارات", "سياره", "مركبات", "عربيات"],
     "شقه": ["شقه", "شقق", "استوديو", "سكن", "منزل"],
     "شقق": ["شقق", "شقه", "استوديوهات", "سكنات", "منازل", "بيوت"],
-    "بيت": ["بيت", "بيوت", "منزل", "فيلا"],
-    "بيوت": ["بيوت", "بيت", "منازل", "فلل"],
+    "بيت": ["بيت", "بيوت", "منزل", "فيلا", "فيلات", "فلل"],
+    "بيوت": ["بيوت", "بيت", "منازل", "فلل", "فيلا", "فيلات"],
+    "فيلا": ["فيلا", "فيلات", "فلل", "بيت", "بيوت", "منزل"],
+    "فيلات": ["فيلات", "فيلا", "فلل", "بيت", "بيوت", "منازل"],
+    "فلل": ["فلل", "فيلا", "فيلات", "بيوت", "بيت", "منازل"],
     "جوال": ["جوال", "جوالات", "موبايل", "تلفون", "هاتف"],
     "جوالات": ["جوالات", "جوال", "موبايلات", "تلفونات", "هواتف"],
     "وظايف": ["وظايف", "عمل", "شغل", "توظيف", "وظيفه"],
@@ -627,6 +630,34 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     words_to_remove.add(w)
             remaining_terms -= words_to_remove
             
+            import re
+            
+            # Extract Price
+            price_match = re.search(r'(?:بسعر|سعر|لا يتجاوز|اقل من|بحدود)\s*(\d+)\s*(ألف|الف|000)?', q)
+            if not price_match:
+                price_match = re.search(r'(\d+)\s*(ألف|الف)', q)
+            if price_match:
+                base_price = int(price_match.group(1))
+                if price_match.lastgroup and price_match.group(price_match.lastindex) in ["ألف", "الف"]:
+                    base_price *= 1000
+                elif price_match.group(0).endswith("ألف") or price_match.group(0).endswith("الف"):
+                     base_price *= 1000
+                inferred_tags.append(f"max_price:{base_price}")
+                for word in price_match.group(0).split():
+                    remaining_terms.discard(word)
+                    
+            # Extract Area
+            area_match = re.search(r'(?:مساحة|مساحتها|بمساحة)?\s*(\d+)\s*(?:متر|م\b|m\b)', q)
+            if area_match:
+                remaining_terms.add(area_match.group(1))
+                for word in area_match.group(0).split():
+                    if word != area_match.group(1):
+                        remaining_terms.discard(word)
+                        
+            # Noise Reduction (using normalized words)
+            noise_words = {"في", "مع", "من", "للبيع", "لا", "يتجاوز", "اقل", "من", "بحدود", "متر", "م", "بسعر", "سعر", "مساحه", "مساحتها", "لقطه", "بداعي", "السفر", "اطلاله", "خلابه", "واسع", "الف", "نظام", "قرب", "مباشره", "الجديده", "قديم", "يصلح", "للاستثمار", "السياحي", "منافسه", "منطقه"}
+            remaining_terms -= noise_words
+            
             # Extract Location using dynamic Cities and Regions from DB
             global LOCATIONS_CACHE
             if LOCATIONS_CACHE is None:
@@ -652,7 +683,9 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                 "طابق ثاني": "floor:2",
                 "طابق ثالث": "floor:3",
                 "طابق رابع": "floor:4",
-                "طابق خامس": "floor:5"
+                "طابق خامس": "floor:5",
+                "تحت الانشاء": "building_age:تحت الإنشاء",
+                "من المالك": "seller_type:المالك"
             }
             for k, v in multi_quick_tags.items():
                 tag_words = set(k.split())
@@ -661,7 +694,13 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
                     remaining_terms -= tag_words
                         
             # Check single-word quick tags
-            single_quick_tags = {"مفروشه": "furnished:مفروشة"}
+            single_quick_tags = {
+                "مفروشه": "furnished:مفروشة",
+                "بالتقسيط": "installment_possible:نعم",
+                "تقسيط": "installment_possible:نعم",
+                "جديده": "building_age:جديد لم يسكن",
+                "ارضيه": "floor:الطابق الأرضي"
+            }
             for k, v in single_quick_tags.items():
                 if k in remaining_terms:
                     inferred_tags.append(v)
@@ -831,7 +870,19 @@ def read_ads(
                 
         for prefix, values in grouped_tags.items():
             conds = []
-            if prefix == "bedrooms":
+            if prefix == "max_price":
+                for val in values:
+                    query = query.filter(models.Ad.price <= float(val))
+                continue
+            elif prefix == "min_price":
+                for val in values:
+                    query = query.filter(models.Ad.price >= float(val))
+                continue
+            elif prefix == "area":
+                for val in values:
+                    conds.append(models.Ad.attributes['building_area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['land_area'].astext.ilike(f"%{val}%"))
+            elif prefix == "bedrooms":
                 for val in values:
                     if val == '+6':
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) >= 6)
@@ -1059,7 +1110,19 @@ def get_ads_count(
                 
         for prefix, values in grouped_tags.items():
             conds = []
-            if prefix == "bedrooms":
+            if prefix == "max_price":
+                for val in values:
+                    query = query.filter(models.Ad.price <= float(val))
+                continue
+            elif prefix == "min_price":
+                for val in values:
+                    query = query.filter(models.Ad.price >= float(val))
+                continue
+            elif prefix == "area":
+                for val in values:
+                    conds.append(models.Ad.attributes['building_area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['land_area'].astext.ilike(f"%{val}%"))
+            elif prefix == "bedrooms":
                 for val in values:
                     if val == '+6':
                         conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) >= 6)
