@@ -394,3 +394,9 @@ class AITrainingLog(Base):
     raw_response = Column(Text, nullable=True)   # Stores the exact unparsed text returned by AI for training
     reason = Column(Text, nullable=True)         # E.g. "Seeking apartment (category_id=0)"
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+class SavedAd(Base):
+    __tablename__ = "saved_ads"
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
