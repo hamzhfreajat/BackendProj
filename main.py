@@ -978,8 +978,38 @@ def read_ads(
                 for val in values:
                     query = query.filter(models.Ad.price >= float(val))
                 continue
+            elif prefix == "min_area":
+                from sqlalchemy import func
+                for val in values:
+                    try:
+                        v = int(val)
+                        numeric_area = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area.cast(Integer) >= v)
+                        numeric_barea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['building_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_barea.cast(Integer) >= v)
+                        numeric_larea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['land_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_larea.cast(Integer) >= v)
+                        numeric_area_top = func.nullif(func.regexp_replace(models.Ad.attributes['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area_top.cast(Integer) >= v)
+                    except: pass
+            elif prefix == "max_area":
+                from sqlalchemy import func
+                for val in values:
+                    try:
+                        v = int(val)
+                        numeric_area = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area.cast(Integer) <= v)
+                        numeric_barea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['building_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_barea.cast(Integer) <= v)
+                        numeric_larea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['land_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_larea.cast(Integer) <= v)
+                        numeric_area_top = func.nullif(func.regexp_replace(models.Ad.attributes['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area_top.cast(Integer) <= v)
+                    except: pass
             elif prefix == "area":
                 for val in values:
+                    conds.append(models.Ad.attributes['area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['area'].astext.ilike(f"%{val}%"))
                     conds.append(models.Ad.attributes['dynamic_data']['building_area'].astext.ilike(f"%{val}%"))
                     conds.append(models.Ad.attributes['dynamic_data']['land_area'].astext.ilike(f"%{val}%"))
             elif prefix == "bedrooms":
@@ -1220,8 +1250,38 @@ def get_ads_count(
                 for val in values:
                     query = query.filter(models.Ad.price >= float(val))
                 continue
+            elif prefix == "min_area":
+                from sqlalchemy import func
+                for val in values:
+                    try:
+                        v = int(val)
+                        numeric_area = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area.cast(Integer) >= v)
+                        numeric_barea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['building_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_barea.cast(Integer) >= v)
+                        numeric_larea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['land_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_larea.cast(Integer) >= v)
+                        numeric_area_top = func.nullif(func.regexp_replace(models.Ad.attributes['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area_top.cast(Integer) >= v)
+                    except: pass
+            elif prefix == "max_area":
+                from sqlalchemy import func
+                for val in values:
+                    try:
+                        v = int(val)
+                        numeric_area = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area.cast(Integer) <= v)
+                        numeric_barea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['building_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_barea.cast(Integer) <= v)
+                        numeric_larea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['land_area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_larea.cast(Integer) <= v)
+                        numeric_area_top = func.nullif(func.regexp_replace(models.Ad.attributes['area'].astext, '[^0-9]', '', 'g'), '')
+                        conds.append(numeric_area_top.cast(Integer) <= v)
+                    except: pass
             elif prefix == "area":
                 for val in values:
+                    conds.append(models.Ad.attributes['area'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['area'].astext.ilike(f"%{val}%"))
                     conds.append(models.Ad.attributes['dynamic_data']['building_area'].astext.ilike(f"%{val}%"))
                     conds.append(models.Ad.attributes['dynamic_data']['land_area'].astext.ilike(f"%{val}%"))
             elif prefix == "bedrooms":
