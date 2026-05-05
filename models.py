@@ -400,3 +400,17 @@ class SavedAd(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), primary_key=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+
+class AdReport(Base):
+    __tablename__ = "ad_reports"
+    id = Column(Integer, primary_key=True, index=True)
+    ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True) # nullable for anonymous
+    reason = Column(String(255), nullable=False)
+    comments = Column(Text, nullable=True)
+    status = Column(String(50), default="pending") # pending, reviewed, dismissed
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    
+    ad = relationship("Ad", backref="reports")
+    user = relationship("User")
