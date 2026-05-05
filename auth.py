@@ -218,7 +218,7 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
         background_tasks.add_task(
             send_personal_notification,
             target_user_id=user.id,
-            title="مرحباً بك في السوق المفتوح! 🎉",
+            title="مرحباً بك في سوقكم! 🎉",
             body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
             notification_type="welcome",
             reference_id=None

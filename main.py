@@ -456,7 +456,68 @@ def perform_bulk_action(
             ad.is_paused = False
             ad.is_sold = False
             ad.is_published = True
-            # if expired_at, could extend it here
+            
+    db.commit()
+    return {"status": "success"}
+
+def get_optional_user(request: Request, db: Session = Depends(get_db)):
+    token = request.headers.get("Authorization")
+    if not token: return None
+    try:
+        scheme, token = token.split()
+        if scheme.lower() != "bearer": return None
+        import jwt
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id:
+            return db.query(models.User).filter(models.User.id == int(user_id)).first()
+    except:
+        return None
+    return None
+
+@app.post("/api/ads/{ad_id}/save")
+def toggle_save_ad(ad_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+        
+    saved = db.query(models.SavedAd).filter(models.SavedAd.user_id == current_user.id, models.SavedAd.ad_id == ad_id).first()
+    metrics = db.query(models.UserMetric).filter(models.UserMetric.user_id == current_user.id).first()
+    
+    if saved:
+        db.delete(saved)
+        if metrics and metrics.saved_items > 0:
+            metrics.saved_items -= 1
+        is_saved = False
+    else:
+        new_save = models.SavedAd(user_id=current_user.id, ad_id=ad_id)
+        db.add(new_save)
+        if metrics:
+            metrics.saved_items += 1
+        else:
+            new_metric = models.UserMetric(user_id=current_user.id, saved_items=1)
+            db.add(new_metric)
+        is_saved = True
+        
+    db.commit()
+    return {"status": "success", "is_saved": is_saved}
+
+@app.get("/api/users/me/saved-ads", response_model=List[schemas.Ad])
+def get_saved_ads(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    saved_ads_records = db.query(models.SavedAd).filter(models.SavedAd.user_id == current_user.id).order_by(models.SavedAd.created_at.desc()).all()
+    ad_ids = [r.ad_id for r in saved_ads_records]
+    
+    if not ad_ids:
+        return []
+        
+    ads = db.query(models.Ad).filter(models.Ad.id.in_(ad_ids)).all()
+    ads_dict = {ad.id: ad for ad in ads}
+    sorted_ads = [ads_dict[ad_id] for ad_id in ad_ids if ad_id in ads_dict]
+    
+    for ad in sorted_ads:
+        ad.is_saved = True
+        
+    return sorted_ads
     
     db.commit()
     return {"message": f"Action '{req.action}' performed on {len(ads)} ads"}
@@ -849,6 +910,7 @@ def read_ads(
     user_id: int = None,
     sort_by: str = None,
     tags: List[str] = Query(None),
+    current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     with open("location_debug.txt", "a", encoding="utf-8") as f:
@@ -1121,6 +1183,16 @@ def read_ads(
         query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
         
     ads = query.offset(skip).limit(limit).all()
+    
+    if current_user and ads:
+        saved_ads = db.query(models.SavedAd.ad_id).filter(
+            models.SavedAd.user_id == current_user.id,
+            models.SavedAd.ad_id.in_([a.id for a in ads])
+        ).all()
+        saved_ids = {r[0] for r in saved_ads}
+        for ad in ads:
+            ad.is_saved = ad.id in saved_ids
+            
     return ads
 
 @app.get("/api/ads/count", response_model=dict)

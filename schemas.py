@@ -238,6 +238,7 @@ class Ad(AdBase):
     boost_expiry: Optional[datetime] = None
     chats_count: int = 0
     favorites_count: int = 0
+    is_saved: Optional[bool] = False
 
     class Config:
         from_attributes = True
