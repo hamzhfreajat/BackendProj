@@ -46,3 +46,5 @@ read_ads called with location: None
 read_ads called with location: ['الجاردنز']
 read_ads called with location: ['الجاردنز']
 read_ads called with location: None
+read_ads called with location: None
+read_ads called with location: None

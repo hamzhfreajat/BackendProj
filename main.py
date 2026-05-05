@@ -36,6 +36,9 @@ if not os.getenv("GOOGLE_API_KEY"):
 
 app = FastAPI(title="Classifieds Backend API")
 
+# Ensure all database tables exist (creates newly added tables like saved_ads)
+models.Base.metadata.create_all(bind=engine)
+
 # Add CORS middleware to allow requests from the Flutter frontend and React Dashboard
 app.add_middleware(
     CORSMiddleware,
