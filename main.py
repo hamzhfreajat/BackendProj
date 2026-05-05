@@ -18,6 +18,8 @@ from notifications import send_personal_notification
 from database import engine, get_db
 from fb_batch_router import router as fb_batch_router
 from ai_router import router as ai_router
+from search_service import SearchService
+from autocomplete_service import AutocompleteService
 from media_router import router as media_router
 from fastapi.staticfiles import StaticFiles
 
@@ -792,110 +794,26 @@ def get_trending_searches(db: Session = Depends(get_db)):
 
 @app.get("/api/search/autocomplete")
 def search_autocomplete(q: str, db: Session = Depends(get_db)):
-    if not q or len(q) < 2:
-        return {"categories": [], "suggestions": []}
-        
-    norm_q = norm_str(q)
-    
-    # 1. Match Categories
-    cats = db.query(models.Category).filter(
-        norm_col(models.Category.name).ilike(f"%{norm_q}%") | 
-        literal(norm_q).ilike(func.concat('%', norm_col(models.Category.name), '%'))
-    ).limit(5).all()
-    cat_results = [{"id": c.id, "name": c.name, "icon_name": c.icon_name} for c in cats]
-    
-    # 2. Match Tags & extract exact ad count for each
-    tags_query = db.query(models.Tag, func.count(models.ad_tags.c.ad_id).label("count")) \
-             .join(models.ad_tags, models.Tag.id == models.ad_tags.c.tag_id) \
-             .filter(norm_col(models.Tag.name).ilike(f"%{norm_q}%") | literal(norm_q).ilike(func.concat('%', norm_col(models.Tag.name), '%'))) \
-             .group_by(models.Tag.id) \
-             .order_by(func.count(models.ad_tags.c.ad_id).desc()) \
-             .limit(10).all()
-             
-    suggestions = []
-    seen = set()
-    for tag, count in tags_query:
-        name = tag.name.split(":", 1)[-1] if ":" in tag.name else tag.name
-        name = name.replace("_", " ")
-        if name not in seen and name.strip():
-            seen.add(name)
-            suggestions.append({"text": name, "count": count, "type": "tag", "raw_value": tag.name})
-            if len(suggestions) >= 5:
-                break
-                
-    # If not enough tags found, match Ads titles as suggestions using tokenized words
-    if len(suggestions) < 5:
-        terms = [t for t in norm_q.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
-        if terms:
-            ads_query = db.query(models.Ad.title, func.count(models.Ad.id).label("count")) \
-                    .filter(models.Ad.is_published == True)
-            
-            for term in terms:
-                ads_query = ads_query.filter(norm_col(models.Ad.title).ilike(f"%{term}%"))
-                
-            ads = ads_query.group_by(models.Ad.title) \
-                    .order_by(func.count(models.Ad.id).desc()) \
-                    .limit(5).all()
-                    
-            for ad_title, count in ads:
-                if ad_title not in seen and ad_title.strip():
-                    seen.add(ad_title)
-                    suggestions.append({"text": ad_title, "count": count, "type": "text"})
-                    if len(suggestions) >= 8:
-                        break
-                        
-    # Always include the user's exact query with accurate counts and NLP extraction
-    if len(q) >= 3:
-        single_quick_tags = {
-            "مفروشه": "furnished:مفروشة",
-            "مفروش": "furnished:مفروشة",
-            "بالتقسيط": "installment_possible:نعم",
-            "تقسيط": "installment_possible:نعم",
-            "جديده": "building_age:جديد لم يسكن",
-            "ارضيه": "floor:الطابق الأرضي",
-            "مسبح": "main_features:مسبح",
-            "ومسبح": "main_features:مسبح",
-            "تكييف": "main_features:تكييف",
-            "مصعد": "main_features:مصعد",
-            "كراج": "main_features:كراج",
-            "انترنت": "main_features:إنترنت",
-            "استوديو": "bedrooms:0",
-            "استوديوهات": "bedrooms:0"
+    """
+    Intelligent Arabic-first autocomplete engine.
+    Uses AutocompleteService to return structured JSON with intent and grouped suggestions.
+    """
+    try:
+        from autocomplete_service import AutocompleteService
+        return AutocompleteService.generate_suggestions(db, q)
+    except Exception as e:
+        print(f"Autocomplete Error: {e}")
+        return {
+            "query": q,
+            "normalized_query": q,
+            "intent": {
+                "deal_type": "UNKNOWN",
+                "property_type": "UNKNOWN",
+                "location": None,
+                "price_intent": "unknown"
+            },
+            "groups": []
         }
-        for k, v in single_quick_tags.items():
-            if k in remaining_terms:
-                inferred_tags.append(v)
-                remaining_terms.discard(k)
-                
-        remaining_search = " ".join(remaining_terms) if remaining_terms else None
-        
-        real_count = get_ads_count(
-            category_id=inferred_cat_id,
-            location=[inferred_loc] if inferred_loc else None,
-            tags=inferred_tags if inferred_tags else None,
-            search=remaining_search,
-            db=db
-        )['total_count']
-        
-        existing_texts = [s['text'] for s in suggestions]
-        if q not in existing_texts:
-            suggestions.insert(0, {
-                "text": q, 
-                "count": real_count, 
-                "type": "smart_search",
-                "inferred_category_id": inferred_cat_id,
-                "inferred_category_name": inferred_cat_name,
-                "inferred_location": inferred_loc,
-                "inferred_tags": inferred_tags,
-                "remaining_query": remaining_search
-            })
-        else:
-            real_count = get_ads_count(search=q, location=None, tags=None, db=db)['total_count']
-            existing_texts = [s['text'] for s in suggestions]
-            if q not in existing_texts:
-                suggestions.insert(0, {"text": q, "count": real_count, "type": "text"})
-                    
-    return {"categories": cat_results, "suggestions": suggestions}
 
 @app.get("/api/ads", response_model=List[schemas.Ad])
 def read_ads(
@@ -925,43 +843,20 @@ def read_ads(
         query = query.filter(models.Ad.user_id == user_id)
         
     from sqlalchemy.sql.expression import case
-    relevance_cases = []
     
     if search:
-        inferred_cat_id, inferred_cat_name, inferred_loc, inferred_tags, remaining_search = parse_smart_search_query(search, db)
+        ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
+        if not ranked_ad_ids:
+            return []
+            
+        query = query.filter(models.Ad.id.in_(ranked_ad_ids))
         
-        if not category_id and inferred_cat_id:
-            category_id = inferred_cat_id
-            
-        if not location and inferred_loc:
-            location = [inferred_loc]
-            
-        if inferred_tags:
-            if tags is None:
-                tags = []
-            tags.extend(inferred_tags)
-            
-        if remaining_search:
-            norm_s = norm_str(remaining_search)
-            terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
-            
-            for term in terms:
-                expanded_terms = expand_term_with_synonyms(term)
-                
-                term_filters = []
-                for ext in expanded_terms:
-                    term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
-                    term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
-                    term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
-                    term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
-                    term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
-                    
-                    relevance_cases.append(case((norm_col(models.Ad.title).ilike(f"%{ext}%"), 4), else_=0))
-                    relevance_cases.append(case((models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")), 3), else_=0))
-                    relevance_cases.append(case((models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")), 2), else_=0))
-                    relevance_cases.append(case((norm_col(models.Ad.description).ilike(f"%{ext}%"), 1), else_=0))
-                    
-                query = query.filter(or_(*term_filters))
+        # Preserve relevance ranking from SearchService
+        order_cases = {ad_id: index for index, ad_id in enumerate(ranked_ad_ids)}
+        whens = [(models.Ad.id == ad_id, index) for ad_id, index in order_cases.items()]
+        
+        if whens:
+            query = query.order_by(case(*whens))
         
     if location:
         parent_loc = None
@@ -1165,10 +1060,7 @@ def read_ads(
     has_image  = case((models.Ad.image_url != None, 1), else_=0)
     has_price  = case((models.Ad.price > 0, 1), else_=0)
 
-    if search and relevance_cases and (sort_by == 'recommended' or sort_by is None):
-        relevance_score = sum(relevance_cases)
-        query = query.order_by(relevance_score.desc(), models.Ad.is_hot.desc(), has_image.desc(), has_price.desc(), models.Ad.views.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
-    elif sort_by == 'price_asc':
+    if sort_by == 'price_asc':
         query = query.order_by(models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
         query = query.order_by(models.Ad.price.desc(), models.Ad.id.desc())
@@ -1215,35 +1107,11 @@ def get_ads_count(
     query = db.query(models.Ad)
     
     if search:
-        inferred_cat_id, inferred_cat_name, inferred_loc, inferred_tags, remaining_search = parse_smart_search_query(search, db)
-        
-        if not category_id and inferred_cat_id:
-            category_id = inferred_cat_id
+        ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
+        if not ranked_ad_ids:
+            return {"total_count": 0}
             
-        if not location and inferred_loc:
-            location = [inferred_loc]
-            
-        if inferred_tags:
-            if tags is None:
-                tags = []
-            tags.extend(inferred_tags)
-            
-        if remaining_search:
-            norm_s = norm_str(remaining_search)
-            terms = [t for t in norm_s.split() if len(t) > 1 and t not in ["في", "من", "على", "الى", "لل", "مع"]]
-            
-            for term in terms:
-                expanded_terms = expand_term_with_synonyms(term)
-                
-                term_filters = []
-                for ext in expanded_terms:
-                    term_filters.append(norm_col(models.Ad.title).ilike(f"%{ext}%"))
-                    term_filters.append(norm_col(models.Ad.description).ilike(f"%{ext}%"))
-                    term_filters.append(norm_col(models.Ad.location).ilike(f"%{ext}%"))
-                    term_filters.append(models.Ad.category.has(norm_col(models.Category.name).ilike(f"%{ext}%")))
-                    term_filters.append(models.Ad.linked_tags.any(norm_col(models.Tag.name).ilike(f"%{ext}%")))
-                    
-                query = query.filter(or_(*term_filters))
+        query = query.filter(models.Ad.id.in_(ranked_ad_ids))
         
     if location:
         parent_loc = None
@@ -1554,6 +1422,9 @@ def create_ad(
         notification_type="ad_created",
         reference_id=db_ad.id
     )
+    
+    # Sync to search index
+    SearchService.sync_ad_to_search_index(db, db_ad)
 
     return db_ad
 
@@ -1620,6 +1491,10 @@ def update_ad(ad_id: int, ad_update: dict, db: Session = Depends(get_db)):
             
     db.commit()
     db.refresh(db_ad)
+    
+    # Sync to search index
+    SearchService.sync_ad_to_search_index(db, db_ad)
+    
     return db_ad
 
 @app.put("/api/ads/{ad_id}/toggle-publish", response_model=schemas.Ad)

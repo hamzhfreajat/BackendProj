@@ -1,0 +1,149 @@
+[
+  {
+    "QUERY": "شقة في خلدا",
+    "RESULT": {
+      "query": "شقة في خلدا",
+      "normalized_query": "شقه في خلدا",
+      "intent": {
+        "deal_type": "UNKNOWN",
+        "property_type": "APARTMENT",
+        "location": "خلدا",
+        "price_intent": "unknown"
+      },
+      "groups": [
+        {
+          "type": "query",
+          "title": "اقتراحات البحث",
+          "items": [
+            {
+              "text": "شقة في خلدا للبيع",
+              "score": 0.98
+            },
+            {
+              "text": "شقة في خلدا للايجار",
+              "score": 0.95
+            }
+          ]
+        },
+        {
+          "type": "filter",
+          "title": "فلاتر إضافية",
+          "items": [
+            {
+              "text": "شقة في خلدا مفروشة",
+              "score": 0.92
+            },
+            {
+              "text": "شقة في خلدا غرفتين",
+              "score": 0.91
+            },
+            {
+              "text": "شقة في خلدا جديدة",
+              "score": 0.89
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "QUERY": "بيت للبيع بالتقسيط",
+    "RESULT": {
+      "query": "بيت للبيع بالتقسيط",
+      "normalized_query": "بيت للبيع بالتقسيط",
+      "intent": {
+        "deal_type": "SALE",
+        "property_type": "HOUSE",
+        "location": null,
+        "price_intent": "negotiable"
+      },
+      "groups": [
+        {
+          "type": "query",
+          "title": "اقتراحات البحث",
+          "items": [
+            {
+              "text": "بيت للبيع بالتقسيط بدون دفعة أولى",
+              "score": 0.95
+            },
+            {
+              "text": "بيت للبيع بالتقسيط في عمان",
+              "score": 0.93
+            },
+            {
+              "text": "بيت للبيع بالتقسيط في عمان",
+              "score": 0.9
+            },
+            {
+              "text": "بيت للبيع بالتقسيط في اربد",
+              "score": 0.9
+            },
+            {
+              "text": "بيت للبيع بالتقسيط في الزرقاء",
+              "score": 0.9
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "QUERY": "شقة أقل من 50 ألف",
+    "RESULT": {
+      "query": "شقة أقل من 50 ألف",
+      "normalized_query": "شقه اقل من 50 الف",
+      "intent": {
+        "deal_type": "UNKNOWN",
+        "property_type": "APARTMENT",
+        "location": null,
+        "price_intent": "unknown"
+      },
+      "groups": [
+        {
+          "type": "query",
+          "title": "اقتراحات البحث",
+          "items": [
+            {
+              "text": "شقة أقل من 50 ألف للبيع",
+              "score": 0.98
+            },
+            {
+              "text": "شقة أقل من 50 ألف للايجار",
+              "score": 0.95
+            },
+            {
+              "text": "شقة أقل من 50 ألف في عمان",
+              "score": 0.9
+            },
+            {
+              "text": "شقة أقل من 50 ألف في اربد",
+              "score": 0.9
+            },
+            {
+              "text": "شقة أقل من 50 ألف في الزرقاء",
+              "score": 0.9
+            }
+          ]
+        },
+        {
+          "type": "filter",
+          "title": "فلاتر إضافية",
+          "items": [
+            {
+              "text": "شقة أقل من 50 ألف مفروشة",
+              "score": 0.92
+            },
+            {
+              "text": "شقة أقل من 50 ألف غرفتين",
+              "score": 0.91
+            },
+            {
+              "text": "شقة أقل من 50 ألف جديدة",
+              "score": 0.89
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
