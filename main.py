@@ -1880,6 +1880,7 @@ def get_dashboard_reports(
             out.ad_title = r.ad.title
         if r.user:
             out.reporter_name = r.user.full_name or r.user.username
+            out.reporter_phone = r.user.mobile_number
         result.append(out)
         
     return result

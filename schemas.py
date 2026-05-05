@@ -391,6 +391,7 @@ class AdReportOut(BaseModel):
     # We can include ad title and username for dashboard convenience
     ad_title: Optional[str] = None
     reporter_name: Optional[str] = None
+    reporter_phone: Optional[str] = None
 
     class Config:
         from_attributes = True
