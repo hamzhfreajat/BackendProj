@@ -249,3 +249,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
 @router.get("/me", response_model=schemas.User)
 def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+# Admin Dependency
+def get_current_admin(current_user: models.User = Depends(get_current_user)):
+    if current_user.user_type != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough privileges")
+    return current_user
