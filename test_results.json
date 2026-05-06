@@ -1,0 +1,2743 @@
+[
+  {
+    "query": "شقة في خلدا غرفتين بسعر مناسب",
+    "parsed": {
+      "original_query": "شقة في خلدا غرفتين بسعر مناسب",
+      "normalized_query": "شقه في خلدا غرفتين بسعر مناسب",
+      "deal_type": "BOTH",
+      "property_type": "APARTMENT",
+      "bedrooms": 2,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 27
+  },
+  {
+    "query": "شقة في الجبيهة 3 غرف نوم قريبة خدمات",
+    "parsed": {
+      "original_query": "شقة في الجبيهة 3 غرف نوم قريبة خدمات",
+      "normalized_query": "شقه في الجبيهه 3 غرف نوم قريبه خدمات",
+      "deal_type": "BOTH",
+      "property_type": "APARTMENT",
+      "bedrooms": 3,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجبيهة",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "بيت في عبدون مع حديقة وكراج بسعر مغري",
+    "parsed": {
+      "original_query": "بيت في عبدون مع حديقة وكراج بسعر مغري",
+      "normalized_query": "بيت في عبدون مع حديقه وكراج بسعر مغري",
+      "deal_type": "BOTH",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عبدون",
+      "features": [
+        "garden"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1
+  },
+  {
+    "query": "استوديو في الصويفية مفروش شامل خدمات",
+    "parsed": {
+      "original_query": "استوديو في الصويفية مفروش شامل خدمات",
+      "normalized_query": "استوديو في الصويفيه مفروش شامل خدمات",
+      "deal_type": "BOTH",
+      "property_type": "STUDIO",
+      "bedrooms": 1,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة جديدة في دابوق مع مصعد وكراج",
+    "parsed": {
+      "original_query": "شقة جديدة في دابوق مع مصعد وكراج",
+      "normalized_query": "شقه جديده في دابوق مع مصعد وكراج",
+      "deal_type": "BOTH",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "دابوق",
+      "features": [
+        "elevator"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 6
+  },
+  {
+    "query": "شقق في ماركا قريبة من المواصلات",
+    "parsed": {
+      "original_query": "شقق في ماركا قريبة من المواصلات",
+      "normalized_query": "شقق في ماركا قريبه من المواصلات",
+      "deal_type": "BOTH",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1605
+  },
+  {
+    "query": "شقة للبيع في طبربور أقل من 40 ألف",
+    "parsed": {
+      "original_query": "شقة للبيع في طبربور أقل من 40 ألف",
+      "normalized_query": "شقه للبيع في طبربور اقل من 40 الف",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": 40000.0,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "cheap"
+      ],
+      "legal": []
+    },
+    "count": 343
+  },
+  {
+    "query": "شقة للايجار في خلدا 250 دينار",
+    "parsed": {
+      "original_query": "شقة للايجار في خلدا 250 دينار",
+      "normalized_query": "شقه للايجار في خلدا 250 دينار",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 48
+  },
+  {
+    "query": "بيت للبيع في صويلح بسعر قابل للتفاوض",
+    "parsed": {
+      "original_query": "بيت للبيع في صويلح بسعر قابل للتفاوض",
+      "normalized_query": "بيت للبيع في صويلح بسعر قابل للتفاوض",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "negotiable"
+      ],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "أرض للبيع في سحاب مستعجل",
+    "parsed": {
+      "original_query": "أرض للبيع في سحاب مستعجل",
+      "normalized_query": "ارض للبيع في سحاب مستعجل",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "urgent"
+      ],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للبيع في الرابية لقطة",
+    "parsed": {
+      "original_query": "شقة للبيع في الرابية لقطة",
+      "normalized_query": "شقه للبيع في الرابيه لقطه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "hot_deal"
+      ],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "بيت للبيع في جبل عمان قديم",
+    "parsed": {
+      "original_query": "بيت للبيع في جبل عمان قديم",
+      "normalized_query": "بيت للبيع في جبل عمان قديم",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عمان",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 18
+  },
+  {
+    "query": "أرض للبيع في الزرقاء شارع رئيسي",
+    "parsed": {
+      "original_query": "أرض للبيع في الزرقاء شارع رئيسي",
+      "normalized_query": "ارض للبيع في الزرقاء شارع رئيسي",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الزرقاء",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 59
+  },
+  {
+    "query": "محل للبيع في وسط البلد جاهز",
+    "parsed": {
+      "original_query": "محل للبيع في وسط البلد جاهز",
+      "normalized_query": "محل للبيع في وسط البلد جاهز",
+      "deal_type": "SALE",
+      "property_type": "SHOP",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 3
+  },
+  {
+    "query": "شقة مفروشة للبيع في العقبة",
+    "parsed": {
+      "original_query": "شقة مفروشة للبيع في العقبة",
+      "normalized_query": "شقه مفروشه للبيع في العقبه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "العقبة",
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "عمارة للبيع في عمان دخل شهري",
+    "parsed": {
+      "original_query": "عمارة للبيع في عمان دخل شهري",
+      "normalized_query": "عماره للبيع في عمان دخل شهري",
+      "deal_type": "BOTH",
+      "property_type": "BUILDING",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عمان",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 22
+  },
+  {
+    "query": "شقق للبيع مؤجرة في الجبيهة",
+    "parsed": {
+      "original_query": "شقق للبيع مؤجرة في الجبيهة",
+      "normalized_query": "شقق للبيع مؤجره في الجبيهه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجبيهة",
+      "features": [],
+      "intents": [
+        "investment"
+      ],
+      "legal": []
+    },
+    "count": 1
+  },
+  {
+    "query": "أرض تجارية للبيع في ماركا",
+    "parsed": {
+      "original_query": "أرض تجارية للبيع في ماركا",
+      "normalized_query": "ارض تجاريه للبيع في ماركا",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "مبنى للبيع في الشميساني شركات",
+    "parsed": {
+      "original_query": "مبنى للبيع في الشميساني شركات",
+      "normalized_query": "مبني للبيع في الشميساني شركات",
+      "deal_type": "SALE",
+      "property_type": "BUILDING",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 20
+  },
+  {
+    "query": "بيت للبيع في اللويبدة إعادة بناء",
+    "parsed": {
+      "original_query": "بيت للبيع في اللويبدة إعادة بناء",
+      "normalized_query": "بيت للبيع في اللويبده اعاده بناء",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "شقة للبيع مع طاقة شمسية في تلاع العلي",
+    "parsed": {
+      "original_query": "شقة للبيع مع طاقة شمسية في تلاع العلي",
+      "normalized_query": "شقه للبيع مع طاقه شمسيه في تلاع العلي",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "تلاع العلي",
+      "features": [
+        "solar"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 27
+  },
+  {
+    "query": "فيلا للبيع في دابوق مع مسبح",
+    "parsed": {
+      "original_query": "فيلا للبيع في دابوق مع مسبح",
+      "normalized_query": "فيلا للبيع في دابوق مع مسبح",
+      "deal_type": "SALE",
+      "property_type": "VILLA",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "دابوق",
+      "features": [
+        "pool"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للايجار في الصويفية مع تدفئة",
+    "parsed": {
+      "original_query": "شقة للايجار في الصويفية مع تدفئة",
+      "normalized_query": "شقه للايجار في الصويفيه مع تدفئه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "heating"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "بيت للبيع في السلط مع بئر ماء",
+    "parsed": {
+      "original_query": "بيت للبيع في السلط مع بئر ماء",
+      "normalized_query": "بيت للبيع في السلط مع بئر ماء",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "water_well"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "شقة للبيع في خلدا مع مطبخ راكب",
+    "parsed": {
+      "original_query": "شقة للبيع في خلدا مع مطبخ راكب",
+      "normalized_query": "شقه للبيع في خلدا مع مطبخ راكب",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [
+        "kitchen_installed"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 14
+  },
+  {
+    "query": "شقة طابق ثاني للبيع في جبل الحسين",
+    "parsed": {
+      "original_query": "شقة طابق ثاني للبيع في جبل الحسين",
+      "normalized_query": "شقه طابق ثاني للبيع في جبل الحسين",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "شقة طابق أرضي للايجار في أم أذينة",
+    "parsed": {
+      "original_query": "شقة طابق أرضي للايجار في أم أذينة",
+      "normalized_query": "شقه طابق ارضي للايجار في ام اذينه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "رووف للايجار في دير غبار تراس كبير",
+    "parsed": {
+      "original_query": "رووف للايجار في دير غبار تراس كبير",
+      "normalized_query": "رووف للايجار في دير غبار تراس كبير",
+      "deal_type": "RENT",
+      "property_type": "ROOF",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "terrace"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 21
+  },
+  {
+    "query": "شقة أرضية للبيع في أبو علندا",
+    "parsed": {
+      "original_query": "شقة أرضية للبيع في أبو علندا",
+      "normalized_query": "شقه ارضيه للبيع في ابو علندا",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "شقة طابق أخير للبيع في تلاع العلي",
+    "parsed": {
+      "original_query": "شقة طابق أخير للبيع في تلاع العلي",
+      "normalized_query": "شقه طابق اخير للبيع في تلاع العلي",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "تلاع العلي",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 27
+  },
+  {
+    "query": "شقة للبيع من المالك بدون عمولة",
+    "parsed": {
+      "original_query": "شقة للبيع من المالك بدون عمولة",
+      "normalized_query": "شقه للبيع من المالك بدون عموله",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "no_commission"
+      ],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "أرض للبيع في مادبا طابو مستقل",
+    "parsed": {
+      "original_query": "أرض للبيع في مادبا طابو مستقل",
+      "normalized_query": "ارض للبيع في مادبا طابو مستقل",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": [
+        "independent_deed",
+        "title_deed"
+      ]
+    },
+    "count": 405
+  },
+  {
+    "query": "بيت للبيع في الزرقاء سند مستقل",
+    "parsed": {
+      "original_query": "بيت للبيع في الزرقاء سند مستقل",
+      "normalized_query": "بيت للبيع في الزرقاء سند مستقل",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الزرقاء",
+      "features": [],
+      "intents": [],
+      "legal": [
+        "independent_deed"
+      ]
+    },
+    "count": 10
+  },
+  {
+    "query": "شقة للبيع تمويل بنكي",
+    "parsed": {
+      "original_query": "شقة للبيع تمويل بنكي",
+      "normalized_query": "شقه للبيع تمويل بنكي",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "أرض للبيع معفية رسوم",
+    "parsed": {
+      "original_query": "أرض للبيع معفية رسوم",
+      "normalized_query": "ارض للبيع معفيه رسوم",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقق للايجار قرب الجامعة الأردنية",
+    "parsed": {
+      "original_query": "شقق للايجار قرب الجامعة الأردنية",
+      "normalized_query": "شقق للايجار قرب الجامعه الاردنيه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجامعة الاردنية",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "سكن شباب مفروش في إربد",
+    "parsed": {
+      "original_query": "سكن شباب مفروش في إربد",
+      "normalized_query": "سكن شباب مفروش في اربد",
+      "deal_type": "BOTH",
+      "property_type": null,
+      "bedrooms": null,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "اربد",
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": [
+        "residential_zoning"
+      ]
+    },
+    "count": 0
+  },
+  {
+    "query": "استوديو للايجار في عبدون للأجانب",
+    "parsed": {
+      "original_query": "استوديو للايجار في عبدون للأجانب",
+      "normalized_query": "استوديو للايجار في عبدون للاجانب",
+      "deal_type": "RENT",
+      "property_type": "STUDIO",
+      "bedrooms": 1,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عبدون",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 5
+  },
+  {
+    "query": "شقة للايجار في دابوق قريبة سفارات",
+    "parsed": {
+      "original_query": "شقة للايجار في دابوق قريبة سفارات",
+      "normalized_query": "شقه للايجار في دابوق قريبه سفارات",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "دابوق",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 5
+  },
+  {
+    "query": "شقة مفروشة للايجار في الشميساني",
+    "parsed": {
+      "original_query": "شقة مفروشة للايجار في الشميساني",
+      "normalized_query": "شقه مفروشه للايجار في الشميساني",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للايجار يومي في البحر الميت",
+    "parsed": {
+      "original_query": "شقة للايجار يومي في البحر الميت",
+      "normalized_query": "شقه للايجار يومي في البحر الميت",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "استوديو للايجار أسبوعي في العقبة",
+    "parsed": {
+      "original_query": "استوديو للايجار أسبوعي في العقبة",
+      "normalized_query": "استوديو للايجار اسبوعي في العقبه",
+      "deal_type": "RENT",
+      "property_type": "STUDIO",
+      "bedrooms": 1,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "العقبة",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للايجار شهري في عبدون",
+    "parsed": {
+      "original_query": "شقة للايجار شهري في عبدون",
+      "normalized_query": "شقه للايجار شهري في عبدون",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عبدون",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 60
+  },
+  {
+    "query": "شقق فندقية للايجار في عمان",
+    "parsed": {
+      "original_query": "شقق فندقية للايجار في عمان",
+      "normalized_query": "شقق فندقيه للايجار في عمان",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عمان",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 788
+  },
+  {
+    "query": "رووف مفروش للايجار في دير غبار",
+    "parsed": {
+      "original_query": "رووف مفروش للايجار في دير غبار",
+      "normalized_query": "رووف مفروش للايجار في دير غبار",
+      "deal_type": "RENT",
+      "property_type": "ROOF",
+      "bedrooms": null,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "بيت للبيع في الكرك مع أرض",
+    "parsed": {
+      "original_query": "بيت للبيع في الكرك مع أرض",
+      "normalized_query": "بيت للبيع في الكرك مع ارض",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "أرض للبيع في الطفيلة حوض مميز",
+    "parsed": {
+      "original_query": "أرض للبيع في الطفيلة حوض مميز",
+      "normalized_query": "ارض للبيع في الطفيله حوض مميز",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "مزرعة للبيع في عجلون إطلالة",
+    "parsed": {
+      "original_query": "مزرعة للبيع في عجلون إطلالة",
+      "normalized_query": "مزرعه للبيع في عجلون اطلاله",
+      "deal_type": "SALE",
+      "property_type": "FARM",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "view"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 56
+  },
+  {
+    "query": "شقة للبيع في معان بسعر جيد",
+    "parsed": {
+      "original_query": "شقة للبيع في معان بسعر جيد",
+      "normalized_query": "شقه للبيع في معان بسعر جيد",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "أرض زراعية للبيع في الأغوار",
+    "parsed": {
+      "original_query": "أرض زراعية للبيع في الأغوار",
+      "normalized_query": "ارض زراعيه للبيع في الاغوار",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للبيع بخلدا 3 غرف نوم",
+    "parsed": {
+      "original_query": "شقة للبيع بخلدا 3 غرف نوم",
+      "normalized_query": "شقه للبيع بخلدا 3 غرف نوم",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": 3,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 6
+  },
+  {
+    "query": "شقة للايجار بعمان الغربية غرفتين",
+    "parsed": {
+      "original_query": "شقة للايجار بعمان الغربية غرفتين",
+      "normalized_query": "شقه للايجار بعمان الغربيه غرفتين",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": 2,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عمان",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 380
+  },
+  {
+    "query": "أرض للبيع بالزرقاء 500 متر",
+    "parsed": {
+      "original_query": "أرض للبيع بالزرقاء 500 متر",
+      "normalized_query": "ارض للبيع بالزرقاء 500 متر",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": 500.0,
+      "location": "الزرقاء",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 13
+  },
+  {
+    "query": "شقة مفروشة للايجار الجبيهة",
+    "parsed": {
+      "original_query": "شقة مفروشة للايجار الجبيهة",
+      "normalized_query": "شقه مفروشه للايجار الجبيهه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجبيهة",
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "بيت للبيع اربد شارع الجامعة",
+    "parsed": {
+      "original_query": "بيت للبيع اربد شارع الجامعة",
+      "normalized_query": "بيت للبيع اربد شارع الجامعه",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "اربد",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للبيع الجاردنز أقل من 100 متر",
+    "parsed": {
+      "original_query": "شقة للبيع الجاردنز أقل من 100 متر",
+      "normalized_query": "شقه للبيع الجاردنز اقل من 100 متر",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": 100.0,
+      "min_price": null,
+      "build_area": 100.0,
+      "location": null,
+      "features": [],
+      "intents": [
+        "cheap"
+      ],
+      "legal": []
+    },
+    "count": 119
+  },
+  {
+    "query": "بيت للبيع صويلح 500 متر",
+    "parsed": {
+      "original_query": "بيت للبيع صويلح 500 متر",
+      "normalized_query": "بيت للبيع صويلح 500 متر",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": 500.0,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 22
+  },
+  {
+    "query": "شقة للايجار مفروشة عبدون انترنت",
+    "parsed": {
+      "original_query": "شقة للايجار مفروشة عبدون انترنت",
+      "normalized_query": "شقه للايجار مفروشه عبدون انترنت",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عبدون",
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "أرض للبيع طريق المطار شارعين",
+    "parsed": {
+      "original_query": "أرض للبيع طريق المطار شارعين",
+      "normalized_query": "ارض للبيع طريق المطار شارعين",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للايجار خلدا طابق أول بلكونة",
+    "parsed": {
+      "original_query": "شقة للايجار خلدا طابق أول بلكونة",
+      "normalized_query": "شقه للايجار خلدا طابق اول بلكونه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [
+        "balcony"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 48
+  },
+  {
+    "query": "شقة للبيع تلاع العلي 150 متر",
+    "parsed": {
+      "original_query": "شقة للبيع تلاع العلي 150 متر",
+      "normalized_query": "شقه للبيع تلاع العلي 150 متر",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": 150.0,
+      "location": "تلاع العلي",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 7
+  },
+  {
+    "query": "فيلا للبيع دابوق مسبح",
+    "parsed": {
+      "original_query": "فيلا للبيع دابوق مسبح",
+      "normalized_query": "فيلا للبيع دابوق مسبح",
+      "deal_type": "SALE",
+      "property_type": "VILLA",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "دابوق",
+      "features": [
+        "pool"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "رووف للبيع ضاحية الرشيد تراس",
+    "parsed": {
+      "original_query": "رووف للبيع ضاحية الرشيد تراس",
+      "normalized_query": "رووف للبيع ضاحيه الرشيد تراس",
+      "deal_type": "SALE",
+      "property_type": "ROOF",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "ضاحية الرشيد",
+      "features": [
+        "terrace"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقق للبيع تقسيط الزرقاء",
+    "parsed": {
+      "original_query": "شقق للبيع تقسيط الزرقاء",
+      "normalized_query": "شقق للبيع تقسيط الزرقاء",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الزرقاء",
+      "features": [],
+      "intents": [
+        "installments"
+      ],
+      "legal": []
+    },
+    "count": 9
+  },
+  {
+    "query": "شقة أرضية للبيع مرج الحمام حديقة",
+    "parsed": {
+      "original_query": "شقة أرضية للبيع مرج الحمام حديقة",
+      "normalized_query": "شقه ارضيه للبيع مرج الحمام حديقه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "مرج الحمام",
+      "features": [
+        "garden"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 17
+  },
+  {
+    "query": "دوبلكس للبيع عبدون سوبر ديلوكس",
+    "parsed": {
+      "original_query": "دوبلكس للبيع عبدون سوبر ديلوكس",
+      "normalized_query": "دوبلكس للبيع عبدون سوبر ديلوكس",
+      "deal_type": "SALE",
+      "property_type": null,
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عبدون",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 7
+  },
+  {
+    "query": "بيت للبيع اللويبدة استثمار",
+    "parsed": {
+      "original_query": "بيت للبيع اللويبدة استثمار",
+      "normalized_query": "بيت للبيع اللويبده استثمار",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "investment"
+      ],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "شقة للبيع الجامعة الأردنية لقطة",
+    "parsed": {
+      "original_query": "شقة للبيع الجامعة الأردنية لقطة",
+      "normalized_query": "شقه للبيع الجامعه الاردنيه لقطه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجامعة الاردنية",
+      "features": [],
+      "intents": [
+        "hot_deal"
+      ],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقق للبيع خلدا تحت الإنشاء",
+    "parsed": {
+      "original_query": "شقق للبيع خلدا تحت الإنشاء",
+      "normalized_query": "شقق للبيع خلدا تحت الانشاء",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 14
+  },
+  {
+    "query": "شقة استوديو للبيع اربد",
+    "parsed": {
+      "original_query": "شقة استوديو للبيع اربد",
+      "normalized_query": "شقه استوديو للبيع اربد",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": 1,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "اربد",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 10
+  },
+  {
+    "query": "شقق للايجار عمان الغربية 3 غرف",
+    "parsed": {
+      "original_query": "شقق للايجار عمان الغربية 3 غرف",
+      "normalized_query": "شقق للايجار عمان الغربيه 3 غرف",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": 3,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عمان",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 235
+  },
+  {
+    "query": "استوديو مفروش للايجار الجبيهة",
+    "parsed": {
+      "original_query": "استوديو مفروش للايجار الجبيهة",
+      "normalized_query": "استوديو مفروش للايجار الجبيهه",
+      "deal_type": "RENT",
+      "property_type": "STUDIO",
+      "bedrooms": 1,
+      "furnished": true,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجبيهة",
+      "features": [
+        "furnished"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للايجار الشميساني قرب مستشفى",
+    "parsed": {
+      "original_query": "شقة للايجار الشميساني قرب مستشفى",
+      "normalized_query": "شقه للايجار الشميساني قرب مستشفي",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "سكن طالبات اربد شارع الجامعة",
+    "parsed": {
+      "original_query": "سكن طالبات اربد شارع الجامعة",
+      "normalized_query": "سكن طالبات اربد شارع الجامعه",
+      "deal_type": "BOTH",
+      "property_type": null,
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "اربد",
+      "features": [],
+      "intents": [],
+      "legal": [
+        "residential_zoning"
+      ]
+    },
+    "count": 54
+  },
+  {
+    "query": "شقة للايجار العقبة مطلة بحر",
+    "parsed": {
+      "original_query": "شقة للايجار العقبة مطلة بحر",
+      "normalized_query": "شقه للايجار العقبه مطله بحر",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "العقبة",
+      "features": [
+        "view"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للايجار دير غبار تدفئة أرضية",
+    "parsed": {
+      "original_query": "شقة للايجار دير غبار تدفئة أرضية",
+      "normalized_query": "شقه للايجار دير غبار تدفئه ارضيه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "heating"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "استوديو للايجار وسط البلد",
+    "parsed": {
+      "original_query": "استوديو للايجار وسط البلد",
+      "normalized_query": "استوديو للايجار وسط البلد",
+      "deal_type": "RENT",
+      "property_type": "STUDIO",
+      "bedrooms": 1,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 126
+  },
+  {
+    "query": "شقة فخمة للايجار الصويفية",
+    "parsed": {
+      "original_query": "شقة فخمة للايجار الصويفية",
+      "normalized_query": "شقه فخمه للايجار الصويفيه",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "شقة للايجار طبربور 250 دينار",
+    "parsed": {
+      "original_query": "شقة للايجار طبربور 250 دينار",
+      "normalized_query": "شقه للايجار طبربور 250 دينار",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "شقة للايجار شفا بدران غرفتين",
+    "parsed": {
+      "original_query": "شقة للايجار شفا بدران غرفتين",
+      "normalized_query": "شقه للايجار شفا بدران غرفتين",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": 2,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 443
+  },
+  {
+    "query": "أرض للبيع السلط تصلح فيلا",
+    "parsed": {
+      "original_query": "أرض للبيع السلط تصلح فيلا",
+      "normalized_query": "ارض للبيع السلط تصلح فيلا",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "مزرعة للبيع الغور 5 دونم",
+    "parsed": {
+      "original_query": "مزرعة للبيع الغور 5 دونم",
+      "normalized_query": "مزرعه للبيع الغور 5 دونم",
+      "deal_type": "SALE",
+      "property_type": "FARM",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 56
+  },
+  {
+    "query": "أرض للبيع المفرق بسعر محروق",
+    "parsed": {
+      "original_query": "أرض للبيع المفرق بسعر محروق",
+      "normalized_query": "ارض للبيع المفرق بسعر محروق",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "أرض زراعية للبيع جرش",
+    "parsed": {
+      "original_query": "أرض زراعية للبيع جرش",
+      "normalized_query": "ارض زراعيه للبيع جرش",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "أرض للبيع القسطل طريق المطار",
+    "parsed": {
+      "original_query": "أرض للبيع القسطل طريق المطار",
+      "normalized_query": "ارض للبيع القسطل طريق المطار",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "أرض استثمارية للبيع العقبة",
+    "parsed": {
+      "original_query": "أرض استثمارية للبيع العقبة",
+      "normalized_query": "ارض استثماريه للبيع العقبه",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "العقبة",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "محل للايجار الجاردنز وصفي التل",
+    "parsed": {
+      "original_query": "محل للايجار الجاردنز وصفي التل",
+      "normalized_query": "محل للايجار الجاردنز وصفي التل",
+      "deal_type": "RENT",
+      "property_type": "SHOP",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 4
+  },
+  {
+    "query": "مكاتب للبيع العبدلي مول",
+    "parsed": {
+      "original_query": "مكاتب للبيع العبدلي مول",
+      "normalized_query": "مكاتب للبيع العبدلي مول",
+      "deal_type": "SALE",
+      "property_type": "OFFICE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 4
+  },
+  {
+    "query": "مخازن للايجار ماركا الصناعية",
+    "parsed": {
+      "original_query": "مخازن للايجار ماركا الصناعية",
+      "normalized_query": "مخازن للايجار ماركا الصناعيه",
+      "deal_type": "RENT",
+      "property_type": null,
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1391
+  },
+  {
+    "query": "محل حلاقة للبيع الرصيفة",
+    "parsed": {
+      "original_query": "محل حلاقة للبيع الرصيفة",
+      "normalized_query": "محل حلاقه للبيع الرصيفه",
+      "deal_type": "SALE",
+      "property_type": "SHOP",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 3
+  },
+  {
+    "query": "مبنى للبيع شارع المدينة",
+    "parsed": {
+      "original_query": "مبنى للبيع شارع المدينة",
+      "normalized_query": "مبني للبيع شارع المدينه",
+      "deal_type": "SALE",
+      "property_type": "BUILDING",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 20
+  },
+  {
+    "query": "شقة للبيع طبربور أقل من 120 متر",
+    "parsed": {
+      "original_query": "شقة للبيع طبربور أقل من 120 متر",
+      "normalized_query": "شقه للبيع طبربور اقل من 120 متر",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": 120.0,
+      "min_price": null,
+      "build_area": 120.0,
+      "location": null,
+      "features": [],
+      "intents": [
+        "cheap"
+      ],
+      "legal": []
+    },
+    "count": 101
+  },
+  {
+    "query": "شقق للايجار الجاردنز مصعد",
+    "parsed": {
+      "original_query": "شقق للايجار الجاردنز مصعد",
+      "normalized_query": "شقق للايجار الجاردنز مصعد",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "elevator"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "بيت للبيع مادبا 1000 متر",
+    "parsed": {
+      "original_query": "بيت للبيع مادبا 1000 متر",
+      "normalized_query": "بيت للبيع مادبا 1000 متر",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": 1000.0,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 6
+  },
+  {
+    "query": "شقة للبيع أبو نصير بدون وسيط",
+    "parsed": {
+      "original_query": "شقة للبيع أبو نصير بدون وسيط",
+      "normalized_query": "شقه للبيع ابو نصير بدون وسيط",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "شقة أرضية للايجار الكرسي كراج",
+    "parsed": {
+      "original_query": "شقة أرضية للايجار الكرسي كراج",
+      "normalized_query": "شقه ارضيه للايجار الكرسي كراج",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "parking"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "شقة للبيع الكرسي تدفئة أرضية",
+    "parsed": {
+      "original_query": "شقة للبيع الكرسي تدفئة أرضية",
+      "normalized_query": "شقه للبيع الكرسي تدفئه ارضيه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "heating"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "فيلا للبيع دابوق سمارت هوم",
+    "parsed": {
+      "original_query": "فيلا للبيع دابوق سمارت هوم",
+      "normalized_query": "فيلا للبيع دابوق سمارت هوم",
+      "deal_type": "SALE",
+      "property_type": "VILLA",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "دابوق",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للبيع الشميساني تشطيب فاخر",
+    "parsed": {
+      "original_query": "شقة للبيع الشميساني تشطيب فاخر",
+      "normalized_query": "شقه للبيع الشميساني تشطيب فاخر",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "premium_finish"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "رووف للبيع تلاع العلي عزل حراري",
+    "parsed": {
+      "original_query": "رووف للبيع تلاع العلي عزل حراري",
+      "normalized_query": "رووف للبيع تلاع العلي عزل حراري",
+      "deal_type": "SALE",
+      "property_type": "ROOF",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "تلاع العلي",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "شقة للايجار دير غبار تكييف مركزي",
+    "parsed": {
+      "original_query": "شقة للايجار دير غبار تكييف مركزي",
+      "normalized_query": "شقه للايجار دير غبار تكييف مركزي",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "ac"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "شقة للبيع مرج الحمام إطلالة",
+    "parsed": {
+      "original_query": "شقة للبيع مرج الحمام إطلالة",
+      "normalized_query": "شقه للبيع مرج الحمام اطلاله",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "مرج الحمام",
+      "features": [
+        "view"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 17
+  },
+  {
+    "query": "أرض للبيع أم الكندم طابو",
+    "parsed": {
+      "original_query": "أرض للبيع أم الكندم طابو",
+      "normalized_query": "ارض للبيع ام الكندم طابو",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": [
+        "title_deed"
+      ]
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للبيع الرصيفة قوشان",
+    "parsed": {
+      "original_query": "شقة للبيع الرصيفة قوشان",
+      "normalized_query": "شقه للبيع الرصيفه قوشان",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": [
+        "title_deed"
+      ]
+    },
+    "count": 553
+  },
+  {
+    "query": "أرض للبيع شفا بدران تنظيم سكني",
+    "parsed": {
+      "original_query": "أرض للبيع شفا بدران تنظيم سكني",
+      "normalized_query": "ارض للبيع شفا بدران تنظيم سكني",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": [
+        "zoning"
+      ]
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للبيع معفية رسوم تسجيل",
+    "parsed": {
+      "original_query": "شقة للبيع معفية رسوم تسجيل",
+      "normalized_query": "شقه للبيع معفيه رسوم تسجيل",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "أرض زراعية للبيع السلط خارج تنظيم",
+    "parsed": {
+      "original_query": "أرض زراعية للبيع السلط خارج تنظيم",
+      "normalized_query": "ارض زراعيه للبيع السلط خارج تنظيم",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": [
+        "zoning"
+      ]
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للبيع رهن بنكي",
+    "parsed": {
+      "original_query": "شقة للبيع رهن بنكي",
+      "normalized_query": "شقه للبيع رهن بنكي",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": [
+        "mortgage"
+      ]
+    },
+    "count": 553
+  },
+  {
+    "query": "شقة للبيع الجبيهة سعر حرق",
+    "parsed": {
+      "original_query": "شقة للبيع الجبيهة سعر حرق",
+      "normalized_query": "شقه للبيع الجبيهه سعر حرق",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجبيهة",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1
+  },
+  {
+    "query": "بيت للبيع جبل عمان بسعر الأرض",
+    "parsed": {
+      "original_query": "بيت للبيع جبل عمان بسعر الأرض",
+      "normalized_query": "بيت للبيع جبل عمان بسعر الارض",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عمان",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 18
+  },
+  {
+    "query": "شقة للبيع كاش فقط",
+    "parsed": {
+      "original_query": "شقة للبيع كاش فقط",
+      "normalized_query": "شقه للبيع كاش فقط",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "non_negotiable"
+      ],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "أرض للبيع بدون عمولة مستعجل",
+    "parsed": {
+      "original_query": "أرض للبيع بدون عمولة مستعجل",
+      "normalized_query": "ارض للبيع بدون عموله مستعجل",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "no_commission",
+        "urgent"
+      ],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للايجار خلدا سعر نهائي",
+    "parsed": {
+      "original_query": "شقة للايجار خلدا سعر نهائي",
+      "normalized_query": "شقه للايجار خلدا سعر نهائي",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "خلدا",
+      "features": [],
+      "intents": [
+        "non_negotiable"
+      ],
+      "legal": []
+    },
+    "count": 48
+  },
+  {
+    "query": "فيلا للبيع طريق المطار لقطة",
+    "parsed": {
+      "original_query": "فيلا للبيع طريق المطار لقطة",
+      "normalized_query": "فيلا للبيع طريق المطار لقطه",
+      "deal_type": "SALE",
+      "property_type": "VILLA",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "hot_deal"
+      ],
+      "legal": []
+    },
+    "count": 45
+  },
+  {
+    "query": "شقة أرضية الكرسي مدخل مستقل",
+    "parsed": {
+      "original_query": "شقة أرضية الكرسي مدخل مستقل",
+      "normalized_query": "شقه ارضيه الكرسي مدخل مستقل",
+      "deal_type": "BOTH",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "private_entrance"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1605
+  },
+  {
+    "query": "شقة للبيع عبدون نظام مفتوح",
+    "parsed": {
+      "original_query": "شقة للبيع عبدون نظام مفتوح",
+      "normalized_query": "شقه للبيع عبدون نظام مفتوح",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "عبدون",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 2
+  },
+  {
+    "query": "شقة للايجار ضاحية الرشيد شبه أرضي",
+    "parsed": {
+      "original_query": "شقة للايجار ضاحية الرشيد شبه أرضي",
+      "normalized_query": "شقه للايجار ضاحيه الرشيد شبه ارضي",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "ضاحية الرشيد",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 0
+  },
+  {
+    "query": "بيت للبيع اللويبدة هدم وبناء",
+    "parsed": {
+      "original_query": "بيت للبيع اللويبدة هدم وبناء",
+      "normalized_query": "بيت للبيع اللويبده هدم وبناء",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "شقة للبيع 3 غرف ماستر بلكونة",
+    "parsed": {
+      "original_query": "شقة للبيع 3 غرف ماستر بلكونة",
+      "normalized_query": "شقه للبيع 3 غرف ماستر بلكونه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": 3,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "master_bedroom",
+        "balcony"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 133
+  },
+  {
+    "query": "شقة للايجار الجاردنز طابق رابع",
+    "parsed": {
+      "original_query": "شقة للايجار الجاردنز طابق رابع",
+      "normalized_query": "شقه للايجار الجاردنز طابق رابع",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "محل للايجار وصفي التل خلو",
+    "parsed": {
+      "original_query": "محل للايجار وصفي التل خلو",
+      "normalized_query": "محل للايجار وصفي التل خلو",
+      "deal_type": "BOTH",
+      "property_type": "SHOP",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 7
+  },
+  {
+    "query": "عمارة للبيع دخل 8%",
+    "parsed": {
+      "original_query": "عمارة للبيع دخل 8%",
+      "normalized_query": "عماره للبيع دخل 8%",
+      "deal_type": "SALE",
+      "property_type": "BUILDING",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 20
+  },
+  {
+    "query": "مكاتب للايجار مجمع أعمال",
+    "parsed": {
+      "original_query": "مكاتب للايجار مجمع أعمال",
+      "normalized_query": "مكاتب للايجار مجمع اعمال",
+      "deal_type": "RENT",
+      "property_type": "OFFICE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 9
+  },
+  {
+    "query": "مخزن للايجار القسطل ارتفاع عالي",
+    "parsed": {
+      "original_query": "مخزن للايجار القسطل ارتفاع عالي",
+      "normalized_query": "مخزن للايجار القسطل ارتفاع عالي",
+      "deal_type": "RENT",
+      "property_type": "WAREHOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 4
+  },
+  {
+    "query": "صيدلية للبيع اربد",
+    "parsed": {
+      "original_query": "صيدلية للبيع اربد",
+      "normalized_query": "صيدليه للبيع اربد",
+      "deal_type": "SALE",
+      "property_type": null,
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "اربد",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 37
+  },
+  {
+    "query": "أرض صناعية للبيع ماركا",
+    "parsed": {
+      "original_query": "أرض صناعية للبيع ماركا",
+      "normalized_query": "ارض صناعيه للبيع ماركا",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للايجار الشميساني قرب التخصصي",
+    "parsed": {
+      "original_query": "شقة للايجار الشميساني قرب التخصصي",
+      "normalized_query": "شقه للايجار الشميساني قرب التخصصي",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "استوديو للايجار الجامعة الأردنية",
+    "parsed": {
+      "original_query": "استوديو للايجار الجامعة الأردنية",
+      "normalized_query": "استوديو للايجار الجامعه الاردنيه",
+      "deal_type": "RENT",
+      "property_type": "STUDIO",
+      "bedrooms": 1,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "الجامعة الاردنية",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1
+  },
+  {
+    "query": "أرض للبيع جرش سد الملك طلال",
+    "parsed": {
+      "original_query": "أرض للبيع جرش سد الملك طلال",
+      "normalized_query": "ارض للبيع جرش سد الملك طلال",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  },
+  {
+    "query": "شقة للبيع دابوق فخمة",
+    "parsed": {
+      "original_query": "شقة للبيع دابوق فخمة",
+      "normalized_query": "شقه للبيع دابوق فخمه",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "دابوق",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1
+  },
+  {
+    "query": "بيت للبيع المفرق قرب المجمع",
+    "parsed": {
+      "original_query": "بيت للبيع المفرق قرب المجمع",
+      "normalized_query": "بيت للبيع المفرق قرب المجمع",
+      "deal_type": "SALE",
+      "property_type": "HOUSE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 77
+  },
+  {
+    "query": "شقة للبيع كراج شحن كهرباء",
+    "parsed": {
+      "original_query": "شقة للبيع كراج شحن كهرباء",
+      "normalized_query": "شقه للبيع كراج شحن كهرباء",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "parking"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "شقة للايجار شامل فواتير",
+    "parsed": {
+      "original_query": "شقة للايجار شامل فواتير",
+      "normalized_query": "شقه للايجار شامل فواتير",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 1042
+  },
+  {
+    "query": "شقة للبيع طاقة شمسية كاملة",
+    "parsed": {
+      "original_query": "شقة للبيع طاقة شمسية كاملة",
+      "normalized_query": "شقه للبيع طاقه شمسيه كامله",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [
+        "solar"
+      ],
+      "intents": [],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "مكتب للايجار العبدلي",
+    "parsed": {
+      "original_query": "مكتب للايجار العبدلي",
+      "normalized_query": "مكتب للايجار العبدلي",
+      "deal_type": "RENT",
+      "property_type": "OFFICE",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 9
+  },
+  {
+    "query": "شقة للبيع بدون دفعة أولى",
+    "parsed": {
+      "original_query": "شقة للبيع بدون دفعة أولى",
+      "normalized_query": "شقه للبيع بدون دفعه اولي",
+      "deal_type": "SALE",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [
+        "installments"
+      ],
+      "legal": []
+    },
+    "count": 553
+  },
+  {
+    "query": "شقة للايجار تلاع العلي غير أرضي",
+    "parsed": {
+      "original_query": "شقة للايجار تلاع العلي غير أرضي",
+      "normalized_query": "شقه للايجار تلاع العلي غير ارضي",
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": "تلاع العلي",
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 90
+  },
+  {
+    "query": "أرض للبيع السلط مستوية",
+    "parsed": {
+      "original_query": "أرض للبيع السلط مستوية",
+      "normalized_query": "ارض للبيع السلط مستويه",
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "bedrooms": null,
+      "furnished": null,
+      "max_price": null,
+      "min_price": null,
+      "build_area": null,
+      "location": null,
+      "features": [],
+      "intents": [],
+      "legal": []
+    },
+    "count": 405
+  }
+]
