@@ -14,6 +14,8 @@ class ParsedQuery(BaseModel):
     build_area: Optional[float] = None
     location: Optional[str] = None
     features: List[str] = []
+    intents: List[str] = []
+    legal: List[str] = []
 
 class QueryParserService:
     # Jordanian specific locations mapped to unified names
@@ -53,25 +55,38 @@ class QueryParserService:
         norm = cls.normalize_arabic(raw_query)
         parsed = ParsedQuery(original_query=raw_query, normalized_query=norm)
 
-        # 1. Extract Deal Type
-        if re.search(r'\b(بيع|للبيع)\b', norm):
-            parsed.deal_type = "SALE"
-        elif re.search(r'\b(ايجار|للايجار|اجار)\b', norm):
-            parsed.deal_type = "RENT"
+        from nlp_dictionaries import DEAL_MAP, PROPERTY_MAP, FEATURES, INTENT, LEGAL
+        
+        # Normalize dict keys once
+        if not hasattr(cls, '_dicts_normalized'):
+            cls._DEAL_MAP = {cls.normalize_arabic(k): v for k, v in DEAL_MAP.items()}
+            cls._PROPERTY_MAP = {cls.normalize_arabic(k): v for k, v in PROPERTY_MAP.items()}
+            cls._FEATURES = {cls.normalize_arabic(k): v for k, v in FEATURES.items()}
+            cls._INTENT = {cls.normalize_arabic(k): v for k, v in INTENT.items()}
+            cls._LEGAL = {cls.normalize_arabic(k): v for k, v in LEGAL.items()}
+            cls._dicts_normalized = True
 
+        # Split tokens
+        words = norm.split()
+        
+        # 1. Extract Deal Type
+        for w in words:
+            if w in cls._DEAL_MAP and not parsed.deal_type:
+                parsed.deal_type = cls._DEAL_MAP[w]
+                
         # 2. Extract Property Type
-        if re.search(r'\b(شقه|شقق)\b', norm): parsed.property_type = "APARTMENT"
-        elif re.search(r'\b(فيلا|فلل|فيلات)\b', norm): parsed.property_type = "VILLA"
-        elif re.search(r'\b(ارض|اراضي)\b', norm): parsed.property_type = "LAND"
-        elif re.search(r'\b(بيت|منزل|بيوت)\b', norm): parsed.property_type = "HOUSE"
-        elif re.search(r'\b(محل|تجاري|مكتب|معرض|مخزن)\b', norm): parsed.property_type = "SHOP"
-        elif re.search(r'\b(استوديو|ستوديو)\b', norm): parsed.property_type = "STUDIO"
-        elif re.search(r'\b(رووف|روف)\b', norm): parsed.property_type = "ROOF"
-        elif re.search(r'\b(دوبلكس)\b', norm): parsed.property_type = "DUPLEX"
-        elif re.search(r'\b(عماره|عمارة|مبنى)\b', norm): parsed.property_type = "BUILDING"
+        for i in range(len(words)):
+            # Try 2 words
+            if i < len(words) - 1:
+                bigram = f"{words[i]} {words[i+1]}"
+                if bigram in cls._PROPERTY_MAP:
+                    parsed.property_type = cls._PROPERTY_MAP[bigram]
+            # Try 1 word
+            if words[i] in cls._PROPERTY_MAP and not parsed.property_type:
+                parsed.property_type = cls._PROPERTY_MAP[words[i]]
 
         # 3. Extract Bedrooms
-        if re.search(r'\b(غرفه|غرفة واحده)\b', norm): parsed.bedrooms = 1
+        if re.search(r'\b(غرفه|غرفة واحده|ستوديو|ستديو|استوديو|استديو)\b', norm): parsed.bedrooms = 1
         elif re.search(r'\b(غرفتين)\b', norm): parsed.bedrooms = 2
         else:
             m = re.search(r'(\d+)\s*(غرف|غرفه|نوم)', norm)
@@ -82,12 +97,11 @@ class QueryParserService:
         if price_match:
             amount = int(price_match.group(2))
             unit = price_match.group(3)
-            if unit in ["الف", "000"] or amount < 100:  # e.g. 50 meaning 50k
+            if unit in ["الف", "000"] or amount < 100:
                 if unit == "الف" or unit == "000" or amount < 1000:
                     amount *= 1000
             parsed.max_price = float(amount)
         else:
-            # Fallback for just exact numbers with ألف
             exact_price = re.search(r'(\d+)\s*(الف)', norm)
             if exact_price:
                 parsed.max_price = float(exact_price.group(1)) * 1000
@@ -97,24 +111,37 @@ class QueryParserService:
         if area_match:
             parsed.build_area = float(area_match.group(1))
 
-        # 6. Extract Furnished
-        if re.search(r'\b(مفروش|مفروشه)\b', norm):
-            parsed.furnished = True
-
-        # 7. Extract Location
-        # Check against our known locations list
+        # 6. Extract Location
         for loc in sorted(cls.LOCATIONS, key=len, reverse=True):
             norm_loc = cls.normalize_arabic(loc)
             if norm_loc in norm:
                 parsed.location = loc
                 break
 
-        # 8. Extract Features and Legal/Intent Terms
-        for feature_name, keywords in cls.FEATURES_MAP.items():
-            for kw in keywords:
-                norm_kw = cls.normalize_arabic(kw)
-                if norm_kw in norm:
-                    if feature_name not in parsed.features:
-                        parsed.features.append(feature_name)
+        # 7. Extract Features, Intent, Legal
+        for i in range(len(words)):
+            # Try 2 words
+            if i < len(words) - 1:
+                bigram = f"{words[i]} {words[i+1]}"
+                if bigram in cls._FEATURES and cls._FEATURES[bigram] not in parsed.features:
+                    parsed.features.append(cls._FEATURES[bigram])
+                if bigram in cls._INTENT and cls._INTENT[bigram] not in parsed.intents:
+                    parsed.intents.append(cls._INTENT[bigram])
+                if bigram in cls._LEGAL and cls._LEGAL[bigram] not in parsed.legal:
+                    parsed.legal.append(cls._LEGAL[bigram])
+            # Try 1 word
+            w = words[i]
+            if w in cls._FEATURES and cls._FEATURES[w] not in parsed.features:
+                parsed.features.append(cls._FEATURES[w])
+            if w in cls._INTENT and cls._INTENT[w] not in parsed.intents:
+                parsed.intents.append(cls._INTENT[w])
+            if w in cls._LEGAL and cls._LEGAL[w] not in parsed.legal:
+                parsed.legal.append(cls._LEGAL[w])
+                
+        # Handle furnished explicit mapping
+        if "furnished" in parsed.features:
+            parsed.furnished = True
+        elif "unfurnished" in parsed.features:
+            parsed.furnished = False
 
         return parsed

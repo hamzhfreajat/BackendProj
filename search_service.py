@@ -18,7 +18,9 @@ class SearchService:
             parsed.deal_type, 
             parsed.property_type, 
             parsed.location, 
-            parsed.features
+            parsed.features,
+            parsed.intents,
+            parsed.legal
         ])
         
         base_sql = "SELECT COUNT(*) FROM ad_search_index WHERE 1=1"
@@ -66,6 +68,14 @@ class SearchService:
         for idx, feat in enumerate(parsed.features):
             base_sql += f" AND search_text ILIKE :feature_{idx}"
             params[f"feature_{idx}"] = f"%{feat}%"
+            
+        for idx, intent in enumerate(parsed.intents):
+            base_sql += f" AND search_text ILIKE :intent_{idx}"
+            params[f"intent_{idx}"] = f"%{intent}%"
+            
+        for idx, leg in enumerate(parsed.legal):
+            base_sql += f" AND search_text ILIKE :legal_{idx}"
+            params[f"legal_{idx}"] = f"%{leg}%"
 
         return db.execute(text(base_sql), params).scalar() or 0
 
@@ -77,7 +87,9 @@ class SearchService:
             parsed.deal_type, 
             parsed.property_type, 
             parsed.location, 
-            parsed.features
+            parsed.features,
+            parsed.intents,
+            parsed.legal
         ])
         
         # Base query combining TSVECTOR and Trigram fuzzy match
@@ -134,6 +146,14 @@ class SearchService:
         for idx, feat in enumerate(parsed.features):
             base_sql += f" AND search_text ILIKE :feature_{idx}"
             params[f"feature_{idx}"] = f"%{feat}%"
+            
+        for idx, intent in enumerate(parsed.intents):
+            base_sql += f" AND search_text ILIKE :intent_{idx}"
+            params[f"intent_{idx}"] = f"%{intent}%"
+            
+        for idx, leg in enumerate(parsed.legal):
+            base_sql += f" AND search_text ILIKE :legal_{idx}"
+            params[f"legal_{idx}"] = f"%{leg}%"
 
 
         # Ranking Logic
@@ -233,6 +253,11 @@ class SearchService:
                 
             if not build_area:
                 build_area = parsed.build_area
+
+            # Append English NLP keys to search_text so they can be matched
+            all_keys = parsed.features + parsed.intents + parsed.legal
+            if all_keys:
+                search_text += " " + " ".join(all_keys)
 
             city_id = getattr(ad, 'city_id', None)
             region_id = getattr(ad, 'region_id', None)

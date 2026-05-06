@@ -7,7 +7,7 @@ from search_parser import QueryParserService
 
 db = SessionLocal()
 
-query = "شقة للايجار في عمان"
+query = "شقة مفروشة لقطة للبيع طابو في خلدا"
 import json
 
 parsed = QueryParserService.parse(query)
