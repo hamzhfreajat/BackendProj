@@ -33,7 +33,8 @@ class SearchService:
             
         params = {"query": parsed.normalized_query}
 
-        if parsed.deal_type:
+        # Apply Structured Filters
+        if parsed.deal_type and parsed.deal_type != "BOTH":
             base_sql += " AND deal_type = :deal_type"
             params["deal_type"] = parsed.deal_type
             
@@ -100,7 +101,7 @@ class SearchService:
         params = {"query": parsed.normalized_query}
 
         # Apply Structured Filters
-        if parsed.deal_type:
+        if parsed.deal_type and parsed.deal_type != "BOTH":
             base_sql += " AND deal_type = :deal_type"
             params["deal_type"] = parsed.deal_type
             
@@ -218,7 +219,7 @@ class SearchService:
             # NLP Parsing for missing fields
             parsed = QueryParserService.parse(f"{title} {desc} {loc}")
             
-            if not deal_type:
+            if not deal_type and parsed.deal_type != "BOTH":
                 deal_type = parsed.deal_type
                 
             property_type = parsed.property_type

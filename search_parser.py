@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class ParsedQuery(BaseModel):
     original_query: str
     normalized_query: str
-    deal_type: Optional[str] = None
+    deal_type: Optional[str] = "BOTH"
     property_type: Optional[str] = None
     bedrooms: Optional[int] = None
     furnished: Optional[bool] = None
@@ -48,6 +48,7 @@ class QueryParserService:
         text = re.sub(r'ة', 'ه', text)
         text = re.sub(r'ى', 'ي', text)
         text = re.sub(r'[ًٌٍَُِّْ]', '', text)  # Remove diacritics
+        text = re.sub(r'[()\[\]\{\}\.,!?"\'-]', ' ', text) # Remove punctuation
         return text.lower().strip()
 
     @classmethod
@@ -70,9 +71,15 @@ class QueryParserService:
         words = norm.split()
         
         # 1. Extract Deal Type
+        deal_types = set()
         for w in words:
-            if w in cls._DEAL_MAP and not parsed.deal_type:
-                parsed.deal_type = cls._DEAL_MAP[w]
+            if w in cls._DEAL_MAP:
+                deal_types.add(cls._DEAL_MAP[w])
+                
+        if len(deal_types) == 1:
+            parsed.deal_type = list(deal_types)[0]
+        else:
+            parsed.deal_type = "BOTH"
                 
         # 2. Extract Property Type
         for i in range(len(words)):
