@@ -1,0 +1,29 @@
+{
+  "query": "شقة للايجار في عمان",
+  "parsed": {
+    "original_query": "شقة للايجار في عمان",
+    "normalized_query": "شقه للايجار في عمان",
+    "deal_type": "RENT",
+    "property_type": "APARTMENT",
+    "bedrooms": null,
+    "furnished": null,
+    "max_price": null,
+    "min_price": null,
+    "build_area": null,
+    "location": "عمان",
+    "features": []
+  },
+  "results": [
+    4028,
+    3681,
+    3680,
+    3262,
+    3723,
+    4025,
+    4531,
+    3841,
+    3571,
+    3335
+  ],
+  "total_rows": 2125
+}

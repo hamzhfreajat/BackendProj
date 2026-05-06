@@ -107,39 +107,61 @@ class AutocompleteService:
         # Build Groups
         groups = []
         
+        from search_service import SearchService
+        
+        def populate_counts(items, limit):
+            valid_items = []
+            for item in items:
+                count = SearchService.count_properties(db, item["text"])
+                if count > 0:
+                    item["count"] = count
+                    valid_items.append(item)
+                if len(valid_items) >= limit:
+                    break
+            return valid_items
+            
         if query_items:
-            # Sort by score and limit
+            # Sort by score first
             query_items.sort(key=lambda x: x["score"], reverse=True)
-            groups.append({
-                "type": "query",
-                "title": "اقتراحات البحث",
-                "items": query_items[:5]
-            })
+            valid_query_items = populate_counts(query_items, 5)
+            if valid_query_items:
+                groups.append({
+                    "type": "query",
+                    "title": "اقتراحات البحث",
+                    "items": valid_query_items
+                })
             
         if location_items:
-            groups.append({
-                "type": "location",
-                "title": "مواقع مقترحة",
-                "items": location_items[:3]
-            })
+            valid_loc_items = populate_counts(location_items, 3)
+            if valid_loc_items:
+                groups.append({
+                    "type": "location",
+                    "title": "مواقع مقترحة",
+                    "items": valid_loc_items
+                })
             
         if filter_items:
-            groups.append({
-                "type": "filter",
-                "title": "فلاتر إضافية",
-                "items": filter_items[:3]
-            })
+            valid_filter_items = populate_counts(filter_items, 3)
+            if valid_filter_items:
+                groups.append({
+                    "type": "filter",
+                    "title": "فلاتر إضافية",
+                    "items": valid_filter_items
+                })
             
         # Fallback if no groups generated at all
         if not groups:
-            groups.append({
-                "type": "query",
-                "title": "اقتراحات البحث",
-                "items": [
-                    {"text": f"{base_query} للبيع", "score": 0.8},
-                    {"text": f"{base_query} للايجار", "score": 0.8}
-                ]
-            })
+            fallback_items = [
+                {"text": f"{base_query} للبيع", "score": 0.8},
+                {"text": f"{base_query} للايجار", "score": 0.8}
+            ]
+            valid_fallback = populate_counts(fallback_items, 2)
+            if valid_fallback:
+                groups.append({
+                    "type": "query",
+                    "title": "اقتراحات البحث",
+                    "items": valid_fallback
+                })
 
         return {
             "query": query,

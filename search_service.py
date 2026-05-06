@@ -11,8 +11,74 @@ LOCATIONS_CACHE = {
 
 class SearchService:
     @staticmethod
+    def count_properties(db: Session, raw_query: str) -> int:
+        parsed = QueryParserService.parse(raw_query)
+        
+        has_strong_filters = any([
+            parsed.deal_type, 
+            parsed.property_type, 
+            parsed.location, 
+            parsed.features
+        ])
+        
+        base_sql = "SELECT COUNT(*) FROM ad_search_index WHERE 1=1"
+        
+        if not has_strong_filters:
+            base_sql += """
+              AND (search_vector @@ websearch_to_tsquery('simple', :query) 
+                   OR search_text % :query)
+            """
+            
+        params = {"query": parsed.normalized_query}
+
+        if parsed.deal_type:
+            base_sql += " AND deal_type = :deal_type"
+            params["deal_type"] = parsed.deal_type
+            
+        if parsed.property_type:
+            base_sql += " AND property_type = :property_type"
+            params["property_type"] = parsed.property_type
+            
+        if parsed.bedrooms:
+            base_sql += " AND bedrooms >= :bedrooms"
+            params["bedrooms"] = parsed.bedrooms
+            
+        if parsed.max_price:
+            base_sql += " AND price <= :max_price"
+            params["max_price"] = parsed.max_price
+            
+        if parsed.min_price:
+            base_sql += " AND price >= :min_price"
+            params["min_price"] = parsed.min_price
+            
+        if parsed.build_area:
+            base_sql += " AND build_area >= :build_area"
+            params["build_area"] = parsed.build_area
+            
+        if parsed.furnished is not None:
+            base_sql += " AND furnished = :furnished"
+            params["furnished"] = parsed.furnished
+            
+        if parsed.location:
+            base_sql += " AND search_text ILIKE :location"
+            params["location"] = f"%{parsed.location}%"
+            
+        for idx, feat in enumerate(parsed.features):
+            base_sql += f" AND search_text ILIKE :feature_{idx}"
+            params[f"feature_{idx}"] = f"%{feat}%"
+
+        return db.execute(text(base_sql), params).scalar() or 0
+
+    @staticmethod
     def search_properties(db: Session, raw_query: str, limit: int = 100):
         parsed = QueryParserService.parse(raw_query)
+        
+        has_strong_filters = any([
+            parsed.deal_type, 
+            parsed.property_type, 
+            parsed.location, 
+            parsed.features
+        ])
         
         # Base query combining TSVECTOR and Trigram fuzzy match
         base_sql = """
@@ -21,9 +87,14 @@ class SearchService:
                    similarity(search_text, :query) as sim_score
             FROM ad_search_index
             WHERE 1=1
+        """
+        
+        if not has_strong_filters:
+            base_sql += """
               AND (search_vector @@ websearch_to_tsquery('simple', :query) 
                    OR search_text % :query)
-        """
+            """
+
         
         params = {"query": parsed.normalized_query}
 
