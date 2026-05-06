@@ -63,20 +63,9 @@ class SearchService:
             
         if parsed.location:
             base_sql += " AND search_text ILIKE :location"
-            params["location"] = f"%{parsed.location}%"
+            params["location"] = f"%{QueryParserService.normalize_arabic(parsed.location)}%"
             
-        for idx, feat in enumerate(parsed.features):
-            base_sql += f" AND search_text ILIKE :feature_{idx}"
-            params[f"feature_{idx}"] = f"%{feat}%"
-            
-        for idx, intent in enumerate(parsed.intents):
-            base_sql += f" AND search_text ILIKE :intent_{idx}"
-            params[f"intent_{idx}"] = f"%{intent}%"
-            
-        for idx, leg in enumerate(parsed.legal):
-            base_sql += f" AND search_text ILIKE :legal_{idx}"
-            params[f"legal_{idx}"] = f"%{leg}%"
-
+        # Features, intents, and legal are treated as soft filters (ranking only) to prevent zero results
         return db.execute(text(base_sql), params).scalar() or 0
 
     @staticmethod
@@ -141,20 +130,9 @@ class SearchService:
             
         if parsed.location:
             base_sql += " AND search_text ILIKE :location"
-            params["location"] = f"%{parsed.location}%"
+            params["location"] = f"%{QueryParserService.normalize_arabic(parsed.location)}%"
             
-        for idx, feat in enumerate(parsed.features):
-            base_sql += f" AND search_text ILIKE :feature_{idx}"
-            params[f"feature_{idx}"] = f"%{feat}%"
-            
-        for idx, intent in enumerate(parsed.intents):
-            base_sql += f" AND search_text ILIKE :intent_{idx}"
-            params[f"intent_{idx}"] = f"%{intent}%"
-            
-        for idx, leg in enumerate(parsed.legal):
-            base_sql += f" AND search_text ILIKE :legal_{idx}"
-            params[f"legal_{idx}"] = f"%{leg}%"
-
+        # Features, intents, and legal are treated as soft filters (ranking only) to prevent zero results
 
         # Ranking Logic
         base_sql += """
@@ -184,7 +162,8 @@ class SearchService:
             loc = ad.location or ""
             cat_name = ad.category.name if ad.category else ""
             
-            search_text = f"{title} {desc} {loc} {cat_name}"
+            raw_text = f"{title} {desc} {loc} {cat_name}"
+            search_text = QueryParserService.normalize_arabic(raw_text)
             
             # Extract real estate details if available
             deal_type = None
