@@ -36,12 +36,31 @@ class AutocompleteService:
         parsed = QueryParserService.parse(query)
         price_intent = AutocompleteService._get_price_intent(query)
         
+        # Map parsed properties to frontend UI tags
+        intent_tags = []
+        if parsed.furnished is True:
+            intent_tags.append("furnished:مفروشة")
+        elif parsed.furnished is False:
+            intent_tags.append("furnished:غير مفروشة")
+            
+        if parsed.floor_number is not None:
+            if parsed.floor_number == 0: intent_tags.append("floor:الطابق الأرضي")
+            elif parsed.floor_number == -1: intent_tags.append("floor:طابق شبه أرضي")
+            elif parsed.floor_number == 99: intent_tags.append("floor:الطابق الأخير")
+            elif parsed.floor_number > 0: intent_tags.append(f"floor:{parsed.floor_number}")
+            
+        if parsed.bedrooms is not None:
+            if parsed.bedrooms == 0: intent_tags.append("bedrooms:ستوديو")
+            elif parsed.bedrooms >= 6: intent_tags.append("bedrooms:+6")
+            else: intent_tags.append(f"bedrooms:{parsed.bedrooms}")
+
         # Base intent object
         intent = {
             "deal_type": parsed.deal_type or "UNKNOWN",
             "property_type": parsed.property_type or "UNKNOWN",
             "location": parsed.location,
-            "price_intent": price_intent
+            "price_intent": price_intent,
+            "tags": intent_tags
         }
 
         # Query completions based on intent

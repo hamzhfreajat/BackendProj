@@ -12,6 +12,7 @@ class ParsedQuery(BaseModel):
     max_price: Optional[float] = None
     min_price: Optional[float] = None
     build_area: Optional[float] = None
+    floor_number: Optional[int] = None
     location: Optional[str] = None
     features: List[str] = []
     intents: List[str] = []
@@ -161,7 +162,31 @@ class QueryParserService:
         if area_match:
             parsed.build_area = float(area_match.group(1))
 
-        # 6. Extract Location
+        # 6. Extract Floor Number
+        floor_match = re.search(r'\bطابق\s+(ارضي|أرضي|اول|أول|ثاني|ثالث|رابع|خامس|سادس|سابع|ثامن|تاسع|عاشر|اخير|أخير|شبه ارضي|تسوية)\b', norm)
+        if not floor_match:
+            floor_match = re.search(r'\b(ارضي|تسوية|شبه ارضي)\b', norm)
+            if floor_match and not re.search(r'\b(طابق)\b', norm):
+                floor_match = None # only if we are sure it's floor
+
+        if floor_match:
+            f = floor_match.group(1)
+            if f in ['ارضي', 'أرضي']: parsed.floor_number = 0
+            elif f in ['اول', 'أول']: parsed.floor_number = 1
+            elif f in ['ثاني']: parsed.floor_number = 2
+            elif f in ['ثالث']: parsed.floor_number = 3
+            elif f in ['رابع']: parsed.floor_number = 4
+            elif f in ['خامس']: parsed.floor_number = 5
+            elif f in ['سادس']: parsed.floor_number = 6
+            elif f in ['سابع']: parsed.floor_number = 7
+            elif f in ['ثامن']: parsed.floor_number = 8
+            elif f in ['تاسع']: parsed.floor_number = 9
+            elif f in ['عاشر']: parsed.floor_number = 10
+            elif f in ['شبه ارضي']: parsed.floor_number = -1
+            elif f in ['تسوية']: parsed.floor_number = -2
+            elif f in ['اخير', 'أخير']: parsed.floor_number = 99
+
+        # 7. Extract Location
         for loc in sorted(cls.LOCATIONS, key=len, reverse=True):
             norm_loc = cls.normalize_arabic(loc)
             if norm_loc in norm:
