@@ -184,7 +184,8 @@ class SearchService:
                     
             if ad.real_estate_detail:
                 bathrooms = ad.real_estate_detail.bathrooms
-                furnished = True if ad.real_estate_detail.furnished in ['مفروشة', 'مفروش', 'مفروش جزئياً', 'yes', 'true'] else False
+                if ad.real_estate_detail.furnished:
+                    furnished = True if ad.real_estate_detail.furnished in ['مفروشة', 'مفروش', 'مفروش جزئياً', 'yes', 'true'] else False
                 build_area = ad.real_estate_detail.build_area
                 floor_number = None
                 try:
@@ -233,6 +234,9 @@ class SearchService:
                 
             if not build_area:
                 build_area = parsed.build_area
+
+            if furnished is None:
+                furnished = parsed.furnished
 
             # Append English NLP keys to search_text so they can be matched
             all_keys = parsed.features + parsed.intents + parsed.legal
