@@ -85,7 +85,7 @@ class AutocompleteService:
         if "تقسيط" in base_query or "بالتقسيط" in base_query:
             if "بدون دفعة" not in base_query:
                 query_items.append({"text": f"{base_query} بدون دفعة أولى", "score": 0.95})
-            if "عمان" not in base_query:
+            if "عمان" not in base_query and parsed.location is None:
                 query_items.append({"text": f"{base_query} في عمان", "score": 0.93})
             if "من المالك" not in base_query:
                 query_items.append({"text": f"{base_query} من المالك", "score": 0.90})
