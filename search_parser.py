@@ -18,7 +18,10 @@ class ParsedQuery(BaseModel):
     legal: List[str] = []
 
 class QueryParserService:
-    # Jordanian specific locations mapped to unified names
+    # Dynamic database locations flag
+    _LOCATIONS_LOADED = False
+
+    # Jordanian specific locations mapped to unified names (fallback)
     LOCATIONS = [
         "عمان", "الزرقاء", "اربد", "العقبة", "دابوق", "عبدون", "تلاع العلي", 
         "ضاحية الرشيد", "مرج الحمام", "جبل اللويبدة", "الجامعة الاردنية", 
@@ -30,6 +33,34 @@ class QueryParserService:
         "الكرسي", "أم الكندم", "وصفي التل", "شارع المدينة", "ماركا الجنوبية",
         "ماركا الشمالية", "شارع الجامعة"
     ]
+    
+    @classmethod
+    def load_locations(cls):
+        if cls._LOCATIONS_LOADED:
+            return
+            
+        try:
+            from database import SessionLocal
+            from models import City, Region
+            db = SessionLocal()
+            cities = db.query(City.name_ar).all()
+            regions = db.query(Region.name_ar).all()
+            
+            db_locations = set()
+            for c in cities:
+                if c[0]: db_locations.add(c[0].strip())
+            for r in regions:
+                if r[0]: db_locations.add(r[0].strip())
+                
+            if db_locations:
+                combined = set(cls.LOCATIONS) | db_locations
+                # Sort by length descending to match longest location first (e.g. "ماركا الجنوبية" before "ماركا")
+                cls.LOCATIONS = sorted(list(combined), key=len, reverse=True)
+                
+            cls._LOCATIONS_LOADED = True
+            db.close()
+        except Exception as e:
+            print("Failed to load DB locations:", e)
     
     FEATURES_MAP = {
         "مسبح": ["مسبح", "بركة سباحة"],
@@ -59,8 +90,14 @@ class QueryParserService:
 
     @classmethod
     def parse(cls, raw_query: str) -> ParsedQuery:
-        norm = cls.normalize_arabic(raw_query)
-        parsed = ParsedQuery(original_query=raw_query, normalized_query=norm)
+        if not cls._LOCATIONS_LOADED:
+            cls.load_locations()
+            
+        parsed = ParsedQuery(
+            original_query=raw_query,
+            normalized_query=cls.normalize_arabic(raw_query)
+        )
+        norm = parsed.normalized_query
 
         from nlp_dictionaries import DEAL_MAP, PROPERTY_MAP, FEATURES, INTENT, LEGAL
         
