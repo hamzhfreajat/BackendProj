@@ -169,16 +169,33 @@ class QueryParserService:
                 break
 
         # 7. Extract Features, Intent, Legal
+        skip_next = False
         for i in range(len(words)):
+            if skip_next:
+                skip_next = False
+                continue
+                
+            bigram_matched = False
             # Try 2 words
             if i < len(words) - 1:
                 bigram = f"{words[i]} {words[i+1]}"
-                if bigram in cls._FEATURES and cls._FEATURES[bigram] not in parsed.features:
-                    parsed.features.append(cls._FEATURES[bigram])
-                if bigram in cls._INTENT and cls._INTENT[bigram] not in parsed.intents:
-                    parsed.intents.append(cls._INTENT[bigram])
-                if bigram in cls._LEGAL and cls._LEGAL[bigram] not in parsed.legal:
-                    parsed.legal.append(cls._LEGAL[bigram])
+                if bigram in cls._FEATURES:
+                    if cls._FEATURES[bigram] not in parsed.features:
+                        parsed.features.append(cls._FEATURES[bigram])
+                    bigram_matched = True
+                if bigram in cls._INTENT:
+                    if cls._INTENT[bigram] not in parsed.intents:
+                        parsed.intents.append(cls._INTENT[bigram])
+                    bigram_matched = True
+                if bigram in cls._LEGAL:
+                    if cls._LEGAL[bigram] not in parsed.legal:
+                        parsed.legal.append(cls._LEGAL[bigram])
+                    bigram_matched = True
+                    
+            if bigram_matched:
+                skip_next = True
+                continue
+
             # Try 1 word
             w = words[i]
             if w in cls._FEATURES and cls._FEATURES[w] not in parsed.features:

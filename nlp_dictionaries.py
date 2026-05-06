@@ -23,7 +23,8 @@ DEAL_MAP = {
 FEATURES = {
     "مفروش": "furnished", "مفروشة": "furnished", "مفروشه": "furnished", "فرش فندقي": "furnished", 
     "مؤثث": "furnished", "عفش": "furnished", "اثاث": "furnished", "غير مفروش": "unfurnished", 
-    "فارغ": "unfurnished", "فارغة": "unfurnished", "فارغه": "unfurnished", "بدون عفش": "unfurnished", 
+    "غير مفروشة": "unfurnished", "غير مفروشه": "unfurnished", "فارغ": "unfurnished", 
+    "فارغة": "unfurnished", "فارغه": "unfurnished", "بدون عفش": "unfurnished", 
     "مصعد": "elevator", "اسانسير": "elevator", "مصاعد": "elevator", "كراج": "parking", 
     "مصف": "parking", "موقف": "parking", "كراجات": "parking", "باركنج": "parking", 
     "مواقف": "parking", "بلكونة": "balcony", "بلكونه": "balcony", "برندا": "balcony", 
