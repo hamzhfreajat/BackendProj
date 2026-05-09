@@ -452,12 +452,12 @@ class ScrapingLog(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
 
 class SearchQueryLog(Base):
-    __tablename__ = ""search_query_logs""
+    __tablename__ = "search_query_logs"
     
     id = Column(Integer, primary_key=True, index=True)
     query_text = Column(String(255), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey(""users.id"", ondelete=""SET NULL""), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     results_count = Column(Integer, default=0)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
     
-    user = relationship(""User"")
+    user = relationship("User")
