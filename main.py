@@ -800,6 +800,18 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
     """
     try:
         from autocomplete_service import AutocompleteService
+        from models import SearchQueryLog
+        
+        # Save raw query log since autocomplete was removed and this is called on submit
+        if q and len(q.strip()) > 1:
+            try:
+                log_entry = SearchQueryLog(query_text=q.strip())
+                db.add(log_entry)
+                db.commit()
+            except Exception as log_err:
+                db.rollback()
+                print(f"Error saving search log: {log_err}")
+
         return AutocompleteService.generate_suggestions(db, q)
     except Exception as e:
         print(f"Autocomplete Error: {e}")
@@ -814,6 +826,13 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
             },
             "groups": []
         }
+
+@app.get("/api/admin/search_logs")
+def get_search_logs(limit: int = 50, db: Session = Depends(get_db)):
+    """Admin endpoint to fetch recent raw search queries."""
+    from models import SearchQueryLog
+    logs = db.query(SearchQueryLog).order_by(SearchQueryLog.created_at.desc()).limit(limit).all()
+    return [{"id": l.id, "query_text": l.query_text, "created_at": l.created_at.isoformat()} for l in logs]
 
 @app.get("/api/ads", response_model=List[schemas.Ad])
 def read_ads(
@@ -1670,9 +1689,30 @@ def delete_saved_group(group_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Deleted successfully"}
 
+import random
+
+def _enrich_user_profile(user: models.User, db: Session) -> models.User:
+    total_ads = db.query(models.Ad).filter(models.Ad.user_id == user.id).count()
+    active_ads = db.query(models.Ad).filter(
+        models.Ad.user_id == user.id,
+        models.Ad.is_published == True,
+        models.Ad.is_paused == False,
+        models.Ad.is_sold == False,
+        models.Ad.is_rejected == False
+    ).count()
+    
+    user.total_ads_count = total_ads
+    user.active_ads_count = active_ads
+    
+    # User requested dummy data for sold ads
+    # Assign a dummy random value for demonstration
+    user.sold_ads_count = random.randint(3, 12) if total_ads > 0 else 0
+    
+    return user
+
 @app.get("/api/users/me/profile", response_model=schemas.User)
 def get_my_profile(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    return current_user
+    return _enrich_user_profile(current_user, db)
 
 @app.patch("/api/users/me/profile", response_model=schemas.User)
 def update_my_profile(update_data: schemas.UserUpdate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
@@ -1693,14 +1733,14 @@ def update_my_profile(update_data: schemas.UserUpdate, current_user: models.User
         
     db.commit()
     db.refresh(current_user)
-    return current_user
+    return _enrich_user_profile(current_user, db)
 
 @app.get("/api/users/{user_id}/profile", response_model=schemas.User)
 def get_user_profile(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    return _enrich_user_profile(user, db)
 
 @app.get("/api/users/{user_id}/reviews", response_model=List[schemas.UserReview])
 def get_user_reviews(user_id: int, db: Session = Depends(get_db)):

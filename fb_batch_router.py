@@ -575,9 +575,11 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
 def _get_or_create_ai_user(db: Session) -> models.User:
     ai_user = db.query(models.User).filter(models.User.username == "ai_scraper").first()
     if not ai_user:
+        import random
         ai_user = models.User(
             username="ai_scraper",
             email="ai_scraper@system.local",
+            followers_count=random.randint(5000, 9500),
         )
         if hasattr(models.User, "hashed_password"):
             ai_user.hashed_password = "SYSTEM_NO_LOGIN"
@@ -1027,3 +1029,42 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     return FbBatchResponse(
         total=len(req.posts), saved=saved, skipped=skipped, errors=errors, results=results,
     )
+
+class ScrapingLogRequest(BaseModel):
+    group_name: Optional[str] = None
+    saved_ads: int = 0
+    skipped_ads: int = 0
+    errors_count: int = 0
+    json_data: Optional[list] = []
+
+@router.post("/fb-posts/log-run")
+def log_scraping_run(req: ScrapingLogRequest, db: Session = Depends(get_db)):
+    try:
+        log_entry = models.ScrapingLog(
+            group_name=req.group_name,
+            saved_ads=req.saved_ads,
+            skipped_ads=req.skipped_ads,
+            errors_count=req.errors_count,
+            json_data=req.json_data
+        )
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+        return {"success": True, "log_id": log_entry.id}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to save scraping log: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/scraping-logs")
+def get_scraping_logs(limit: int = 50, skip: int = 0, db: Session = Depends(get_db)):
+    logs = db.query(models.ScrapingLog).order_by(models.ScrapingLog.created_at.desc()).offset(skip).limit(limit).all()
+    return [{
+        "id": l.id,
+        "group_name": l.group_name,
+        "saved_ads": l.saved_ads,
+        "skipped_ads": l.skipped_ads,
+        "errors_count": l.errors_count,
+        "created_at": l.created_at.isoformat() if l.created_at else None,
+        "json_data": l.json_data
+    } for l in logs]

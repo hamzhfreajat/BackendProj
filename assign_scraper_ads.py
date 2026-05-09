@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+import random
 
 from database import SessionLocal
 from models import User, Ad, SourceType
@@ -25,6 +26,7 @@ def main():
                     is_phone_verified=True,
                     is_identity_verified=True,
                     full_name=f"Fake User {i}",
+                    followers_count=random.randint(5000, 9500),
                     hashed_password="$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjIQqiRQYq" # 123456
                 )
                 db.add(new_user)

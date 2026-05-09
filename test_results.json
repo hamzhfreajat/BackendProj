@@ -70,7 +70,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الصويفية",
       "features": [
         "furnished"
       ],
@@ -112,12 +112,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "ماركا",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1605
+    "count": 9
   },
   {
     "query": "شقة للبيع في طبربور أقل من 40 ألف",
@@ -131,14 +131,14 @@
       "max_price": 40000.0,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "طبربور",
       "features": [],
       "intents": [
         "cheap"
       ],
       "legal": []
     },
-    "count": 343
+    "count": 54
   },
   {
     "query": "شقة للايجار في خلدا 250 دينار",
@@ -171,14 +171,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "صويلح",
       "features": [],
       "intents": [
         "negotiable"
       ],
       "legal": []
     },
-    "count": 77
+    "count": 0
   },
   {
     "query": "أرض للبيع في سحاب مستعجل",
@@ -192,14 +192,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "سحاب",
       "features": [],
       "intents": [
         "urgent"
       ],
       "legal": []
     },
-    "count": 405
+    "count": 0
   },
   {
     "query": "شقة للبيع في الرابية لقطة",
@@ -213,14 +213,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الرابية",
       "features": [],
       "intents": [
         "hot_deal"
       ],
       "legal": []
     },
-    "count": 553
+    "count": 0
   },
   {
     "query": "بيت للبيع في جبل عمان قديم",
@@ -234,12 +234,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": "عمان",
+      "location": "جبل عمان",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 18
+    "count": 0
   },
   {
     "query": "أرض للبيع في الزرقاء شارع رئيسي",
@@ -272,12 +272,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "وسط البلد",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 3
+    "count": 0
   },
   {
     "query": "شقة مفروشة للبيع في العقبة",
@@ -352,12 +352,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "ماركا",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 2
   },
   {
     "query": "مبنى للبيع في الشميساني شركات",
@@ -371,12 +371,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شميساني",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 20
+    "count": 0
   },
   {
     "query": "بيت للبيع في اللويبدة إعادة بناء",
@@ -390,12 +390,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "اللويبدة",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 77
+    "count": 0
   },
   {
     "query": "شقة للبيع مع طاقة شمسية في تلاع العلي",
@@ -451,14 +451,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الصويفية",
       "features": [
         "heating"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 0
   },
   {
     "query": "بيت للبيع في السلط مع بئر ماء",
@@ -472,14 +472,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "السلط",
       "features": [
         "water_well"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 77
+    "count": 15
   },
   {
     "query": "شقة للبيع في خلدا مع مطبخ راكب",
@@ -514,12 +514,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "جبل الحسين",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 0
   },
   {
     "query": "شقة طابق أرضي للايجار في أم أذينة",
@@ -533,12 +533,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "ام اذينة",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 0
   },
   {
     "query": "رووف للايجار في دير غبار تراس كبير",
@@ -552,14 +552,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "دير غبار",
       "features": [
         "terrace"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 21
+    "count": 0
   },
   {
     "query": "شقة أرضية للبيع في أبو علندا",
@@ -573,12 +573,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "ابو علندا",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 7
   },
   {
     "query": "شقة طابق أخير للبيع في تلاع العلي",
@@ -611,7 +611,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [
         "no_commission"
@@ -632,7 +632,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "مادبا",
       "features": [],
       "intents": [],
       "legal": [
@@ -640,7 +640,7 @@
         "title_deed"
       ]
     },
-    "count": 405
+    "count": 26
   },
   {
     "query": "بيت للبيع في الزرقاء سند مستقل",
@@ -675,7 +675,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [],
       "legal": []
@@ -694,12 +694,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "سوم",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 2
   },
   {
     "query": "شقق للايجار قرب الجامعة الأردنية",
@@ -793,7 +793,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شميساني",
       "features": [
         "furnished"
       ],
@@ -814,12 +814,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "البحر الميت",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 0
   },
   {
     "query": "استوديو للايجار أسبوعي في العقبة",
@@ -890,7 +890,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "دير غبار",
       "features": [
         "furnished"
       ],
@@ -911,12 +911,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الكرك",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 77
+    "count": 7
   },
   {
     "query": "أرض للبيع في الطفيلة حوض مميز",
@@ -930,12 +930,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الطفيلة",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 0
   },
   {
     "query": "مزرعة للبيع في عجلون إطلالة",
@@ -949,14 +949,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "عجلون",
       "features": [
         "view"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 56
+    "count": 1
   },
   {
     "query": "شقة للبيع في معان بسعر جيد",
@@ -970,12 +970,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "معان",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 2
   },
   {
     "query": "أرض زراعية للبيع في الأغوار",
@@ -989,12 +989,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الأغوار",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 0
   },
   {
     "query": "شقة للبيع بخلدا 3 غرف نوم",
@@ -1086,7 +1086,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": "اربد",
+      "location": "شارع الجامعة",
       "features": [],
       "intents": [],
       "legal": []
@@ -1105,14 +1105,14 @@
       "max_price": 100.0,
       "min_price": null,
       "build_area": 100.0,
-      "location": null,
+      "location": "الجاردنز",
       "features": [],
       "intents": [
         "cheap"
       ],
       "legal": []
     },
-    "count": 119
+    "count": 0
   },
   {
     "query": "بيت للبيع صويلح 500 متر",
@@ -1126,12 +1126,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": 500.0,
-      "location": null,
+      "location": "صويلح",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 22
+    "count": 0
   },
   {
     "query": "شقة للايجار مفروشة عبدون انترنت",
@@ -1166,12 +1166,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "طريق المطار",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 1
   },
   {
     "query": "شقة للايجار خلدا طابق أول بلكونة",
@@ -1328,14 +1328,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "اللويبدة",
       "features": [],
       "intents": [
         "investment"
       ],
       "legal": []
     },
-    "count": 77
+    "count": 0
   },
   {
     "query": "شقة للبيع الجامعة الأردنية لقطة",
@@ -1448,12 +1448,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شميساني",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 9
   },
   {
     "query": "سكن طالبات اربد شارع الجامعة",
@@ -1467,14 +1467,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": "اربد",
+      "location": "شارع الجامعة",
       "features": [],
       "intents": [],
       "legal": [
         "residential_zoning"
       ]
     },
-    "count": 54
+    "count": 0
   },
   {
     "query": "شقة للايجار العقبة مطلة بحر",
@@ -1509,14 +1509,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "دير غبار",
       "features": [
         "heating"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 16
   },
   {
     "query": "استوديو للايجار وسط البلد",
@@ -1530,12 +1530,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "وسط البلد",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 126
+    "count": 1
   },
   {
     "query": "شقة فخمة للايجار الصويفية",
@@ -1549,12 +1549,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الصويفية",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 0
   },
   {
     "query": "شقة للايجار طبربور 250 دينار",
@@ -1568,12 +1568,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "طبربور",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 30
   },
   {
     "query": "شقة للايجار شفا بدران غرفتين",
@@ -1587,12 +1587,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شفا بدران",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 443
+    "count": 9
   },
   {
     "query": "أرض للبيع السلط تصلح فيلا",
@@ -1606,12 +1606,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "السلط",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 24
   },
   {
     "query": "مزرعة للبيع الغور 5 دونم",
@@ -1625,12 +1625,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الغور",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 56
+    "count": 0
   },
   {
     "query": "أرض للبيع المفرق بسعر محروق",
@@ -1644,12 +1644,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "المفرق",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 70
   },
   {
     "query": "أرض زراعية للبيع جرش",
@@ -1663,12 +1663,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "جرش",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 27
   },
   {
     "query": "أرض للبيع القسطل طريق المطار",
@@ -1682,12 +1682,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "طريق المطار",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 1
   },
   {
     "query": "أرض استثمارية للبيع العقبة",
@@ -1720,12 +1720,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "وصفي التل",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 4
+    "count": 0
   },
   {
     "query": "مكاتب للبيع العبدلي مول",
@@ -1739,12 +1739,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "العبدلي",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 4
+    "count": 0
   },
   {
     "query": "مخازن للايجار ماركا الصناعية",
@@ -1758,12 +1758,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "ماركا",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1391
+    "count": 5
   },
   {
     "query": "محل حلاقة للبيع الرصيفة",
@@ -1777,12 +1777,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الرصيفة",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 3
+    "count": 0
   },
   {
     "query": "مبنى للبيع شارع المدينة",
@@ -1796,12 +1796,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شارع المدينة",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 20
+    "count": 0
   },
   {
     "query": "شقة للبيع طبربور أقل من 120 متر",
@@ -1815,14 +1815,14 @@
       "max_price": 120.0,
       "min_price": null,
       "build_area": 120.0,
-      "location": null,
+      "location": "طبربور",
       "features": [],
       "intents": [
         "cheap"
       ],
       "legal": []
     },
-    "count": 101
+    "count": 19
   },
   {
     "query": "شقق للايجار الجاردنز مصعد",
@@ -1836,14 +1836,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الجاردنز",
       "features": [
         "elevator"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 41
   },
   {
     "query": "بيت للبيع مادبا 1000 متر",
@@ -1857,12 +1857,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": 1000.0,
-      "location": null,
+      "location": "مادبا",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 6
+    "count": 0
   },
   {
     "query": "شقة للبيع أبو نصير بدون وسيط",
@@ -1876,12 +1876,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "أبو نصير",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 5
   },
   {
     "query": "شقة أرضية للايجار الكرسي كراج",
@@ -1895,14 +1895,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الكرسي",
       "features": [
         "parking"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 0
   },
   {
     "query": "شقة للبيع الكرسي تدفئة أرضية",
@@ -1916,14 +1916,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الكرسي",
       "features": [
         "heating"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 0
   },
   {
     "query": "فيلا للبيع دابوق سمارت هوم",
@@ -1956,14 +1956,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شميساني",
       "features": [
         "premium_finish"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 2
   },
   {
     "query": "رووف للبيع تلاع العلي عزل حراري",
@@ -1996,14 +1996,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "دير غبار",
       "features": [
         "ac"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 16
   },
   {
     "query": "شقة للبيع مرج الحمام إطلالة",
@@ -2038,14 +2038,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "أم الكندم",
       "features": [],
       "intents": [],
       "legal": [
         "title_deed"
       ]
     },
-    "count": 405
+    "count": 0
   },
   {
     "query": "شقة للبيع الرصيفة قوشان",
@@ -2059,14 +2059,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الرصيفة",
       "features": [],
       "intents": [],
       "legal": [
         "title_deed"
       ]
     },
-    "count": 553
+    "count": 0
   },
   {
     "query": "أرض للبيع شفا بدران تنظيم سكني",
@@ -2080,14 +2080,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شفا بدران",
       "features": [],
       "intents": [],
       "legal": [
         "zoning"
       ]
     },
-    "count": 405
+    "count": 7
   },
   {
     "query": "شقة للبيع معفية رسوم تسجيل",
@@ -2101,12 +2101,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "سوم",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 553
+    "count": 36
   },
   {
     "query": "أرض زراعية للبيع السلط خارج تنظيم",
@@ -2120,14 +2120,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "السلط",
       "features": [],
       "intents": [],
       "legal": [
         "zoning"
       ]
     },
-    "count": 405
+    "count": 24
   },
   {
     "query": "شقة للبيع رهن بنكي",
@@ -2141,7 +2141,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [],
       "legal": [
@@ -2181,12 +2181,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": "عمان",
+      "location": "جبل عمان",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 18
+    "count": 0
   },
   {
     "query": "شقة للبيع كاش فقط",
@@ -2200,7 +2200,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [
         "non_negotiable"
@@ -2221,7 +2221,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [
         "no_commission",
@@ -2229,7 +2229,7 @@
       ],
       "legal": []
     },
-    "count": 405
+    "count": 394
   },
   {
     "query": "شقة للايجار خلدا سعر نهائي",
@@ -2264,14 +2264,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "طريق المطار",
       "features": [],
       "intents": [
         "hot_deal"
       ],
       "legal": []
     },
-    "count": 45
+    "count": 5
   },
   {
     "query": "شقة أرضية الكرسي مدخل مستقل",
@@ -2285,14 +2285,14 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الكرسي",
       "features": [
         "private_entrance"
       ],
       "intents": [],
       "legal": []
     },
-    "count": 1605
+    "count": 0
   },
   {
     "query": "شقة للبيع عبدون نظام مفتوح",
@@ -2344,12 +2344,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "اللويبدة",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 77
+    "count": 0
   },
   {
     "query": "شقة للبيع 3 غرف ماستر بلكونة",
@@ -2363,7 +2363,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [
         "master_bedroom",
         "balcony"
@@ -2385,12 +2385,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "الجاردنز",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 41
   },
   {
     "query": "محل للايجار وصفي التل خلو",
@@ -2404,12 +2404,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "وصفي التل",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 7
+    "count": 0
   },
   {
     "query": "عمارة للبيع دخل 8%",
@@ -2423,7 +2423,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [],
       "legal": []
@@ -2461,12 +2461,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "القسطل",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 4
+    "count": 0
   },
   {
     "query": "صيدلية للبيع اربد",
@@ -2499,12 +2499,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "ماركا",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 2
   },
   {
     "query": "شقة للايجار الشميساني قرب التخصصي",
@@ -2518,12 +2518,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "شميساني",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 1042
+    "count": 9
   },
   {
     "query": "استوديو للايجار الجامعة الأردنية",
@@ -2556,12 +2556,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "جرش",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 27
   },
   {
     "query": "شقة للبيع دابوق فخمة",
@@ -2594,12 +2594,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "المفرق",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 77
+    "count": 8
   },
   {
     "query": "شقة للبيع كراج شحن كهرباء",
@@ -2613,7 +2613,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [
         "parking"
       ],
@@ -2653,7 +2653,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [
         "solar"
       ],
@@ -2674,12 +2674,12 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "العبدلي",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 9
+    "count": 0
   },
   {
     "query": "شقة للبيع بدون دفعة أولى",
@@ -2693,7 +2693,7 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "لب",
       "features": [],
       "intents": [
         "installments"
@@ -2733,11 +2733,11 @@
       "max_price": null,
       "min_price": null,
       "build_area": null,
-      "location": null,
+      "location": "السلط",
       "features": [],
       "intents": [],
       "legal": []
     },
-    "count": 405
+    "count": 24
   }
 ]

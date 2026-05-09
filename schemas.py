@@ -56,6 +56,11 @@ class User(UserBase):
     business_policy: Optional[str] = None
     shop_location: Optional[str] = None
     shop_hours: Optional[str] = None
+    
+    # Dynamic Ads Counts
+    active_ads_count: Optional[int] = 0
+    sold_ads_count: Optional[int] = 0
+    total_ads_count: Optional[int] = 0
 
     class Config:
         from_attributes = True

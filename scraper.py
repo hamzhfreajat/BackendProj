@@ -462,7 +462,8 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                                 user = models.User(
                                     email="ai_scraper@system.com",
                                     username="AI Auto Scraper",
-                                    hashed_password="mock"
+                                    hashed_password="mock",
+                                    followers_count=random.randint(5000, 9500)
                                 )
                                 db.add(user)
                                 db.commit()

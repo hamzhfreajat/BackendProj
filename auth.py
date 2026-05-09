@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta
 import random
 import jwt
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -10,6 +11,58 @@ import models
 import schemas
 from database import get_db
 from passlib.context import CryptContext
+
+def send_whatsapp_otp(mobile_number: str, otp_code: str):
+    token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    if not token:
+        print("WARNING: WHATSAPP_ACCESS_TOKEN not set.")
+        return
+
+    wa_number = "962" + mobile_number[1:] if mobile_number.startswith("0") else mobile_number
+
+    url = "https://graph.facebook.com/v25.0/1027970960410357/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": wa_number,
+        "type": "template",
+        "template": {
+            "name": "hello_world",
+            "language": {
+                "code": "en_US"
+            }
+        }
+    }
+    
+    # Standard hello_world template expects 0 parameters.
+    # To pass OTP, you MUST register an Authentication template with a {{1}} parameter.
+    # We are omitting components for 'hello_world' to prevent API 400 Bad Request crash.
+    if payload["template"]["name"] != "hello_world":
+        payload["template"]["components"] = [
+            {
+                "type": "body",
+                "parameters": [{"type": "text", "text": str(otp_code)}]
+            },
+            {
+                "type": "button",
+                "sub_type": "url",
+                "index": "0",
+                "parameters": [{"type": "text", "text": str(otp_code)}]
+            }
+        ]
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()
+        print(f"WhatsApp OTP sent to {wa_number}")
+    except requests.exceptions.RequestException as e:
+        print(f"WhatsApp API Error: {e}")
+        if e.response is not None:
+            print(f"Response: {e.response.text}")
 
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
@@ -106,21 +159,22 @@ def request_otp(data: schemas.RequestOTP, request: Request, db: Session = Depend
     if not TESTING_MODE:
         check_rate_limit(db, ip_address, mobile_number, "request-otp")
 
-    # 2. Check 5-minute cooldown (skip in testing)
+    # 2. Check max 3 requests per 10 minutes (skip in testing)
     now = datetime.utcnow()
     if not TESTING_MODE:
-        five_mins_ago = now - timedelta(minutes=5)
-        last_otp = db.query(models.OtpCode).filter(
+        ten_mins_ago = now - timedelta(minutes=10)
+        recent_otps_count = db.query(models.OtpCode).filter(
             models.OtpCode.mobile_number == mobile_number,
-            models.OtpCode.created_at >= five_mins_ago
-        ).first()
+            models.OtpCode.created_at >= ten_mins_ago
+        ).count()
 
-        if last_otp:
-            raise HTTPException(status_code=425, detail="Please wait 5 minutes before requesting another OTP.")
+        if recent_otps_count >= 3:
+            raise HTTPException(status_code=429, detail="Too many OTP requests. Please wait 10 minutes.")
 
     # 3. Generate new 6-digit OTP
     otp_code = f"{random.randint(100000, 999999)}"
-    expires_at = now + timedelta(hours=1)
+    # Expire OTP after 5 minutes
+    expires_at = now + timedelta(minutes=5)
 
     db_otp = models.OtpCode(
         mobile_number=mobile_number,
@@ -131,14 +185,10 @@ def request_otp(data: schemas.RequestOTP, request: Request, db: Session = Depend
     db.add(db_otp)
     db.commit()
 
-    # In production, integrate SMS provider (Twilio, MessageBird, etc.) here.
-    # For now, we simulate sending SMS by printing to backend console.
-    print(f"\n{'='*40}")
-    print(f"📲 SMS TO: {mobile_number}")
-    print(f"🔑 OTP CODE: {otp_code}")
-    print(f"{'='*40}\n")
+    # Send via WhatsApp API
+    send_whatsapp_otp(mobile_number, otp_code)
 
-    return {"status": "success", "message": "OTP sent successfully"}
+    return {"status": "success", "message": "OTP sent successfully via WhatsApp"}
 
 @router.post("/admin-login", response_model=schemas.AuthResponse)
 def admin_login(data: schemas.AdminLogin, db: Session = Depends(get_db)):
@@ -182,7 +232,8 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
     if datetime.utcnow() > db_otp.expires_at:
         raise HTTPException(status_code=400, detail="OTP has expired.")
         
-    if db_otp.attempts >= 10:
+    # Prevent OTP brute force (max 5 attempts)
+    if db_otp.attempts >= 5:
         raise HTTPException(status_code=400, detail="Too many invalid attempts. Please request a new OTP.")
 
     if db_otp.otp_code != otp_code:

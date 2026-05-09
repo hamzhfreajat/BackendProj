@@ -1,10 +1,29 @@
-import psycopg2, json
-conn = psycopg2.connect(host='178.104.204.148', port=9000, dbname='cmnynjgg90003aumlerff4j9q', user='cmnynjgg70001aumle0zkfovm', password='z9l0aau7lAGSmmCGghGwKNbP')
-cur = conn.cursor()
-cur.execute("SELECT id, name, parent_id FROM categories WHERE name LIKE '%سكني%'")
-res = []
-for row in cur.fetchall():
-    cur.execute("SELECT id, name FROM categories WHERE parent_id = %s", (row[0],))
-    res.append({'id': row[0], 'name': row[1], 'children': cur.fetchall()})
-with open('out.json', 'w', encoding='utf-8') as f:
-    json.dump(res, f, ensure_ascii=False, indent=2)
+import sys
+import io
+sys.path.append('.')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+from database import SessionLocal
+from sqlalchemy import text
+db = SessionLocal()
+
+def run(q):
+    return db.execute(text(q)).scalar()
+
+print('Total:', run('SELECT count(*) FROM ad_search_index'))
+print('Tlaa:', run("SELECT count(*) FROM ad_search_index WHERE search_text ILIKE '%تلاع العلي%'"))
+print('Apartment:', run("SELECT count(*) FROM ad_search_index WHERE property_type = 'APARTMENT'"))
+print('Rent:', run("SELECT count(*) FROM ad_search_index WHERE deal_type = 'RENT'"))
+print('Furnished:', run("SELECT count(*) FROM ad_search_index WHERE furnished = true"))
+
+# Intersections
+print('Tlaa + Apt + Rent:', run("SELECT count(*) FROM ad_search_index WHERE search_text ILIKE '%تلاع العلي%' AND property_type = 'APARTMENT' AND deal_type = 'RENT'"))
+print('Tlaa + Apt + Rent + Furnished:', run("SELECT count(*) FROM ad_search_index WHERE search_text ILIKE '%تلاع العلي%' AND property_type = 'APARTMENT' AND deal_type = 'RENT' AND furnished = true"))
+
+# What if furnished is null?
+print('Tlaa + Apt + Rent + Furnished IS NULL:', run("SELECT count(*) FROM ad_search_index WHERE search_text ILIKE '%تلاع العلي%' AND property_type = 'APARTMENT' AND deal_type = 'RENT' AND furnished IS NULL"))
+print('Tlaa + Apt + Rent + Furnished IS FALSE:', run("SELECT count(*) FROM ad_search_index WHERE search_text ILIKE '%تلاع العلي%' AND property_type = 'APARTMENT' AND deal_type = 'RENT' AND furnished = false"))
+
+# Features JSON
+print('Features jsonb check:', run("SELECT count(*) FROM ad_search_index WHERE search_text ILIKE '%تلاع العلي%' AND property_type = 'APARTMENT' AND deal_type = 'RENT' AND search_text ILIKE '%مفروش%'"))
+
+db.close()

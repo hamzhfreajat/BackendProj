@@ -439,3 +439,14 @@ class AdSearchIndex(Base):
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
     
     ad = relationship("Ad")
+
+class ScrapingLog(Base):
+    __tablename__ = "scraping_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_name = Column(String(255), nullable=True)
+    saved_ads = Column(Integer, default=0)
+    skipped_ads = Column(Integer, default=0)
+    errors_count = Column(Integer, default=0)
+    json_data = Column(JSONB, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
