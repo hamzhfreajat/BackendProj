@@ -293,6 +293,7 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
 
 def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
+    global _LAST_GEMINI_CALL
     api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
     api_key_grok = os.getenv("GROK_API_KEY")
@@ -432,7 +433,6 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 raw = data["choices"][0]["message"]["content"]
                 ai_model_used = "deepseek-chat"
             else:
-                global _LAST_GEMINI_CALL
                 sleep_time = 0.0
                 with _GEMINI_LOCK:
                     if not _check_and_update_gemini_daily_limit():
@@ -474,6 +474,76 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                 if isinstance(item, dict): 
                     item["ai_model"] = ai_model_used
                     item["raw_unparsed_chunk_layer"] = raw.strip()
+
+            # --- BEGIN NEW CASCADING LOGIC ---
+            if api_key_deepseek and api_key_gemini and ai_model_used == "deepseek-chat":
+                posts_missing_loc = []
+                posts_by_index = {p.index: p for p in chunk_posts if p.index is not None}
+                
+                for p_i, item in enumerate(parsed):
+                    if not isinstance(item, dict): continue
+                    loc = str(item.get("location", "")).strip()
+                    if not loc or loc == "أخرى" or loc.lower() == "other" or "غير محدد" in loc:
+                        item_index = item.get("index")
+                        original_post = posts_by_index.get(item_index)
+                        if original_post:
+                            posts_missing_loc.append((p_i, original_post))
+                
+                if posts_missing_loc:
+                    logger.info(f"DeepSeek missed {len(posts_missing_loc)} locations. Falling back to Gemini...")
+                    missing_posts = [p for _, p in posts_missing_loc]
+                    gemini_prompt = _GEMINI_BATCH_PROMPT.format(
+                        categories_block=categories_block,
+                        posts_block=_build_posts_block(missing_posts)
+                    )
+                    
+                    try:
+                        # Ensure Gemini rate limit is respected
+                        sleep_time = 0.0
+                        with _GEMINI_LOCK:
+                            if _check_and_update_gemini_daily_limit():
+                                now = time.time()
+                                elapsed = now - _LAST_GEMINI_CALL
+                                if elapsed < 5.0:
+                                    sleep_time = 5.0 - elapsed
+                                    _LAST_GEMINI_CALL = now + sleep_time
+                                else:
+                                    _LAST_GEMINI_CALL = now
+                        if sleep_time > 0:
+                            time.sleep(sleep_time)
+
+                        g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
+                        g_headers = {"Content-Type": "application/json"}
+                        g_payload = {
+                            "contents": [{"parts": [{"text": gemini_prompt}]}],
+                            "generationConfig": {
+                                "responseMimeType": "application/json",
+                                "maxOutputTokens": 8192
+                            }
+                        }
+                        
+                        g_res = requests.post(g_url, json=g_payload, headers=g_headers, timeout=60)
+                        g_res.raise_for_status()
+                        g_data = g_res.json()
+                        g_raw = g_data["candidates"][0]["content"]["parts"][0]["text"]
+                        
+                        gemini_parsed = _parse_json_result(g_raw.strip())
+                        
+                        # Merge back
+                        for gem_item in gemini_parsed:
+                            if not isinstance(gem_item, dict): continue
+                            g_idx = gem_item.get("index")
+                            
+                            for p_i, orig_post in posts_missing_loc:
+                                if orig_post.index == g_idx:
+                                    gem_item["ai_model"] = "deepseek+gemini_fallback"
+                                    gem_item["raw_unparsed_chunk_layer"] = g_raw.strip()
+                                    parsed[p_i] = gem_item
+                                    break
+                    except Exception as e:
+                        logger.error(f"Gemini fallback failed: {e}")
+            # --- END NEW CASCADING LOGIC ---
+            
             return parsed
 
         except Exception as e:
