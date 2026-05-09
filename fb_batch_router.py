@@ -499,8 +499,8 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     categories_block = REAL_ESTATE_CATEGORIES
     
     # Send ALL non-duplicate posts to AI safely in chunks
-    # Keep chunk size explicitly to 20 to heavily reduce request count and overhead tokens.
-    CHUNK_SIZE = 20
+    # Keep chunk size explicitly to 5 to prevent AI output truncation.
+    CHUNK_SIZE = 5
     chunks = [posts[i:i + CHUNK_SIZE] for i in range(0, len(posts), CHUNK_SIZE)]
     
     def process_single_chunk(chunk):
