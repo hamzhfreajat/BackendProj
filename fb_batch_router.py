@@ -97,7 +97,7 @@ CRITICAL LOCATION RULES:
 3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
 4. If an ad mentions being near or at a specific university (e.g., "قرب الجامعة الأردنية", "بجانب الجامعة الألمانية"), map the location directly to that university's region (e.g., "عمان, الجامعة الأردنية", "مادبا, الجامعة الألمانية الأردنية").
 - phone_number (string or null) -- phone number if mentioned
-- category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a property or room.
+- category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the post is completely unrelated to real estate (e.g. cars, services, products, news) OR if the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a real estate property or room.
 - suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
 - attributes (object) -- Extract these specific property/shared-room features if mentioned:
     - area (int) -- Property area in square meters (if mentioned, e.g., 150)
@@ -152,7 +152,7 @@ Respond ONLY with valid JSON. No explanation, no markdown fences, no extra text.
 _GEMMA_SINGLE_PROMPT = """You are an expert real estate data extractor. Perform JSON extraction from the provided Facebook post. 
 
 EXTREMELY IMPORTANT RULE FOR ARABIC: 
-If the post contains the word "مطلوب" (Wanted/Seeking) or the author is ASKING to buy or rent an apartment, it is NOT a real estate offering! You MUST set category_id to 0 and provide a rejection_reason.
+If the post is completely unrelated to real estate (e.g. cars, services, news) OR if the post contains the word "مطلوب" (Wanted/Seeking) or the author is ASKING to buy or rent an apartment, it is NOT a real estate offering! You MUST set category_id to 0 and provide a rejection_reason.
 
 EXAMPLES OF CORRECT BEHAVIOR:
 Example 1 (WANTED POST):
@@ -788,7 +788,6 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         attributes={
             **ai_attrs, # Spread AI extracted attributes safely
             "dynamic_data": ai_attrs.get("dynamic_data", {}), # Ensure it explicitly exists
-            "author": post.author,
             "timestamp": post.timestamp,
             "reactions": post.reactions,
             "scraped_at": post.scrapedAt,
@@ -929,7 +928,10 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     if not (os.getenv("GOOGLE_API_KEY") or os.getenv("DEEPSEEK_API_KEY") or os.getenv("GROK_API_KEY")):
         raise HTTPException(status_code=500, detail="Missing AI API keys.")
 
-    ai_user = _get_or_create_ai_user(db)
+    import random
+    fake_users = db.query(models.User).filter(models.User.username.like("user-%")).all()
+    if not fake_users:
+        fake_users = [_get_or_create_ai_user(db)]
     results: List[PostResult] = []
     saved = skipped = errors = 0
 
@@ -1071,9 +1073,16 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             # For older outputs that still relied on missing category_name as a reject signal
             is_legacy_reject = not ai_data.get("category_id") and not ai_data.get("category_name")
             
-            if is_explicit_reject or is_legacy_reject:
+            # Check if AI successfully extracted a phone number
+            has_no_phone = not ai_data.get("phone_number")
+            
+            if is_explicit_reject or is_legacy_reject or has_no_phone:
                 skipped += 1
-                reason = ai_data.get("rejection_reason") or "AI determined post is not offering real estate"
+                if has_no_phone and not is_explicit_reject and not is_legacy_reject:
+                    reason = "No phone number found in AI extraction"
+                else:
+                    reason = ai_data.get("rejection_reason") or "AI determined post is not offering real estate"
+                    
                 logger.info(f"Post #{idx} rejected: {reason}")
                 _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res, used_ai_model)
                 results.append(PostResult(index=idx, status="skipped", reason=reason))
@@ -1083,7 +1092,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             post.images = _upload_imgs_to_r2(post.images)
             ad = _save_ad_to_db(
                 db=db, post=post, ai_data=ai_data,
-                ai_user_id=ai_user.id,
+                ai_user_id=random.choice(fake_users).id,
                 fb_request_category_id=req.category_id,
                 default_location=req.default_location or "",
             )
