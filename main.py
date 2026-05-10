@@ -1445,6 +1445,10 @@ def create_ad(
     # Sync to search index
     SearchService.sync_ad_to_search_index(db, db_ad)
 
+    # Trigger saved searches alerts
+    from observer import trigger_saved_filter_notifications
+    background_tasks.add_task(trigger_saved_filter_notifications, db, db_ad)
+
     return db_ad
 
 @app.put("/api/ads/{ad_id}", response_model=schemas.Ad)
@@ -1799,3 +1803,65 @@ def get_dashboard_reports(
         result.append(out)
         
     return result
+
+
+# --- Saved Filter Endpoints ---
+
+@app.post("/api/saved_filters/sync", response_model=List[schemas.SavedFilterResponse])
+def sync_saved_filters(
+    filters: List[schemas.SavedFilterCreate],
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """
+    Syncs the local SharedPreferences saved searches to the backend.
+    Replaces existing filters for the user to maintain perfect sync.
+    """
+    # Delete old filters
+    db.query(models.SavedFilter).filter(models.SavedFilter.user_id == current_user.id).delete()
+    
+    # Insert new ones
+    db_filters = []
+    for f in filters:
+        db_filter = models.SavedFilter(**f.dict(), user_id=current_user.id)
+        db.add(db_filter)
+        db_filters.append(db_filter)
+    
+    db.commit()
+    
+    # Refresh to get IDs
+    for f in db_filters:
+        db.refresh(f)
+        
+    return db_filters
+
+@app.post("/api/saved_filters", response_model=schemas.SavedFilterResponse)
+def create_saved_filter(
+    filter_data: schemas.SavedFilterCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    db_filter = models.SavedFilter(**filter_data.dict(), user_id=current_user.id)
+    db.add(db_filter)
+    db.commit()
+    db.refresh(db_filter)
+    return db_filter
+
+@app.delete("/api/saved_filters/{filter_id}")
+def delete_saved_filter(
+    filter_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    db_filter = db.query(models.SavedFilter).filter(
+        models.SavedFilter.id == filter_id,
+        models.SavedFilter.user_id == current_user.id
+    ).first()
+    
+    if not db_filter:
+        raise HTTPException(status_code=404, detail="Filter not found")
+        
+    db.delete(db_filter)
+    db.commit()
+    return {"status": "success"}
+

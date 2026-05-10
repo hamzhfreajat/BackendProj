@@ -377,6 +377,7 @@ class SavedFilter(Base):
     max_price = Column(DECIMAL(10, 2), nullable=True)
     tags = Column(JSONB, nullable=True)      # ["مفروشة", "عمان", ...]
     locations = Column(JSONB, nullable=True) # ["عمان", "صويلح", ...]
+    alert_frequency = Column(String(50), default="none") # e.g. "فوري", "يومي", "none"
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 

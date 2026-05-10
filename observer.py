@@ -10,15 +10,14 @@ def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
     If conditions match, sends a notification to the User.
     """
     # Quick filter for active saved filters that match the same category
-    # (Or null category if global)
+    # AND have instant alerts enabled.
     filters = db.query(models.SavedFilter).filter(
-        models.SavedFilter.is_active == True
+        models.SavedFilter.is_active == True,
+        models.SavedFilter.alert_frequency.in_(['فوري', 'instant']),
+        (models.SavedFilter.category_id == ad.category_id) | (models.SavedFilter.category_id == None)
     ).all()
 
     for f in filters:
-        if f.category_id and f.category_id != ad.category_id:
-            continue
-            
         # Check price constraints
         if f.min_price is not None and ad.price < f.min_price:
             continue
@@ -55,14 +54,15 @@ def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
             
         alert_body = f"وجدنا: {ad.title[:40]}... بسعر {ad.price} دينار."
         
-        # Async invocation (ideally using background tasks, but here we can just fire and forget if send_personal_notification is sync, wait it's sync)
+        # Async invocation (using asyncio.run since background tasks run in a threadpool)
+        import asyncio
         try:
-            send_personal_notification(
+            asyncio.run(send_personal_notification(
                 target_user_id=f.user_id,
                 title=alert_title,
                 body=alert_body,
                 notification_type="saved_filter_alert",
                 reference_id=ad.id
-            )
+            ))
         except Exception as e:
             print(f"Error sending filter notification: {e}")

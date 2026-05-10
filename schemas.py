@@ -400,3 +400,28 @@ class AdReportOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# --- Saved Filter Schemas ---
+
+class SavedFilterBase(BaseModel):
+    category_id: Optional[int] = None
+    name: Optional[str] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    tags: Optional[List[str]] = []
+    locations: Optional[List[str]] = []
+    alert_frequency: Optional[str] = "none"
+    is_active: Optional[bool] = True
+
+class SavedFilterCreate(SavedFilterBase):
+    pass
+
+class SavedFilterResponse(SavedFilterBase):
+    id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
