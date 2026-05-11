@@ -1942,7 +1942,7 @@ def delete_saved_filter(
     db.commit()
     return {"status": "success"}
 
-@app.get("/api/ads/{ad_id}", response_model=schemas.AdResponse)
+@app.get("/api/ads/{ad_id}", response_model=schemas.Ad)
 def get_ad_by_id(ad_id: int, db: Session = Depends(get_db)):
     ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not ad:
