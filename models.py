@@ -126,6 +126,13 @@ class User(Base):
     preferred_contact = Column(String(50), nullable=True)
     languages_spoken = Column(JSONB, nullable=True)
     deals_completed = Column(Integer, default=0)
+    
+    # Anti-Spam & Penalty System
+    duplicate_attempts = Column(Integer, default=0)
+    first_duplicate_attempt_at = Column(TIMESTAMP, nullable=True)
+    banned_from_posting_until = Column(TIMESTAMP, nullable=True)
+    penalty_tier = Column(Integer, default=0)
+    last_penalty_at = Column(TIMESTAMP, nullable=True)
     cancellation_rate = Column(Integer, default=0)
     buyer_satisfaction = Column(Integer, default=0)
     shop_name = Column(String(100), nullable=True)

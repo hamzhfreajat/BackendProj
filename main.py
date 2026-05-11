@@ -1373,6 +1373,83 @@ def create_ad(
         except:
             pass # Use fallback
 
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    
+    # --- Duplicate & Spam Prevention ---
+    if user and user.id != 1:
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        
+        # 1. Ban Check
+        if user.banned_from_posting_until and user.banned_from_posting_until > now:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"أنت محظور من إضافة الإعلانات حتى {user.banned_from_posting_until.strftime('%Y-%m-%d %H:%M:%S')} بسبب تكرار المخالفات."
+            )
+            
+        # 2. Fetch All Active Ads for AI comparison
+        recent_ads = db.query(models.Ad).filter(
+            models.Ad.user_id == user.id,
+            models.Ad.is_published == True,
+            models.Ad.is_paused == False,
+            models.Ad.is_sold == False,
+            models.Ad.is_rejected == False
+        ).all()
+        
+        if recent_ads:
+            from duplicate_checker import check_duplicate_with_deepseek
+            ad_dict = ad.model_dump()
+            is_duplicate = check_duplicate_with_deepseek(ad_dict, recent_ads)
+            
+            if is_duplicate:
+                # 3. Handle Penalty State Machine
+                if not user.first_duplicate_attempt_at or (now - user.first_duplicate_attempt_at) > timedelta(minutes=30):
+                    user.first_duplicate_attempt_at = now
+                    user.duplicate_attempts = 1
+                else:
+                    user.duplicate_attempts += 1
+                    
+                if user.duplicate_attempts >= 5:
+                    # Apply Escalating Ban
+                    if user.last_penalty_at:
+                        days_since_last = (now - user.last_penalty_at).days
+                        if user.penalty_tier == 1 and days_since_last > 7:
+                            user.penalty_tier = 0
+                        elif user.penalty_tier >= 2 and days_since_last > 30:
+                            user.penalty_tier = 0
+                            
+                    user.penalty_tier += 1
+                    
+                    if user.penalty_tier == 1:
+                        ban_duration = timedelta(hours=6)
+                        ban_str = "6 ساعات"
+                    elif user.penalty_tier == 2:
+                        ban_duration = timedelta(days=3)
+                        ban_str = "3 أيام"
+                    elif user.penalty_tier == 3:
+                        ban_duration = timedelta(days=30)
+                        ban_str = "شهر واحد"
+                    else:
+                        ban_duration = timedelta(days=365)
+                        ban_str = "سنة كاملة"
+                        
+                    user.banned_from_posting_until = now + ban_duration
+                    user.last_penalty_at = now
+                    user.duplicate_attempts = 0
+                    db.commit()
+                    
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"تم حظرك من إضافة الإعلانات لمدة {ban_str} لتجاوزك الحد المسموح للإعلانات المكررة."
+                    )
+                else:
+                    db.commit()
+                    remaining = 5 - user.duplicate_attempts
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"إعلان مكرر! يرجى عدم تكرار نشر نفس الإعلان. لديك {remaining} محاولات متبقية قبل الحظر المؤقت."
+                    )
+
     ad_data = ad.model_dump()
     re_detail_data = ad_data.pop("real_estate_detail", None)
     tags_data = ad_data.pop("linked_tags", [])
