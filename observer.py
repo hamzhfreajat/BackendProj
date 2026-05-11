@@ -9,6 +9,10 @@ def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
     Checks all active Saved Filters against the newly inserted ad.
     If conditions match, sends a notification to the User.
     """
+    # Do not send notifications for ads with no price or zero price (to avoid spamming users with incomplete scraped ads)
+    if not ad.price or ad.price <= 0:
+        return
+
     # Quick filter for active saved filters that match the same category
     # AND have instant alerts enabled.
     filters = db.query(models.SavedFilter).filter(
