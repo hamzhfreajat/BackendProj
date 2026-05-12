@@ -77,7 +77,8 @@ async def send_personal_notification(
     title: str,
     body: str,
     notification_type: str = None,
-    reference_id: int = None
+    reference_id: int = None,
+    extra_data: dict = None
 ):
     """
     Core function to send a user-specific notification:
@@ -108,6 +109,8 @@ async def send_personal_notification(
             "is_read": False,
             "created_at": db_notification.created_at.isoformat()
         }
+        if extra_data:
+            notification_payload.update(extra_data)
 
         # 2. Send FCM Push to the target user's devices ONLY
         user_tokens = db.query(models.UserDeviceToken).filter(
@@ -135,21 +138,39 @@ async def send_personal_notification(
                 if firebase_admin._apps:
                     for device in user_tokens:
                         try:
-                            message = messaging.Message(
-                                notification=messaging.Notification(title=title, body=body),
-                                android=messaging.AndroidConfig(
-                                    priority="high",
-                                    notification=messaging.AndroidNotification(
-                                        channel_id="high_importance_channel",
-                                        visibility="private"
-                                    )
-                                ),
-                                data={
+                                data_payload = {
                                     "type": notification_type or "",
                                     "reference_id": str(reference_id or ""),
-                                },
-                                token=device.fcm_token,
-                            )
+                                }
+                                if extra_data:
+                                    for k, v in extra_data.items():
+                                        data_payload[k] = str(v)
+
+                                # Ensure we have title and body in data payload for data-only messages
+                                data_payload["title"] = title
+                                data_payload["body"] = body
+
+                                is_android_chat = (device.device_type == "android" and notification_type == "chat_message")
+
+                                if is_android_chat:
+                                    message = messaging.Message(
+                                        android=messaging.AndroidConfig(priority="high"),
+                                        data=data_payload,
+                                        token=device.fcm_token,
+                                    )
+                                else:
+                                    message = messaging.Message(
+                                        notification=messaging.Notification(title=title, body=body),
+                                        android=messaging.AndroidConfig(
+                                            priority="high",
+                                            notification=messaging.AndroidNotification(
+                                                channel_id="high_importance_channel",
+                                                visibility="private"
+                                            )
+                                        ),
+                                        data=data_payload,
+                                        token=device.fcm_token,
+                                    )
                             messaging.send(message)
                         except Exception as e:
                             print(f"[FCM] Failed to send to token {device.fcm_token[:20]}...: {e}")
@@ -287,7 +308,8 @@ def send_chat_alert(
         title=title,
         body=data.message_preview,
         notification_type="chat_message",
-        reference_id=int(data.ad_id) if data.ad_id.isdigit() else None
+        reference_id=int(data.ad_id) if data.ad_id.isdigit() else None,
+        extra_data={"sender_name": data.sender_name, "ad_title": getattr(data, 'ad_title', '')}
     )
     
     return {"status": "success", "message": "Chat alert queued."}
