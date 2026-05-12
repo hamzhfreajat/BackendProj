@@ -138,39 +138,39 @@ async def send_personal_notification(
                 if firebase_admin._apps:
                     for device in user_tokens:
                         try:
-                                data_payload = {
-                                    "type": notification_type or "",
-                                    "reference_id": str(reference_id or ""),
-                                }
-                                if extra_data:
-                                    for k, v in extra_data.items():
-                                        data_payload[k] = str(v)
+                            data_payload = {
+                                "type": notification_type or "",
+                                "reference_id": str(reference_id or ""),
+                            }
+                            if extra_data:
+                                for k, v in extra_data.items():
+                                    data_payload[k] = str(v)
 
-                                # Ensure we have title and body in data payload for data-only messages
-                                data_payload["title"] = title
-                                data_payload["body"] = body
+                            # Ensure we have title and body in data payload for data-only messages
+                            data_payload["title"] = title
+                            data_payload["body"] = body
 
-                                is_android_chat = (device.device_type == "android" and notification_type == "chat_message")
+                            is_android_chat = (device.device_type == "android" and notification_type == "chat_message")
 
-                                if is_android_chat:
-                                    message = messaging.Message(
-                                        android=messaging.AndroidConfig(priority="high"),
-                                        data=data_payload,
-                                        token=device.fcm_token,
-                                    )
-                                else:
-                                    message = messaging.Message(
-                                        notification=messaging.Notification(title=title, body=body),
-                                        android=messaging.AndroidConfig(
-                                            priority="high",
-                                            notification=messaging.AndroidNotification(
-                                                channel_id="high_importance_channel",
-                                                visibility="private"
-                                            )
-                                        ),
-                                        data=data_payload,
-                                        token=device.fcm_token,
-                                    )
+                            if is_android_chat:
+                                message = messaging.Message(
+                                    android=messaging.AndroidConfig(priority="high"),
+                                    data=data_payload,
+                                    token=device.fcm_token,
+                                )
+                            else:
+                                message = messaging.Message(
+                                    notification=messaging.Notification(title=title, body=body),
+                                    android=messaging.AndroidConfig(
+                                        priority="high",
+                                        notification=messaging.AndroidNotification(
+                                            channel_id="high_importance_channel",
+                                            visibility="private"
+                                        )
+                                    ),
+                                    data=data_payload,
+                                    token=device.fcm_token,
+                                )
                             messaging.send(message)
                         except Exception as e:
                             print(f"[FCM] Failed to send to token {device.fcm_token[:20]}...: {e}")
@@ -309,7 +309,12 @@ def send_chat_alert(
         body=data.message_preview,
         notification_type="chat_message",
         reference_id=int(data.ad_id) if data.ad_id.isdigit() else None,
-        extra_data={"sender_name": data.sender_name, "ad_title": getattr(data, 'ad_title', '')}
+        extra_data={
+            "sender_name": data.sender_name, 
+            "ad_title": getattr(data, 'ad_title', ''),
+            "chat_id": getattr(data, 'chat_id', ''),
+            "message_id": getattr(data, 'message_id', ''),
+        }
     )
     
     return {"status": "success", "message": "Chat alert queued."}

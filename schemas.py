@@ -346,6 +346,8 @@ class ChatAlertCreate(BaseModel):
     message_preview: str
     ad_id: str
     ad_title: Optional[str] = ""
+    chat_id: Optional[str] = ""
+    message_id: Optional[str] = ""
 
 # TRACKING SCHEMAS
 class LogEventRequest(BaseModel):
