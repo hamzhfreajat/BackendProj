@@ -140,7 +140,8 @@ async def send_personal_notification(
                                 android=messaging.AndroidConfig(
                                     priority="high",
                                     notification=messaging.AndroidNotification(
-                                        channel_id="high_importance_channel"
+                                        channel_id="high_importance_channel",
+                                        visibility="private"
                                     )
                                 ),
                                 data={
