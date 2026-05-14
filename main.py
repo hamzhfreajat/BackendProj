@@ -493,6 +493,7 @@ def toggle_save_ad(ad_id: int, current_user: models.User = Depends(auth.get_curr
         db.delete(saved)
         if metrics and metrics.saved_items > 0:
             metrics.saved_items -= 1
+        ad.favorites_count = max(0, (ad.favorites_count or 0) - 1)
         is_saved = False
     else:
         new_save = models.SavedAd(user_id=current_user.id, ad_id=ad_id)
@@ -502,6 +503,7 @@ def toggle_save_ad(ad_id: int, current_user: models.User = Depends(auth.get_curr
         else:
             new_metric = models.UserMetric(user_id=current_user.id, saved_items=1)
             db.add(new_metric)
+        ad.favorites_count = (ad.favorites_count or 0) + 1
         is_saved = True
         
     db.commit()
@@ -1486,7 +1488,8 @@ def create_ad(
     
     db_ad = models.Ad(
         **ad_data,
-        user_id=user_id
+        user_id=user_id,
+        is_published=True
     )
     
     # Process Tags
@@ -1514,7 +1517,7 @@ def create_ad(
         send_personal_notification,
         target_user_id=db_ad.user_id,
         title="تم نشر إعلانك بنجاح ✅",
-        body=f"إعلانك '{db_ad.title[:50]}' تم إضافته. في انتظار المراجعة.",
+        body=f"إعلانك '{db_ad.title[:50]}' تم نشره بنجاح وأصبح متاحاً للجميع.",
         notification_type="ad_created",
         reference_id=db_ad.id
     )
@@ -1694,6 +1697,8 @@ def record_ad_view(
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
         raise HTTPException(status_code=404, detail="Ad not found")
+
+    db_ad.views = (db_ad.views or 0) + 1
 
     # Use raw insert / update on conflict for tracking view_at
     stmt = pg_insert(models.user_viewed_ads).values(

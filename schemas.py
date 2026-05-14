@@ -97,6 +97,18 @@ class VerifyOTP(BaseModel):
     mobile_number: str
     otp_code: str
 
+class OtpCodeOut(BaseModel):
+    id: int
+    mobile_number: str
+    otp_code: str
+    expires_at: datetime
+    created_at: datetime
+    attempts: int
+    ip_address: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
 class AuthResponse(BaseModel):
     token: str
     user: User

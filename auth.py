@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 import random
+from typing import List
 import jwt
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
@@ -306,3 +307,8 @@ def get_current_admin(current_user: models.User = Depends(get_current_user)):
     if current_user.user_type != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough privileges")
     return current_user
+
+@router.get("/admin/otps", response_model=List[schemas.OtpCodeOut])
+def get_all_otps(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
+    otps = db.query(models.OtpCode).order_by(models.OtpCode.created_at.desc()).limit(100).all()
+    return otps
