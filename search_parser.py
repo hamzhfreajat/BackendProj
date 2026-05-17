@@ -189,8 +189,15 @@ class QueryParserService:
         # 7. Extract Location
         for loc in sorted(cls.LOCATIONS, key=len, reverse=True):
             norm_loc = cls.normalize_arabic(loc)
-            # Use regex to match only complete words, preventing 'بدر' from matching 'شفا بدران'
-            pattern = r'(?:^|\s)' + re.escape(norm_loc) + r'(?:\s|$)'
+            
+            if norm_loc.startswith("ال"):
+                rest = norm_loc[2:]
+                # Matches: الجاردنز, بالجاردنز, لالجاردنز, للجاردنز
+                pattern = r'(?:^|\s)(?:(?:ب|ل)?' + re.escape(norm_loc) + r'|لل' + re.escape(rest) + r')(?:\s|$)'
+            else:
+                # Matches: عمان, بعمان, لعمان
+                pattern = r'(?:^|\s)(?:ب|ل)?' + re.escape(norm_loc) + r'(?:\s|$)'
+                
             if re.search(pattern, norm):
                 parsed.location = loc
                 break
