@@ -1367,7 +1367,131 @@ def get_ads_count(
         query = query.filter(models.Ad.category_id.in_(all_cat_ids))
         
     total_count = query.count()
+    total_count = query.count()
     return {"total_count": total_count}
+
+@app.post("/api/ads/draft", response_model=schemas.Ad)
+def create_ad_draft(
+    ad_draft: schemas.AdDraftCreate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    user_id = 1
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            import jwt
+            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+            token_sub = payload.get("sub")
+            if token_sub:
+                user_id = int(token_sub)
+        except:
+            pass
+
+    ad_data = ad_draft.model_dump()
+    re_detail_data = ad_data.pop("real_estate_detail", None)
+    tags_data = ad_data.pop("linked_tags", [])
+    image_urls = ad_data.pop("image_urls", [])
+    ad_data.pop("phone_number", None)
+    
+    attributes = ad_data.get("attributes") or {}
+    attributes["image_urls"] = image_urls
+    ad_data["attributes"] = attributes
+
+    db_ad = models.Ad(
+        **ad_data,
+        user_id=user_id,
+        is_published=False
+    )
+    
+    if tags_data:
+        for tag_name in tags_data:
+            tag = db.query(models.Tag).filter(models.Tag.name == tag_name).first()
+            if not tag:
+                tag = models.Tag(name=tag_name)
+                db.add(tag)
+            db_ad.linked_tags.append(tag)
+            
+    db.add(db_ad)
+    db.commit()
+    db.refresh(db_ad)
+    
+    if re_detail_data:
+        re_detail = models.AdRealEstateDetail(**re_detail_data, ad_id=db_ad.id)
+        db.add(re_detail)
+        db.commit()
+        db.refresh(db_ad)
+        
+    return db_ad
+
+@app.put("/api/ads/{ad_id}/draft", response_model=schemas.Ad)
+def update_ad_draft(
+    ad_id: int,
+    ad_draft: schemas.AdDraftUpdate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if not db_ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+        
+    user_id = 1
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            import jwt
+            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+            token_sub = payload.get("sub")
+            if token_sub:
+                user_id = int(token_sub)
+        except:
+            pass
+            
+    if db_ad.user_id != user_id and user_id != 1:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this ad")
+
+    update_data = ad_draft.model_dump(exclude_unset=True)
+    re_detail_data = update_data.pop("real_estate_detail", None)
+    tags_data = update_data.pop("linked_tags", None)
+    image_urls = update_data.pop("image_urls", None)
+    update_data.pop("phone_number", None)
+
+    attributes = db_ad.attributes or {}
+    if image_urls is not None:
+        attributes["image_urls"] = image_urls
+    
+    new_attrs = update_data.pop("attributes", None)
+    if new_attrs:
+        attributes.update(new_attrs)
+        
+    update_data["attributes"] = attributes
+
+    for key, value in update_data.items():
+        setattr(db_ad, key, value)
+
+    if tags_data is not None:
+        db_ad.linked_tags.clear()
+        for tag_name in tags_data:
+            tag = db.query(models.Tag).filter(models.Tag.name == tag_name).first()
+            if not tag:
+                tag = models.Tag(name=tag_name)
+                db.add(tag)
+            db_ad.linked_tags.append(tag)
+
+    if re_detail_data is not None:
+        if db_ad.real_estate_detail:
+            for k, v in re_detail_data.items():
+                setattr(db_ad.real_estate_detail, k, v)
+        else:
+            re_detail = models.AdRealEstateDetail(**re_detail_data, ad_id=db_ad.id)
+            db.add(re_detail)
+
+    db.commit()
+    db.refresh(db_ad)
+    return db_ad
+
 @app.post("/api/ads", response_model=schemas.Ad)
 def create_ad(
     ad: schemas.AdCreate, 
