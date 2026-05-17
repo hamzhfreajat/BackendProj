@@ -533,7 +533,6 @@ CATEGORIES = [
     (9908, 4169, "Y9", "موبايل Y9", "devices_other", None, None, {"en": ["Y9"]}),
     (9910, 4163, "7 Plus", "موبايل 7 Plus", "devices_other", None, None, {"en": ["7 Plus"]}),
     (9976, 4157, "iPhone 6 Plus", "موبايل iPhone 6 Plus", "devices_other", None, None, {"en": ["iPhone 6 Plus"]}),
-    (10015, 10301, "شقق فندقية / مخدومة", None, None, None, None, {"ar": ["شقق فندقية", "شقة مفروشة"], "en": ["Hotel / Serviced Apartments"]}),
     (10023, 10302, "ستوديو فندقي / مخدوم", None, None, None, None, {"ar": ["ستوديو فندقي", "خدمات فندقية"], "en": ["Hotel / Serviced Studio"]}),
     (10101, 10310, "فلل وقصور", None, None, None, None, None),
     (10102, 10310, "بيوت مستقلة للبيع", None, None, None, None, None),
