@@ -996,28 +996,47 @@ def read_ads(
             elif prefix == "bedrooms":
                 for val in values:
                     if val == '+6':
-                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%6%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%7%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%6%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%7%'))
                     elif val == 'ستوديو':
-                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.cast(Integer) == 0)
+                        conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == 0)
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%ستوديو%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%0%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%ستوديو%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%0%'))
                     else:
-                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['rooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike(f"%{val}%"))
+                        conds.append(models.Ad.attributes['dynamic_data']['rooms'].astext.ilike(f"%{val}%"))
             elif prefix == "bathrooms":
                 for val in values:
                     if val == '+6':
-                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['bathrooms'].astext.cast(Integer) >= 6)
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.ilike('%6%'))
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.ilike('%7%'))
                     else:
-                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['bathrooms'].astext.cast(Integer) == int(val))
+                        conds.append(models.Ad.attributes['dynamic_data']['bathrooms'].astext.ilike(f"%{val}%"))
             elif prefix == "furnished":
                 for val in values:
+                    conds.append(models.Ad.attributes['furnished'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['furnishing'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['furnished'].astext == val)
             elif prefix == "floor":
                 for val in values:
+                    conds.append(models.Ad.attributes['floor'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == val)
             elif prefix == "age":
                 for val in values:
+                    conds.append(models.Ad.attributes['building_age'].astext == val)
+                    conds.append(models.Ad.attributes['dynamic_data']['age'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['building_age'].astext == val)
             elif prefix == "rent_duration":
                 for val in values:
+                    conds.append(models.Ad.attributes['rent_duration'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['rent_duration'].astext == val)
             elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible"]:
                 for val in values:
@@ -1028,14 +1047,17 @@ def read_ads(
             elif prefix == "main_features":
                 for val in values:
                     conds = [
+                        models.Ad.attributes['key_features'].astext.ilike(f"%{val}%"),
+                        models.Ad.attributes['dynamic_data']['main_features'].astext.ilike(f"%{val}%"),
                         models.Ad.attributes['dynamic_data']['key_features'].astext.ilike(f"%{val}%"),
-                        models.Ad.attributes['dynamic_data']['building_features'].astext.ilike(f"%{val}%")
+                        models.Ad.attributes['building_features'].astext.ilike(f"%{val}%")
                     ]
             elif prefix == "extra_features":
                 for val in values:
+                    conds.append(models.Ad.attributes['building_features'].astext.ilike(f"%{val}%"))
+                    conds.append(models.Ad.attributes['dynamic_data']['extra_features'].astext.ilike(f"%{val}%"))
                     conds.append(models.Ad.attributes['dynamic_data']['building_features'].astext.ilike(f"%{val}%"))
             else:
-                # Unrecognized prefix, treat as generic tags
                 for val in values:
                     query = query.filter(models.Ad.linked_tags.any(models.Tag.name == f"{prefix}:{val}"))
                 continue
@@ -1043,7 +1065,6 @@ def read_ads(
             if conds:
                 query = query.filter(or_(*conds))
                 
-        # AND logic for generic non-prefixed tags
         for t in generic_tags:
             query = query.filter(models.Ad.linked_tags.any(models.Tag.name == t))
     
