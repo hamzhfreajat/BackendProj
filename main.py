@@ -361,8 +361,6 @@ def _compute_performance(ad: models.Ad) -> dict:
     suggested = None
     if score < 20 and ad.views > 50:
         suggested = "Price might be slightly high."
-    elif ad.views < 10 and ad.is_published:
-        suggested = "Consider boosting for more visibility."
     elif len(ad.image_urls) < 3:
         suggested = "Add more photos to increase trust."
     return {"score": int(score), "action": suggested}

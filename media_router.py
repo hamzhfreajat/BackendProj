@@ -47,7 +47,12 @@ async def upload_media(files: List[UploadFile] = File(...)):
     
     for file in files:
         # Check for watermarks on image uploads
-        if file.content_type and file.content_type.startswith('image/'):
+        file_ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        is_image = file.content_type and file.content_type.startswith('image/')
+        if not is_image and file_ext in ['.jpg', '.jpeg', '.png', '.webp', '.heic']:
+            is_image = True
+            
+        if is_image:
             content = await file.read()
             if check_image_bytes_for_watermark(content):
                 raise HTTPException(
@@ -97,3 +102,26 @@ async def upload_media(files: List[UploadFile] = File(...)):
             uploaded_urls.append(file_url)
         
     return {"urls": uploaded_urls}
+
+@router.post("/check-watermarks")
+async def check_watermarks(files: List[UploadFile] = File(...)):
+    """
+    Receives multiple files and ONLY checks them for watermarks.
+    Returns 200 OK if clean, 400 Bad Request if a watermark is found.
+    """
+    from fb_batch_router import check_image_bytes_for_watermark
+    
+    for file in files:
+        file_ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        is_image = file.content_type and file.content_type.startswith('image/')
+        if not is_image and file_ext in ['.jpg', '.jpeg', '.png', '.webp', '.heic']:
+            is_image = True
+            
+        if is_image:
+            content = await file.read()
+            if check_image_bytes_for_watermark(content):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="عذراً، الصورة المرفقة تحتوي على شعارات أو نصوص تمنع نشرها. يرجى اختيار صورة أخرى بدون علامات مائية."
+                )
+    return {"status": "clean"}
