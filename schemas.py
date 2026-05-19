@@ -219,7 +219,7 @@ class AdDraftCreate(BaseModel):
     real_estate_detail: Optional[dict] = None
 
 class AdDraftUpdate(AdDraftCreate):
-    pass
+    is_published: Optional[bool] = None
 
 class AdRealEstateDetailBase(BaseModel):
     bathrooms: Optional[int] = None
