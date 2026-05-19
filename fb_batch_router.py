@@ -42,8 +42,6 @@ router = APIRouter(prefix="/api", tags=["fb-batch"])
 
 print(f"[fb_batch_router] LOADED — will use source_type = {SourceType.SCRAPER_BOT}")
 
-_OCR_READER = None
-
 
 # -- Pydantic models --------------------------------------------------------
 
@@ -698,42 +696,31 @@ def _upload_videos_to_r2(video_urls: List[str]) -> List[str]:
 
 def check_image_bytes_for_watermark(image_bytes: bytes) -> bool:
     """
-    Checks raw image bytes for watermarks/logos using EasyOCR.
+    Checks raw image bytes for watermarks/logos by calling the external OCR microservice.
     """
-    global _OCR_READER
-    if _OCR_READER is None:
-        try:
-            import easyocr
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info("Initializing EasyOCR Model for watermark detection...")
-            _OCR_READER = easyocr.Reader(['en', 'ar'], gpu=False)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to initialize EasyOCR: {e}")
-            return False
-
+    import os
+    import requests
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    ocr_url = os.getenv("OCR_SERVICE_URL", "https://ocr.sooq-com.com/api/detect")
+    
     try:
-        from PIL import Image
-        import numpy as np
-        import io
-        import logging
-        logger = logging.getLogger(__name__)
+        # Send the raw bytes as a file upload to the OCR service
+        files = {"file": ("image.jpg", image_bytes, "image/jpeg")}
+        resp = requests.post(ocr_url, files=files, timeout=15)
         
-        img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-        img_np = np.array(img)
-        
-        results = _OCR_READER.readtext(img_np)
-        for (bbox, text, prob) in results:
-            clean_text = text.strip()
-            if prob > 0.6 and len(clean_text) >= 4:
-                logger.info(f"Detected watermark/logo text: {clean_text} (prob: {prob})")
-                return True
-        return False
-        
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("has_watermark", False)
+        else:
+            logger.error(f"OCR Service returned status {resp.status_code}: {resp.text}")
+            return False
+            
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Byte-level OCR check failed: {e}")
+        logger.error(f"Failed to connect to OCR microservice at {ocr_url}: {e}")
+        # Fail open: if OCR service is down, don't block uploads
         return False
 
 def _has_watermark_local(image_urls: List[str]) -> bool:
