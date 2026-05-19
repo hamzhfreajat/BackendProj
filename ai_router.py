@@ -25,7 +25,7 @@ def _get_api_key():
     return api_key
 
 @router.post("/analyze-image")
-async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def analyze_image(file: UploadFile = File(...)):
     """
     Visual AI: Processes the first uploaded image to detect category and quality.
     """
@@ -39,8 +39,13 @@ async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_
         # We need to pass the image to Gemini
         
         # Get list of category names to help Gemini choose
-        categories = [c.name for c in db.query(models.Category).all()]
-        cat_list_str = ", ".join(categories)
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            categories = [c.name for c in db.query(models.Category).all()]
+            cat_list_str = ", ".join(categories)
+        finally:
+            db.close()
 
         prompt = f"""
         You are an expert AI for a classifieds app in Jordan.

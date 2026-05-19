@@ -42,6 +42,8 @@ router = APIRouter(prefix="/api", tags=["fb-batch"])
 
 print(f"[fb_batch_router] LOADED — will use source_type = {SourceType.SCRAPER_BOT}")
 
+_OCR_READER = None
+
 
 # -- Pydantic models --------------------------------------------------------
 
@@ -52,6 +54,7 @@ class FbPost(BaseModel):
     postUrl: Optional[str] = None
     text: Optional[str] = None
     images: Optional[List[str]] = []
+    videos: Optional[List[str]] = []
     reactions: Optional[str] = None
     scrapedAt: Optional[str] = None
 
@@ -642,6 +645,110 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
         
     return [r for r in results if r is not None]
 
+def _upload_videos_to_r2(video_urls: List[str]) -> List[str]:
+    if not video_urls:
+        return []
+    
+    from media_router import get_r2_client
+    r2_client = get_r2_client()
+    if not r2_client:
+        return video_urls
+    
+    bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
+    public_url = os.getenv("R2_PUBLIC_URL", "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev")
+    public_url_base = public_url.rstrip('/')
+    
+    def process_url(url):
+        if not url: return None
+        if "r2.dev" in url or "cloudflare" in url or url.startswith("blob:"):
+            # Skip blobs as they cannot be downloaded server-side. They must be handled via direct client-side upload
+            return url
+            
+        try:
+            # Use larger timeout and streaming for videos
+            resp = requests.get(url, timeout=30, stream=True)
+            if resp.status_code == 200:
+                content_type = resp.headers.get('Content-Type', 'video/mp4')
+                file_ext = ".mp4" if "mp4" in content_type else ".webm" if "webm" in content_type else ".mp4"
+                unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+                
+                # Download into memory for R2 upload
+                file_obj = io.BytesIO()
+                for chunk in resp.iter_content(chunk_size=8192):
+                    file_obj.write(chunk)
+                file_obj.seek(0)
+                
+                r2_client.upload_fileobj(
+                    file_obj, 
+                    bucket_name, 
+                    unique_filename,
+                    ExtraArgs={'ContentType': content_type}
+                )
+                return f"{public_url_base}/{unique_filename}"
+            else:
+                return url
+        except Exception as e:
+            logger.error(f"Failed to upload FB video to R2 {url}: {e}")
+            return url
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(process_url, video_urls))
+        
+    return [r for r in results if r is not None]
+
+def _has_watermark_local(image_urls: List[str]) -> bool:
+    """
+    A completely free and robust Local ML OCR check to detect any large text overlay (watermark/logo)
+    using EasyOCR.
+    """
+    if not image_urls:
+        return False
+        
+    global _OCR_READER
+    if _OCR_READER is None:
+        try:
+            import easyocr
+            logger.info("Initializing EasyOCR Model for watermark detection...")
+            _OCR_READER = easyocr.Reader(['en', 'ar'], gpu=False)
+        except Exception as e:
+            logger.error(f"Failed to initialize EasyOCR: {e}")
+            return False
+
+    def check_url(url):
+        if not url: return False
+        try:
+            resp = requests.get(url, timeout=10)
+            if resp.status_code != 200:
+                return False
+                
+            from PIL import Image
+            import numpy as np
+            import io
+            
+            img = Image.open(io.BytesIO(resp.content)).convert('RGB')
+            img_np = np.array(img)
+            
+            # Read text from image
+            results = _OCR_READER.readtext(img_np)
+            for (bbox, text, prob) in results:
+                # We flag it if we find high-probability text that is reasonably long.
+                # This catches watermarks, company names, and contact numbers overlaid on the image.
+                clean_text = text.strip()
+                if prob > 0.6 and len(clean_text) >= 4:
+                    logger.info(f"Detected watermark/logo text: {clean_text} (prob: {prob})")
+                    return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"Local OCR check failed for {url}: {e}")
+            return False
+
+    # Run concurrently (max 3 images)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        results = list(executor.map(check_url, image_urls[:3]))
+        
+    return any(results)
+
 def _get_or_create_ai_user(db: Session) -> models.User:
     ai_user = db.query(models.User).filter(models.User.username == "ai_scraper").first()
     if not ai_user:
@@ -793,6 +900,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
             "scraped_at": post.scrapedAt,
             "phone_number": ai_data.get("phone_number"),
             "images": post.images or [],
+            "videos": post.videos or [],
         },
         is_published=True,
     )
@@ -1089,7 +1197,15 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                 continue
 
         try:
+            if _has_watermark_local(post.images):
+                skipped += 1
+                reason = "Image contains competitor watermark or logo"
+                _log_training_data(db, post.text or "", {"rejected": True}, "skipped", reason)
+                results.append(PostResult(index=idx, status="skipped", reason=reason))
+                continue
+
             post.images = _upload_imgs_to_r2(post.images)
+            post.videos = _upload_videos_to_r2(post.videos)
             ad = _save_ad_to_db(
                 db=db, post=post, ai_data=ai_data,
                 ai_user_id=random.choice(fake_users).id,
