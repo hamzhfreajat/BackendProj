@@ -2,8 +2,10 @@ import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import json
+from dotenv import load_dotenv
 
-DATABASE_URL = "postgresql://cmnynjgg70001aumle0zkfovm:z9l0aau7lAGSmmCGghGwKNbP@178.104.204.148:9000/cmnynjgg90003aumlerff4j9q"
+load_dotenv()
+DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db = SessionLocal()
