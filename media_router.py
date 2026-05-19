@@ -43,7 +43,20 @@ async def upload_media(files: List[UploadFile] = File(...)):
     
     r2_client = get_r2_client()
     
+    from fb_batch_router import check_image_bytes_for_watermark
+    
     for file in files:
+        # Check for watermarks on image uploads
+        if file.content_type and file.content_type.startswith('image/'):
+            content = await file.read()
+            if check_image_bytes_for_watermark(content):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="عذراً، الصورة المرفقة تحتوي على شعارات أو نصوص تمنع نشرها. يرجى اختيار صورة أخرى بدون علامات مائية."
+                )
+            # Reset file pointer after reading
+            file.file.seek(0)
+
         # Generate a unique filename to prevent collisions
         file_ext = os.path.splitext(file.filename)[1] if file.filename else ""
         unique_filename = f"{uuid.uuid4().hex}{file_ext}"

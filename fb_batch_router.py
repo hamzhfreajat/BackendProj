@@ -696,6 +696,46 @@ def _upload_videos_to_r2(video_urls: List[str]) -> List[str]:
         
     return [r for r in results if r is not None]
 
+def check_image_bytes_for_watermark(image_bytes: bytes) -> bool:
+    """
+    Checks raw image bytes for watermarks/logos using EasyOCR.
+    """
+    global _OCR_READER
+    if _OCR_READER is None:
+        try:
+            import easyocr
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("Initializing EasyOCR Model for watermark detection...")
+            _OCR_READER = easyocr.Reader(['en', 'ar'], gpu=False)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to initialize EasyOCR: {e}")
+            return False
+
+    try:
+        from PIL import Image
+        import numpy as np
+        import io
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        img_np = np.array(img)
+        
+        results = _OCR_READER.readtext(img_np)
+        for (bbox, text, prob) in results:
+            clean_text = text.strip()
+            if prob > 0.6 and len(clean_text) >= 4:
+                logger.info(f"Detected watermark/logo text: {clean_text} (prob: {prob})")
+                return True
+        return False
+        
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Byte-level OCR check failed: {e}")
+        return False
+
 def _has_watermark_local(image_urls: List[str]) -> bool:
     """
     A completely free and robust Local ML OCR check to detect any large text overlay (watermark/logo)
@@ -703,44 +743,18 @@ def _has_watermark_local(image_urls: List[str]) -> bool:
     """
     if not image_urls:
         return False
-        
-    global _OCR_READER
-    if _OCR_READER is None:
-        try:
-            import easyocr
-            logger.info("Initializing EasyOCR Model for watermark detection...")
-            _OCR_READER = easyocr.Reader(['en', 'ar'], gpu=False)
-        except Exception as e:
-            logger.error(f"Failed to initialize EasyOCR: {e}")
-            return False
 
     def check_url(url):
         if not url: return False
         try:
+            import requests
             resp = requests.get(url, timeout=10)
             if resp.status_code != 200:
                 return False
-                
-            from PIL import Image
-            import numpy as np
-            import io
-            
-            img = Image.open(io.BytesIO(resp.content)).convert('RGB')
-            img_np = np.array(img)
-            
-            # Read text from image
-            results = _OCR_READER.readtext(img_np)
-            for (bbox, text, prob) in results:
-                # We flag it if we find high-probability text that is reasonably long.
-                # This catches watermarks, company names, and contact numbers overlaid on the image.
-                clean_text = text.strip()
-                if prob > 0.6 and len(clean_text) >= 4:
-                    logger.info(f"Detected watermark/logo text: {clean_text} (prob: {prob})")
-                    return True
-            return False
-            
+            return check_image_bytes_for_watermark(resp.content)
         except Exception as e:
-            logger.error(f"Local OCR check failed for {url}: {e}")
+            import logging
+            logging.getLogger(__name__).error(f"Local OCR check failed for {url}: {e}")
             return False
 
     # Run concurrently (max 3 images)
