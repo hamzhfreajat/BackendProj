@@ -232,7 +232,8 @@ class Ad(Base):
     @property
     def image_urls(self):
         if self.attributes and isinstance(self.attributes, dict):
-            return self.attributes.get("image_urls", [])
+            val = self.attributes.get("image_urls")
+            return val if val is not None else []
         return []
 
     @image_urls.setter
@@ -244,7 +245,7 @@ class Ad(Base):
     @property
     def phone_number(self):
         if self.attributes and isinstance(self.attributes, dict):
-            return self.attributes.get("phone_number", None)
+            return self.attributes.get("phone_number")
         return None
 
     @phone_number.setter
@@ -256,7 +257,7 @@ class Ad(Base):
     @property
     def rooms(self):
         if self.attributes and isinstance(self.attributes, dict):
-            return self.attributes.get("rooms", None)
+            return self.attributes.get("rooms")
         return None
 
     @rooms.setter

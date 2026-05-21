@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 
 class UserBase(BaseModel):
@@ -222,9 +222,9 @@ class AdDraftUpdate(AdDraftCreate):
     is_published: Optional[bool] = None
 
 class AdRealEstateDetailBase(BaseModel):
-    bathrooms: Optional[int] = None
+    bathrooms: Optional[Any] = None
     furnished: Optional[str] = None
-    build_area: Optional[int] = None
+    build_area: Optional[Any] = None
     floor: Optional[str] = None
     building_age: Optional[str] = None
     rent_duration: Optional[str] = None
@@ -254,8 +254,8 @@ class Ad(AdBase):
     source_url: Optional[str] = None
     raw_description: Optional[str] = None
     phone_number: Optional[str] = None
-    rooms: Optional[int] = None
-    image_urls: List[str] = []
+    rooms: Optional[Any] = None
+    image_urls: Optional[List[str]] = []
     
     real_estate_detail: Optional[AdRealEstateDetail] = None
 
