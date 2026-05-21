@@ -57,7 +57,7 @@ async def upload_media(files: List[UploadFile] = File(...)):
             if check_image_bytes_for_watermark(content):
                 raise HTTPException(
                     status_code=400, 
-                    detail="عذراً، الصورة المرفقة تحتوي على شعارات أو نصوص تمنع نشرها. يرجى اختيار صورة أخرى بدون علامات مائية."
+                    detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة اخرى."
                 )
             # Reset file pointer after reading
             file.file.seek(0)
@@ -122,6 +122,6 @@ async def check_watermarks(files: List[UploadFile] = File(...)):
             if check_image_bytes_for_watermark(content):
                 raise HTTPException(
                     status_code=400, 
-                    detail="عذراً، الصورة المرفقة تحتوي على شعارات أو نصوص تمنع نشرها. يرجى اختيار صورة أخرى بدون علامات مائية."
+                    detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة طبيعية."
                 )
     return {"status": "clean"}

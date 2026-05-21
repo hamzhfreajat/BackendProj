@@ -198,6 +198,7 @@ class AdBase(BaseModel):
     image_url: Optional[str] = None
     category_id: Optional[int] = None
     attributes: Optional[dict] = None
+    video_url: Optional[str] = None
 
 class AdCreate(AdBase):
     linked_tags: Optional[List[str]] = []

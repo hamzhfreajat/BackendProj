@@ -243,6 +243,18 @@ class Ad(Base):
         self.attributes = {**self.attributes, "image_urls": value}
 
     @property
+    def video_url(self):
+        if self.attributes and isinstance(self.attributes, dict):
+            return self.attributes.get("video_url")
+        return None
+
+    @video_url.setter
+    def video_url(self, value):
+        if self.attributes is None:
+            self.attributes = {}
+        self.attributes = {**self.attributes, "video_url": value}
+
+    @property
     def phone_number(self):
         if self.attributes and isinstance(self.attributes, dict):
             return self.attributes.get("phone_number")
