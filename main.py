@@ -1121,13 +1121,21 @@ def read_ads(
     ads = query.offset(skip).limit(limit).all()
     
     if current_user and ads:
-        saved_ads = db.query(models.SavedAd.ad_id).filter(
-            models.SavedAd.user_id == current_user.id,
-            models.SavedAd.ad_id.in_([a.id for a in ads])
-        ).all()
-        saved_ids = {r[0] for r in saved_ads}
-        for ad in ads:
-            ad.is_saved = ad.id in saved_ids
+        try:
+            saved_ads = db.query(models.SavedAd.ad_id).filter(
+                models.SavedAd.user_id == current_user.id,
+                models.SavedAd.ad_id.in_([a.id for a in ads])
+            ).all()
+            saved_ids = {r[0] for r in saved_ads}
+            for ad in ads:
+                ad.is_saved = ad.id in saved_ids
+        except Exception as e:
+            import logging
+            logging.error(f"Could not load saved_ads for current user due to: {str(e)}")
+            db.rollback()
+            # Default to False if permissions fail
+            for ad in ads:
+                ad.is_saved = False
             
     return ads
 
