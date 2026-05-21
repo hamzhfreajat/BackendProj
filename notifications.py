@@ -314,6 +314,7 @@ def send_chat_alert(
             "ad_title": getattr(data, 'ad_title', ''),
             "chat_id": getattr(data, 'chat_id', ''),
             "message_id": getattr(data, 'message_id', ''),
+            "ad_id": data.ad_id,
         }
     )
     
