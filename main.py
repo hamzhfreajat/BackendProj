@@ -471,6 +471,8 @@ def perform_bulk_action(
             ad.is_published = True
             ad.last_republished_at = func.now()
             ad.republish_notification_sent = False
+            ad.created_at = func.now()
+            ad.updated_at = func.now()
             
     db.commit()
     return {"status": "success"}
