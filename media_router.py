@@ -59,8 +59,49 @@ async def upload_media(files: List[UploadFile] = File(...)):
                     status_code=400, 
                     detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة اخرى."
                 )
-            # Reset file pointer after reading
-            file.file.seek(0)
+            
+            # --- APPLY WATERMARK ---
+            try:
+                from PIL import Image
+                import io
+                
+                uploaded_img = Image.open(io.BytesIO(content)).convert("RGBA")
+                watermark_path = "static/watermark.png"
+                if os.path.exists(watermark_path):
+                    watermark = Image.open(watermark_path).convert("RGBA")
+                    
+                    target_width = int(uploaded_img.width * 0.25)
+                    target_width = max(100, min(target_width, 800))
+                    
+                    aspect_ratio = watermark.width / watermark.height
+                    target_height = int(target_width / aspect_ratio)
+                    watermark = watermark.resize((target_width, target_height), Image.Resampling.LANCZOS)
+                    
+                    padding = int(uploaded_img.width * 0.03)
+                    position = (padding, uploaded_img.height - watermark.height - padding)
+                    
+                    composite = Image.new("RGBA", uploaded_img.size)
+                    composite.paste(uploaded_img, (0,0))
+                    composite.paste(watermark, position, mask=watermark)
+                    
+                    if file_ext in ['.jpg', '.jpeg']:
+                        final_img = composite.convert("RGB")
+                        save_format = "JPEG"
+                    else:
+                        final_img = composite
+                        save_format = "PNG"
+                        
+                    out_buffer = io.BytesIO()
+                    final_img.save(out_buffer, format=save_format, quality=90)
+                    content = out_buffer.getvalue()
+            except Exception as e:
+                print(f"Failed to apply watermark: {e}")
+            # -----------------------
+            
+            file_obj_to_upload = io.BytesIO(content)
+        else:
+            file_obj_to_upload = file.file
+            file_obj_to_upload.seek(0)
 
         # Generate a unique filename to prevent collisions
         file_ext = os.path.splitext(file.filename)[1] if file.filename else ""
@@ -74,9 +115,9 @@ async def upload_media(files: List[UploadFile] = File(...)):
             # Upload to Cloudflare R2
             try:
                 print(f"Uploading {unique_filename} to Cloudflare R2 bucket: {bucket_name}...")
-                file.file.seek(0)
+                file_obj_to_upload.seek(0)
                 r2_client.upload_fileobj(
-                    file.file, 
+                    file_obj_to_upload, 
                     bucket_name, 
                     unique_filename,
                     ExtraArgs={'ContentType': file.content_type or 'application/octet-stream'}
@@ -95,8 +136,8 @@ async def upload_media(files: List[UploadFile] = File(...)):
             # Fallback to Local Upload
             file_path = os.path.join(UPLOAD_DIR, unique_filename)
             with open(file_path, "wb") as buffer:
-                content = await file.read()
-                buffer.write(content)
+                file_obj_to_upload.seek(0)
+                buffer.write(file_obj_to_upload.read())
                 
             file_url = f"/uploads/{unique_filename}"
             uploaded_urls.append(file_url)
