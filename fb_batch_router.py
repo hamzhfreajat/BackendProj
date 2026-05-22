@@ -643,57 +643,6 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
         
     return [r for r in results if r is not None]
 
-def _upload_videos_to_r2(video_urls: List[str]) -> List[str]:
-    if not video_urls:
-        return []
-    
-    from media_router import get_r2_client
-    r2_client = get_r2_client()
-    if not r2_client:
-        return video_urls
-    
-    bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
-    public_url = os.getenv("R2_PUBLIC_URL", "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev")
-    public_url_base = public_url.rstrip('/')
-    
-    def process_url(url):
-        if not url: return None
-        if "r2.dev" in url or "cloudflare" in url or url.startswith("blob:"):
-            # Skip blobs as they cannot be downloaded server-side. They must be handled via direct client-side upload
-            return url
-            
-        try:
-            # Use larger timeout and streaming for videos
-            resp = requests.get(url, timeout=30, stream=True)
-            if resp.status_code == 200:
-                content_type = resp.headers.get('Content-Type', 'video/mp4')
-                file_ext = ".mp4" if "mp4" in content_type else ".webm" if "webm" in content_type else ".mp4"
-                unique_filename = f"{uuid.uuid4().hex}{file_ext}"
-                
-                # Download into memory for R2 upload
-                file_obj = io.BytesIO()
-                for chunk in resp.iter_content(chunk_size=8192):
-                    file_obj.write(chunk)
-                file_obj.seek(0)
-                
-                r2_client.upload_fileobj(
-                    file_obj, 
-                    bucket_name, 
-                    unique_filename,
-                    ExtraArgs={'ContentType': content_type}
-                )
-                return f"{public_url_base}/{unique_filename}"
-            else:
-                return url
-        except Exception as e:
-            logger.error(f"Failed to upload FB video to R2 {url}: {e}")
-            return url
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        results = list(executor.map(process_url, video_urls))
-        
-    return [r for r in results if r is not None]
-
 def check_image_bytes_for_watermark(image_bytes: bytes) -> bool:
     """
     Checks raw image bytes for watermarks/logos by calling the external OCR microservice.
@@ -1206,7 +1155,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                 continue
 
             post.images = _upload_imgs_to_r2(post.images)
-            post.videos = _upload_videos_to_r2(post.videos)
+            post.videos = []
             ad = _save_ad_to_db(
                 db=db, post=post, ai_data=ai_data,
                 ai_user_id=random.choice(fake_users).id,
