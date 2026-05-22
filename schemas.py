@@ -292,6 +292,7 @@ class MyAdsDashboardSummary(BaseModel):
     expiredAds: int
     pendingAds: int
     soldAds: int
+    pausedAds: int
     boostedAds: int
     totalViews: int
     totalChats: int

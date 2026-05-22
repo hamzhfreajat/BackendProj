@@ -381,6 +381,7 @@ def get_my_ads_dashboard(
     expired = 0
     pending = 0
     sold = 0
+    paused = 0
     boosted = 0
     
     views = 0
@@ -393,6 +394,7 @@ def get_my_ads_dashboard(
         elif st == "Expired": expired += 1
         elif st == "Pending": pending += 1
         elif st == "Sold": sold += 1
+        elif st == "Paused": paused += 1
         
         if ad.is_boosted: boosted += 1
         
@@ -406,6 +408,7 @@ def get_my_ads_dashboard(
         expiredAds=expired,
         pendingAds=pending,
         soldAds=sold,
+        pausedAds=paused,
         boostedAds=boosted,
         totalViews=views,
         totalChats=chats,
@@ -440,6 +443,7 @@ def read_my_ads(
         ad_resp.suggested_action = perf["action"]
         response_list.append(ad_resp)
         
+    response_list.sort(key=lambda x: (0 if x.status == "Active" else 1, -x.created_at.timestamp()))
     return response_list
 
 @app.post("/api/my-ads/bulk-action", response_model=dict)
