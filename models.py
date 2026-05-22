@@ -217,6 +217,9 @@ class Ad(Base):
     chats_count = Column(Integer, default=0)
     favorites_count = Column(Integer, default=0)
     
+    last_republished_at = Column(TIMESTAMP, nullable=True)
+    republish_notification_sent = Column(Boolean, default=False)
+    
     # Scraper Support Fields
     source_type = Column(Enum(SourceType), default=SourceType.ORGANIC_USER)
     source_url = Column(Text, nullable=True)

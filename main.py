@@ -172,7 +172,10 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
     categories = query.offset(skip).limit(limit).all()
     
     # FAST AD COUNT INJECTION (Recursive)
-    ad_query = db.query(models.Ad.category_id, func.count(models.Ad.id)).filter(models.Ad.is_published == True)
+    ad_query = db.query(models.Ad.category_id, func.count(models.Ad.id)).filter(
+        models.Ad.is_published == True,
+        models.Ad.is_sold == False
+    )
     
     if location:
         target_loc = location[-1]
@@ -228,7 +231,8 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
         # 1. Find all published ads belonging to these categories
         all_ads = db.query(models.Ad).filter(
             models.Ad.category_id.in_(all_cat_ids),
-            models.Ad.is_published == True
+            models.Ad.is_published == True,
+            models.Ad.is_sold == False
         ).all()
         
         active_cat_ids = set([ad.category_id for ad in all_ads])
@@ -455,10 +459,18 @@ def perform_bulk_action(
             ad.is_paused = False
         elif req.action == "sold":
             ad.is_sold = True
+            ad.last_republished_at = func.now()
+            ad.republish_notification_sent = False
         elif req.action == "renew":
             ad.is_paused = False
             ad.is_sold = False
             ad.is_published = True
+        elif req.action == "republish":
+            ad.is_paused = False
+            ad.is_sold = False
+            ad.is_published = True
+            ad.last_republished_at = func.now()
+            ad.republish_notification_sent = False
             
     db.commit()
     return {"status": "success"}
@@ -930,6 +942,8 @@ def read_ads(
         
     if is_published is not None:
         query = query.filter(models.Ad.is_published == is_published)
+    else:
+        query = query.filter(models.Ad.is_published == True, models.Ad.is_sold == False)
         
     if source_type:
         query = query.filter(models.Ad.source_type == source_type)
@@ -1207,6 +1221,8 @@ def get_ads_count(
         
     if is_published is not None:
         query = query.filter(models.Ad.is_published == is_published)
+    else:
+        query = query.filter(models.Ad.is_published == True, models.Ad.is_sold == False)
         
     if source_type:
         query = query.filter(models.Ad.source_type == source_type)
@@ -2099,3 +2115,37 @@ def get_ad_by_id(ad_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Ad not found")
     return ad
 
+import asyncio
+from datetime import datetime, timedelta
+
+async def republish_notifier_worker():
+    while True:
+        try:
+            from database import SessionLocal
+            from notifications import send_personal_notification
+            db = SessionLocal()
+            now_minus_24h = datetime.utcnow() - timedelta(hours=24)
+            ads = db.query(models.Ad).filter(
+                models.Ad.is_sold == True,
+                models.Ad.republish_notification_sent == False,
+                models.Ad.last_republished_at <= now_minus_24h
+            ).all()
+            for ad in ads:
+                ad.republish_notification_sent = True
+                db.commit()
+                # Run sync/async based on your architecture. We'll await since send_personal_notification is async
+                await send_personal_notification(
+                    target_user_id=ad.user_id,
+                    title="إعلانك متاح لإعادة النشر",
+                    body=f"يمكنك الآن إعادة نشر إعلانك '{ad.title}' ليظهر في أعلى القائمة مجدداً.",
+                    notification_type="system",
+                    reference_id=ad.id
+                )
+            db.close()
+        except Exception as e:
+            print(f"Error in republish_notifier_worker: {e}")
+        await asyncio.sleep(600)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(republish_notifier_worker())

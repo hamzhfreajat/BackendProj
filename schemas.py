@@ -273,6 +273,7 @@ class Ad(AdBase):
     chats_count: int = 0
     favorites_count: int = 0
     is_saved: Optional[bool] = False
+    last_republished_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
