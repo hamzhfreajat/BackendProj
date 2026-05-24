@@ -35,7 +35,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload")
-async def upload_media(files: List[UploadFile] = File(...)):
+async def upload_media(files: List[UploadFile] = File(...), bypass_watermark: bool = False):
     """
     Receives multiple files, saves them to Cloudflare R2 (or locally if missing config),
     and returns a list of URLs pointing to the saved files.
@@ -55,15 +55,16 @@ async def upload_media(files: List[UploadFile] = File(...)):
             
         if is_image:
             content = await file.read()
-            if check_image_bytes_for_watermark(content):
+            if not bypass_watermark and check_image_bytes_for_watermark(content):
                 raise HTTPException(
                     status_code=400, 
                     detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة اخرى."
                 )
             
             # --- APPLY WATERMARK ---
-            try:
-                from PIL import Image
+            if not bypass_watermark:
+                try:
+                    from PIL import Image
                 
                 uploaded_img = Image.open(io.BytesIO(content)).convert("RGBA")
                 watermark_path = "static/watermark.png"
@@ -91,11 +92,11 @@ async def upload_media(files: List[UploadFile] = File(...)):
                         final_img = composite
                         save_format = "PNG"
                         
-                    out_buffer = io.BytesIO()
-                    final_img.save(out_buffer, format=save_format, quality=90)
-                    content = out_buffer.getvalue()
-            except Exception as e:
-                print(f"Failed to apply watermark: {e}")
+                        out_buffer = io.BytesIO()
+                        final_img.save(out_buffer, format=save_format, quality=90)
+                        content = out_buffer.getvalue()
+                except Exception as e:
+                    print(f"Failed to apply watermark: {e}")
             # -----------------------
             
             file_obj_to_upload = io.BytesIO(content)
