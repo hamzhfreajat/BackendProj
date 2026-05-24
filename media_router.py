@@ -1,4 +1,5 @@
 import os
+import io
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from typing import List
 import uuid
@@ -63,7 +64,6 @@ async def upload_media(files: List[UploadFile] = File(...)):
             # --- APPLY WATERMARK ---
             try:
                 from PIL import Image
-                import io
                 
                 uploaded_img = Image.open(io.BytesIO(content)).convert("RGBA")
                 watermark_path = "static/watermark.png"
