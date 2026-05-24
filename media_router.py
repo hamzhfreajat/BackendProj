@@ -65,33 +65,33 @@ async def upload_media(files: List[UploadFile] = File(...), bypass_watermark: bo
             if not bypass_watermark:
                 try:
                     from PIL import Image
-                
-                uploaded_img = Image.open(io.BytesIO(content)).convert("RGBA")
-                watermark_path = "static/watermark.png"
-                if os.path.exists(watermark_path):
-                    watermark = Image.open(watermark_path).convert("RGBA")
                     
-                    target_width = int(uploaded_img.width * 0.25)
-                    target_width = max(100, min(target_width, 800))
-                    
-                    aspect_ratio = watermark.width / watermark.height
-                    target_height = int(target_width / aspect_ratio)
-                    watermark = watermark.resize((target_width, target_height), Image.Resampling.LANCZOS)
-                    
-                    padding = int(uploaded_img.width * 0.03)
-                    position = (padding, uploaded_img.height - watermark.height - padding)
-                    
-                    composite = Image.new("RGBA", uploaded_img.size)
-                    composite.paste(uploaded_img, (0,0))
-                    composite.paste(watermark, position, mask=watermark)
-                    
-                    if file_ext in ['.jpg', '.jpeg']:
-                        final_img = composite.convert("RGB")
-                        save_format = "JPEG"
-                    else:
-                        final_img = composite
-                        save_format = "PNG"
+                    uploaded_img = Image.open(io.BytesIO(content)).convert("RGBA")
+                    watermark_path = "static/watermark.png"
+                    if os.path.exists(watermark_path):
+                        watermark = Image.open(watermark_path).convert("RGBA")
                         
+                        target_width = int(uploaded_img.width * 0.25)
+                        target_width = max(100, min(target_width, 800))
+                        
+                        aspect_ratio = watermark.width / watermark.height
+                        target_height = int(target_width / aspect_ratio)
+                        watermark = watermark.resize((target_width, target_height), Image.Resampling.LANCZOS)
+                        
+                        padding = int(uploaded_img.width * 0.03)
+                        position = (padding, uploaded_img.height - watermark.height - padding)
+                        
+                        composite = Image.new("RGBA", uploaded_img.size)
+                        composite.paste(uploaded_img, (0,0))
+                        composite.paste(watermark, position, mask=watermark)
+                        
+                        if file_ext in ['.jpg', '.jpeg']:
+                            final_img = composite.convert("RGB")
+                            save_format = "JPEG"
+                        else:
+                            final_img = composite
+                            save_format = "PNG"
+                            
                         out_buffer = io.BytesIO()
                         final_img.save(out_buffer, format=save_format, quality=90)
                         content = out_buffer.getvalue()
