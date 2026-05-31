@@ -355,7 +355,7 @@ def _compute_ad_status(ad: models.Ad) -> str:
     if ad.is_sold: return "Sold"
     if ad.is_rejected: return "Rejected"
     if ad.is_paused: return "Paused"
-    if not ad.is_published: return "Pending"
+    if not ad.is_published: return "Uncompleted"
     if ad.expires_at and ad.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc): 
         return "Expired"
     return "Active"
@@ -392,7 +392,7 @@ def get_my_ads_dashboard(
         st = _compute_ad_status(ad)
         if st == "Active": active += 1
         elif st == "Expired": expired += 1
-        elif st == "Pending": pending += 1
+        elif st == "Uncompleted": pending += 1
         elif st == "Sold": sold += 1
         elif st == "Paused": paused += 1
         
@@ -443,7 +443,7 @@ def read_my_ads(
         ad_resp.suggested_action = perf["action"]
         response_list.append(ad_resp)
         
-    response_list.sort(key=lambda x: (0 if x.status == "Active" else 1, -x.created_at.timestamp()))
+    response_list.sort(key=lambda x: x.created_at.timestamp(), reverse=True)
     return response_list
 
 @app.post("/api/my-ads/bulk-action", response_model=dict)
@@ -868,6 +868,8 @@ def read_ads(
     user_id: int = None,
     sort_by: str = None,
     tags: List[str] = Query(None),
+    user_lat: float = None,
+    user_lng: float = None,
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
@@ -1129,6 +1131,16 @@ def read_ads(
         query = query.order_by(models.Ad.created_at.asc(), models.Ad.id.asc())
     elif sort_by == 'most_viewed':
         query = query.order_by(models.Ad.views.desc(), models.Ad.id.desc())
+    elif sort_by == 'nearest' and user_lat is not None and user_lng is not None:
+        from sqlalchemy import func
+        query = query.outerjoin(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
+        query = query.outerjoin(models.Region, models.AdSearchIndex.region_id == models.Region.id)
+        
+        distance = func.sqrt(
+            func.pow(models.Region.latitude - user_lat, 2) + 
+            func.pow((models.Region.longitude - user_lng) * func.cos(user_lat * 3.14159 / 180.0), 2)
+        )
+        query = query.order_by(distance.asc().nulls_last(), models.Ad.id.desc())
     elif sort_by == 'newest':
         query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
