@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
+    full_name: Optional[str] = None
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -15,6 +16,7 @@ class UserUpdate(BaseModel):
     preferred_contact: Optional[str] = None
     languages_spoken: Optional[List[str]] = None
     avatar_url: Optional[str] = None
+    full_name: Optional[str] = None
     cover_image_url: Optional[str] = None
     user_type: Optional[str] = None
 

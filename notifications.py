@@ -67,6 +67,80 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+def init_firebase_admin():
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+        if not firebase_admin._apps:
+            firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
+            if firebase_creds_json:
+                cred_dict = json.loads(firebase_creds_json)
+                cred = credentials.Certificate(cred_dict)
+                firebase_admin.initialize_app(cred)
+            else:
+                cred_path = "firebase-service-account.json"
+                if os.path.exists(cred_path):
+                    cred = credentials.Certificate(cred_path)
+                    firebase_admin.initialize_app(cred)
+        return True
+    except ImportError:
+        print("[FCM] firebase-admin not installed.")
+        return False
+
+def send_welcome_chat_message(user_id: int, user_name: str, user_phone: str):
+    if not init_firebase_admin():
+        return
+    try:
+        import firebase_admin
+        from firebase_admin import firestore
+        db_fs = firestore.client()
+        user_id_str = str(user_id)
+        chat_id = f"welcome_admin_{user_id_str}"
+        
+        # Don't send if chat already exists
+        chat_doc = db_fs.collection("chats").document(chat_id).get()
+        if chat_doc.exists:
+            return
+
+        message_ref = db_fs.collection("chats").document(chat_id).collection("messages").document()
+        welcome_text = "مرحباً بك! 👋 نحن هنا لمساعدتك في أي وقت، جاهزون للرد على استفساراتك."
+        
+        message_ref.set({
+            "senderId": "admin",
+            "text": welcome_text,
+            "type": "text",
+            "mediaUrl": None,
+            "status": "sent",
+            "timestamp": firestore.SERVER_TIMESTAMP
+        })
+        
+        db_fs.collection("chats").document(chat_id).set({
+            "adId": "welcome",
+            "adTitle": "خدمة العملاء",
+            "adPrice": "",
+            "adImageUrl": "",
+            "participants": [user_id_str, "admin"],
+            "users": {
+                user_id_str: {
+                    "name": user_name or user_phone,
+                    "avatar": "https://cdn-icons-png.freepik.com/512/3135/3135715.png",
+                    "phone": user_phone,
+                    "unreadCount": 1
+                },
+                "admin": {
+                    "name": "خدمة العملاء",
+                    "avatar": "https://cdn-icons-png.freepik.com/512/3135/3135715.png",
+                    "unreadCount": 0
+                }
+            },
+            "lastMessage": welcome_text,
+            "lastMessageTime": firestore.SERVER_TIMESTAMP,
+            "lastSenderId": "admin"
+        }, merge=True)
+        print(f"[CHAT] Welcome message sent to {user_id}")
+    except Exception as e:
+        print(f"[CHAT] Failed to send welcome message: {e}")
+
 
 # ============================================================
 # Reusable Notification Sender (DB + FCM + WebSocket)
@@ -122,18 +196,8 @@ async def send_personal_notification(
                 import firebase_admin
                 from firebase_admin import messaging
 
-                if not firebase_admin._apps:
-                    # Initialize Firebase Admin only once
-                    firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
-                    if firebase_creds_json:
-                        cred_dict = json.loads(firebase_creds_json)
-                        cred = firebase_admin.credentials.Certificate(cred_dict)
-                        firebase_admin.initialize_app(cred)
-                    else:
-                        cred_path = "firebase-service-account.json"
-                        if os.path.exists(cred_path):
-                            cred = firebase_admin.credentials.Certificate(cred_path)
-                            firebase_admin.initialize_app(cred)
+                if not init_firebase_admin():
+                    print("[FCM] Failed to initialize firebase.")
 
                 if firebase_admin._apps:
                     for device in user_tokens:

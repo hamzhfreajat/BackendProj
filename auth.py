@@ -270,7 +270,9 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
 
     # 4. Send welcome notification for new users
     if is_new_user:
-        from notifications import send_personal_notification
+        from notifications import send_personal_notification, send_welcome_chat_message
+        
+        # Send in-app notification
         background_tasks.add_task(
             send_personal_notification,
             target_user_id=user.id,
@@ -278,6 +280,14 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
             body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
             notification_type="welcome",
             reference_id=None
+        )
+        
+        # Send chat message from admin
+        background_tasks.add_task(
+            send_welcome_chat_message,
+            user_id=user.id,
+            user_name=user.username or user.mobile_number,
+            user_phone=user.mobile_number
         )
 
     return schemas.AuthResponse(token=access_token, user=user)

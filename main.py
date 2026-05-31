@@ -1983,6 +1983,8 @@ def get_my_profile(current_user: models.User = Depends(auth.get_current_user), d
 def update_my_profile(update_data: schemas.UserUpdate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     if update_data.username is not None:
         current_user.username = update_data.username
+    if update_data.full_name is not None:
+        current_user.full_name = update_data.full_name
     if update_data.bio is not None:
         current_user.bio = update_data.bio
     if update_data.preferred_contact is not None:
