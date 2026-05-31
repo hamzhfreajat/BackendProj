@@ -88,6 +88,7 @@ class UserReview(UserReviewBase):
 # AUTHENTICATION SCHEMAS
 class RequestOTP(BaseModel):
     mobile_number: str
+    method: Optional[str] = "whatsapp"
     
 class AdminLogin(BaseModel):
     username: str

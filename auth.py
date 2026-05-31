@@ -186,10 +186,14 @@ def request_otp(data: schemas.RequestOTP, request: Request, db: Session = Depend
     db.add(db_otp)
     db.commit()
 
-    # Send via WhatsApp API
-    send_whatsapp_otp(mobile_number, otp_code)
+    # Send via WhatsApp or SMS
+    if data.method == "sms":
+        print(f"*** PLACEHOLDER SMS SENT TO {mobile_number}: YOUR OTP IS {otp_code} ***")
+    else:
+        # Default to whatsapp
+        send_whatsapp_otp(mobile_number, otp_code)
 
-    return {"status": "success", "message": "OTP sent successfully via WhatsApp"}
+    return {"status": "success", "message": f"OTP sent successfully via {data.method or 'whatsapp'}"}
 
 @router.post("/admin-login", response_model=schemas.AuthResponse)
 def admin_login(data: schemas.AdminLogin, db: Session = Depends(get_db)):
