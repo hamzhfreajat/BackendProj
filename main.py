@@ -84,6 +84,10 @@ app.include_router(verification_router)
 from tracking_router import router as tracking_router
 app.include_router(tracking_router)
 
+from whatsapp_router import router as whatsapp_router
+app.include_router(whatsapp_router)
+
+
 # Mount the uploads directory to serve media files
 import os
 os.makedirs("uploads", exist_ok=True)
@@ -2109,6 +2113,15 @@ def create_saved_filter(
     db.commit()
     db.refresh(db_filter)
     return db_filter
+
+@app.get("/api/saved_filters", response_model=List[schemas.SavedFilterResponse])
+def get_saved_filters(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    filters = db.query(models.SavedFilter).filter(models.SavedFilter.user_id == current_user.id).all()
+    return filters
+
 
 @app.delete("/api/saved_filters/{filter_id}")
 def delete_saved_filter(
