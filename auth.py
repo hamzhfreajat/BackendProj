@@ -365,9 +365,14 @@ def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: Backgroun
             
         fb_data = response.json()
         
+        fb_id = fb_data.get('id')
         email = fb_data.get('email')
+        
+        # If the user doesn't have an email (e.g., signed up with phone), generate a unique pseudo-email
         if not email:
-            raise HTTPException(status_code=400, detail="Facebook account must have an email address linked.")
+            if not fb_id:
+                raise HTTPException(status_code=400, detail="Could not retrieve Facebook ID.")
+            email = f"fb_{fb_id}@facebook.sooqcom.com"
             
         is_new_user = False
         user = db.query(models.User).filter(models.User.email == email).first()
