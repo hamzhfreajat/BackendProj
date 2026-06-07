@@ -13,6 +13,10 @@ import schemas
 from database import get_db
 from passlib.context import CryptContext
 
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
+
 def send_whatsapp_otp(mobile_number: str, otp_code: str):
     token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
     if not token:
@@ -291,6 +295,63 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
         )
 
     return schemas.AuthResponse(token=access_token, user=user)
+
+@router.post("/google", response_model=schemas.AuthResponse)
+def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    try:
+        # Verify the token without requiring a specific client ID for flexibility. 
+        # In production, you should pass audience="YOUR_WEB_CLIENT_ID"
+        idinfo = id_token.verify_oauth2_token(data.id_token, google_requests.Request())
+        
+        email = idinfo.get('email')
+        if not email:
+            raise HTTPException(status_code=400, detail="Google token does not contain an email address.")
+            
+        is_new_user = False
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            is_new_user = True
+            user = models.User(
+                email=email,
+                full_name=idinfo.get('name'),
+                avatar_url=idinfo.get('picture'),
+                is_email_verified=True,
+                username=email.split('@')[0]
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            # Auto-create metrics for the new user
+            metrics = models.UserMetric(user_id=user.id)
+            db.add(metrics)
+            db.commit()
+            
+        access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        
+        if is_new_user:
+            from notifications import send_personal_notification, send_welcome_chat_message
+            background_tasks.add_task(
+                send_personal_notification,
+                target_user_id=user.id,
+                title="مرحباً بك في سوقكم! 🎉",
+                body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
+                notification_type="welcome",
+                reference_id=None
+            )
+            background_tasks.add_task(
+                send_welcome_chat_message,
+                user_id=user.id,
+                user_name=user.username or user.email,
+                user_phone=user.email
+            )
+            
+        return schemas.AuthResponse(token=access_token, user=user)
+        
+    except ValueError as e:
+        print(f"Google Token Verification Failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid Google authentication token.")
 
 # Common dependency for protected routes to easily get current user via JWT
 def get_current_user(request: Request, db: Session = Depends(get_db)):

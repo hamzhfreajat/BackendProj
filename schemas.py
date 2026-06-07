@@ -91,7 +91,11 @@ class UserReview(UserReviewBase):
 class RequestOTP(BaseModel):
     mobile_number: str
     method: Optional[str] = "whatsapp"
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
     
+
 class AdminLogin(BaseModel):
     username: str
     password: str
@@ -444,6 +448,7 @@ class AdReportOut(BaseModel):
 class SavedFilterBase(BaseModel):
     category_id: Optional[int] = None
     name: Optional[str] = None
+    search_query: Optional[str] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
     tags: Optional[List[str]] = []
