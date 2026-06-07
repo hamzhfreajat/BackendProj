@@ -90,7 +90,7 @@ class ExtractedAd(BaseModel):
     title: str = Field(description="A clean, concise title for the ad (max 80 chars)")
     description: str = Field(description="The full ad text cleaned up")
     price: float = Field(description="The extracted price in JOD. Return 0 if not found")
-    location: Optional[str] = Field(description="The geographic location. For real estate/apartments, format as 'المدينة, المنطقة' (e.g. عمان, عبدون). For lands (الأراضي), format as 'المحافظة, المديرية, القرية, الحوض' if mentioned (e.g. العاصمة, لواء الجامعة, طبربور, حوض 10).")
+    location: Optional[str] = Field(description="The geographic location. For real estate format as 'المدينة, المنطقة'. CRITICAL: 'التاسعة' means 'العقبة, المنطقة التاسعة' NOT Amman. 'بدر' is different from 'شفا بدران'. Do not hallucinate cities if not mentioned.")
     attributes: ExtractedAdAttributes = Field(description="Detailed property / vehicle attributes")
 
 def run_scraper_task(request_data: dict, db: Session):
@@ -390,7 +390,8 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
             "3. For valid ads, extract the fields exactly as required by the schema.\\n"
             f"4. If you can confidently determine the Category ID from this list, use it:\\n{categories_context}\\n"
             "If you CANNOT determine the ID, you may leave `category_id` as 0.\\n"
-            "5. Ensure prices are purely numeric (JOD). Extract any Jordanian phone numbers precisely."
+            "5. Ensure prices are purely numeric (JOD). Extract any Jordanian phone numbers precisely.\\n"
+            "6. CRITICAL LOCATION RULES: Be very precise with locations. 'التاسعة' typically means 'العقبة, المنطقة التاسعة' NOT 'عمان, الدوار التاسع'. Do not confuse 'بدر' with 'شفا بدران'. Do not hallucinate cities."
         )
         model = genai.GenerativeModel("gemini-2.5-flash", system_instruction=system_instruction)
         

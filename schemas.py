@@ -94,6 +94,9 @@ class RequestOTP(BaseModel):
 
 class GoogleAuthRequest(BaseModel):
     id_token: str
+
+class FacebookAuthRequest(BaseModel):
+    access_token: str
     
 
 class AdminLogin(BaseModel):

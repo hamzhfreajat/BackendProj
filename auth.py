@@ -353,6 +353,74 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
         print(f"Google Token Verification Failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid Google authentication token.")
 
+@router.post("/facebook", response_model=schemas.AuthResponse)
+def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    try:
+        # Verify Facebook token via Graph API
+        fb_url = f"https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token={data.access_token}"
+        response = requests.get(fb_url, timeout=10)
+        
+        if response.status_code != 200:
+            raise ValueError("Invalid Facebook token")
+            
+        fb_data = response.json()
+        
+        email = fb_data.get('email')
+        if not email:
+            raise HTTPException(status_code=400, detail="Facebook account must have an email address linked.")
+            
+        is_new_user = False
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            is_new_user = True
+            
+            # Extract picture if available
+            avatar_url = None
+            if 'picture' in fb_data and 'data' in fb_data['picture']:
+                avatar_url = fb_data['picture']['data'].get('url')
+                
+            user = models.User(
+                email=email,
+                full_name=fb_data.get('name'),
+                avatar_url=avatar_url,
+                is_email_verified=True,
+                username=email.split('@')[0]
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            # Auto-create metrics for the new user
+            metrics = models.UserMetric(user_id=user.id)
+            db.add(metrics)
+            db.commit()
+            
+        access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        
+        if is_new_user:
+            from notifications import send_personal_notification, send_welcome_chat_message
+            background_tasks.add_task(
+                send_personal_notification,
+                target_user_id=user.id,
+                title="مرحباً بك في سوقكم! 🎉",
+                body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
+                notification_type="welcome",
+                reference_id=None
+            )
+            background_tasks.add_task(
+                send_welcome_chat_message,
+                user_id=user.id,
+                user_name=user.username or user.email,
+                user_phone=user.email
+            )
+            
+        return schemas.AuthResponse(token=access_token, user=user)
+        
+    except ValueError as e:
+        print(f"Facebook Token Verification Failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid Facebook authentication token.")
+
 # Common dependency for protected routes to easily get current user via JWT
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
