@@ -421,6 +421,116 @@ def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: Backgroun
         print(f"Facebook Token Verification Failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid Facebook authentication token.")
 
+from fastapi import Form
+from fastapi.responses import RedirectResponse
+
+@router.post("/apple/callback")
+def apple_callback(
+    code: str = Form(None),
+    id_token: str = Form(None),
+    state: str = Form(None),
+    user: str = Form(None),
+    error: str = Form(None)
+):
+    """
+    Callback endpoint used by the Android Apple Sign-In flow.
+    Apple redirects here after successful login, and we redirect back to the app via an Intent.
+    """
+    if error:
+        return f"Apple Sign-In Error: {error}"
+        
+    # Construct the query parameters
+    import urllib.parse
+    params = {}
+    if code: params["code"] = code
+    if id_token: params["id_token"] = id_token
+    if state: params["state"] = state
+    if user: params["user"] = user
+    
+    query_string = urllib.parse.urlencode(params)
+    
+    # We must redirect to the custom intent scheme expected by sign_in_with_apple
+    intent_url = f"intent://callback?{query_string}#Intent;package=com.sooqcom.app;scheme=signinwithapple;end"
+    
+    return RedirectResponse(url=intent_url, status_code=307)
+
+@router.post("/apple", response_model=schemas.AuthResponse)
+def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    try:
+        # Fetch Apple's public keys
+        jwks_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
+        signing_key = jwks_client.get_signing_key_from_jwt(data.id_token)
+        
+        # Decode and verify the token
+        payload = jwt.decode(
+            data.id_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience="com.sooqcom.app.service", # The Service ID you created
+            # If the user logs in from iOS natively, the audience is the Bundle ID (com.sooqcom.app)
+            # You can accept both using a list if needed: audience=["com.sooqcom.app.service", "com.sooqcom.app"]
+            options={"verify_aud": False} # For flexibility between iOS and Android in this implementation
+        )
+        
+        apple_sub = payload.get("sub")
+        email = payload.get("email") or data.email
+        
+        if not email and not apple_sub:
+            raise HTTPException(status_code=400, detail="Invalid Apple token")
+            
+        is_new_user = False
+        # Try to find by email first, or by a unique apple_id (sub) if we added it to the schema.
+        # Since we use email as the primary key for OAuth users in our current schema:
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if not user:
+            is_new_user = True
+            
+            # Combine first and last name if provided (Apple only sends this on the FIRST login)
+            full_name = None
+            if data.first_name or data.last_name:
+                full_name = f"{data.first_name or ''} {data.last_name or ''}".strip()
+                
+            user = models.User(
+                email=email,
+                full_name=full_name,
+                is_email_verified=True,
+                username=email.split('@')[0] if email else f"apple_user_{apple_sub[:8]}"
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            metrics = models.UserMetric(user_id=user.id)
+            db.add(metrics)
+            db.commit()
+            
+        access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        
+        if is_new_user:
+            from notifications import send_personal_notification, send_welcome_chat_message
+            background_tasks.add_task(
+                send_personal_notification,
+                target_user_id=user.id,
+                title="مرحباً بك في سوقكم! 🎉",
+                body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
+                notification_type="welcome",
+                reference_id=None
+            )
+            background_tasks.add_task(
+                send_welcome_chat_message,
+                user_id=user.id,
+                user_name=user.username or user.email,
+                user_phone=user.email or ""
+            )
+            
+        return schemas.AuthResponse(token=access_token, user=user)
+        
+    except Exception as e:
+        print(f"Apple Token Verification Failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid Apple authentication token.")
+
+
 # Common dependency for protected routes to easily get current user via JWT
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")

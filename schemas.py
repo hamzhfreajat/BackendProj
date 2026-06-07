@@ -97,7 +97,13 @@ class GoogleAuthRequest(BaseModel):
 
 class FacebookAuthRequest(BaseModel):
     access_token: str
-    
+
+class AppleAuthRequest(BaseModel):
+    id_token: str
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
 
 class AdminLogin(BaseModel):
     username: str
