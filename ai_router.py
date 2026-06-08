@@ -25,7 +25,7 @@ def _get_api_key():
     return api_key
 
 @router.post("/analyze-image")
-async def analyze_image(file: UploadFile = File(...)):
+async def analyze_image(file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user)):
     """
     Visual AI: Processes the first uploaded image to detect category and quality.
     """
@@ -88,7 +88,7 @@ async def analyze_image(file: UploadFile = File(...)):
         return {"category_name": None, "image_quality": "good"}
 
 @router.post("/location-intelligence")
-def location_intelligence(request: dict):
+def location_intelligence(request: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     Returns landmarks near the given region and city in Jordan.
     Uses Gemini to synthesize nearby landmarks if lat/lng not strictly coded.
@@ -135,7 +135,7 @@ def location_intelligence(request: dict):
         return {"landmarks": []}
 
 @router.post("/price-estimate")
-def price_estimate(request: dict, db: Session = Depends(get_db)):
+def price_estimate(request: dict, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
     """
     Calculates the median/average price of similar ads.
     """
@@ -174,7 +174,7 @@ def price_estimate(request: dict, db: Session = Depends(get_db)):
     return {"average_price": 0, "message": "لا توجد بيانات كافية لتقدير السعر المتوسط لهذا القسم حتى الآن."}
 
 @router.post("/evaluate-ad")
-def evaluate_ad(request: dict):
+def evaluate_ad(request: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     AI Coach: Evaluates the complete ad payload right before publishing.
     """
@@ -216,7 +216,7 @@ def evaluate_ad(request: dict):
         return {"score": 75, "tips": ["تأكد من إرفاق صور واضحة للحصول على مشاهدات أكثر"]}
 
 @router.post("/generate-suggestions")
-def generate_ad_suggestions(request: dict):
+def generate_ad_suggestions(request: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     Generative AI: Title, Description, and Smart Tags.
     """

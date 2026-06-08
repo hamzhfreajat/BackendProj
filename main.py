@@ -23,6 +23,13 @@ from autocomplete_service import AutocompleteService
 from media_router import router as media_router
 from fastapi.staticfiles import StaticFiles
 
+import uuid
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from auth import get_real_ip
+from security_events import request_id_ctx, log_system_error, log_schema_validation_failure, log_bola_attempt
+
 import os
 import json
 try:
@@ -41,7 +48,8 @@ app = FastAPI(title="Classifieds Backend API")
 # Ensure all database tables exist (creates newly added tables like saved_ads)
 models.Base.metadata.create_all(bind=engine)
 
-# Add CORS middleware — restrict origins to known clients in production
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +58,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+@app.middleware("http")
+async def security_context_middleware(request: Request, call_next):
+    req_id = str(uuid.uuid4())
+    request_id_ctx.set(req_id)
+    
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = req_id
+    return response
 
 @app.middleware("http")
 async def cloudflare_edge_caching(request: Request, call_next):
@@ -73,14 +91,26 @@ async def cloudflare_edge_caching(request: Request, call_next):
             
     return response
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    ip = get_real_ip(request)
+    log_system_error(ip, request.url.path, f"Unhandled server crash: {str(exc)}")
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    ip = get_real_ip(request)
+    log_schema_validation_failure(ip, request.url.path, str(exc.errors()))
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 app.include_router(fb_batch_router)
 app.include_router(ai_router)
 app.include_router(media_router)
 app.include_router(auth.router)
 app.include_router(notifications.router)
 
-from verification import router as verification_router
-app.include_router(verification_router)
+# from verification import router as verification_router
+# app.include_router(verification_router)
 
 from tracking_router import router as tracking_router
 app.include_router(tracking_router)
@@ -877,7 +907,7 @@ def get_search_logs(limit: int = 50, db: Session = Depends(get_db)):
     logs = db.query(SearchQueryLog).order_by(SearchQueryLog.created_at.desc()).limit(limit).all()
     return [{"id": l.id, "query_text": l.query_text, "created_at": l.created_at.isoformat()} for l in logs]
 
-@app.get("/api/ads", response_model=List[schemas.Ad])
+@app.get("/api/ads", response_model=List[schemas.Ad], dependencies=[Depends(auth.get_rate_limiter(60, 60))])
 def read_ads(
     skip: int = 0, 
     limit: int = 100, 
@@ -1426,25 +1456,13 @@ def get_ads_count(
     total_count = query.count()
     return {"total_count": total_count}
 
-@app.post("/api/ads/draft", response_model=schemas.Ad)
+@app.post("/api/ads/draft", response_model=schemas.Ad, dependencies=[Depends(auth.get_rate_limiter(20, 60))])
 def create_ad_draft(
     ad_draft: schemas.AdDraftCreate,
-    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_id = 1
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = auth_header.split(" ")[1]
-            import jwt
-            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-            token_sub = payload.get("sub")
-            if token_sub:
-                user_id = int(token_sub)
-        except:
-            pass
-
+    user_id = current_user.id
     ad_data = ad_draft.model_dump()
     re_detail_data = ad_data.pop("real_estate_detail", None)
     tags_data = ad_data.pop("linked_tags", [])
@@ -1485,27 +1503,17 @@ def create_ad_draft(
 def update_ad_draft(
     ad_id: int,
     ad_draft: schemas.AdDraftUpdate,
-    request: Request,
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
         raise HTTPException(status_code=404, detail="Ad not found")
         
-    user_id = 1
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = auth_header.split(" ")[1]
-            import jwt
-            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-            token_sub = payload.get("sub")
-            if token_sub:
-                user_id = int(token_sub)
-        except:
-            pass
+    user_id = current_user.id
             
-    if db_ad.user_id != user_id and user_id != 1:
+    if db_ad.user_id != user_id and current_user.user_type != "admin":
+        log_bola_attempt(str(user_id), get_real_ip(request), request.url.path, str(ad_id))
         raise HTTPException(status_code=403, detail="Not authorized to edit this ad")
 
     update_data = ad_draft.model_dump(exclude_unset=True)
@@ -1720,7 +1728,7 @@ def create_ad(
 @app.put("/api/ads/{ad_id}", response_model=schemas.Ad)
 def update_ad(
     ad_id: int,
-    ad_update: dict,
+    ad_update: schemas.AdUpdate,
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
@@ -1730,16 +1738,18 @@ def update_ad(
         raise HTTPException(status_code=404, detail="Ad not found")
     # Ownership check: only owner or admin may update
     if db_ad.user_id != current_user.id and current_user.user_type != "admin":
+        log_bola_attempt(str(current_user.id), get_real_ip(request), request.url.path, str(ad_id))
         raise HTTPException(status_code=403, detail="Not authorized to edit this ad")
 
-    re_detail_data = ad_update.pop("real_estate_detail", None)
-    tags_data = ad_update.pop("linked_tags", [])
-    image_urls = ad_update.pop("image_urls", [])
+    update_dict = ad_update.model_dump(exclude_unset=True)
+    re_detail_data = update_dict.pop("real_estate_detail", None)
+    tags_data = update_dict.pop("linked_tags", [])
+    image_urls = update_dict.pop("image_urls", [])
 
-    ad_update.pop("phone_number", None)
-    ad_update.pop("rooms", None)
+    update_dict.pop("phone_number", None)
+    update_dict.pop("rooms", None)
     
-    attributes = ad_update.get("attributes") or {}
+    attributes = update_dict.get("attributes") or {}
     attributes["image_urls"] = image_urls
     
     dynamic_data = attributes.get("dynamic_data", {})
@@ -1759,15 +1769,15 @@ def update_ad(
         if "extra_features" in dynamic_data: attributes["building_features"] = dynamic_data["extra_features"]
         if "nearby" in dynamic_data: attributes["nearby_places"] = dynamic_data["nearby"]
             
-    ad_update["attributes"] = attributes
+    update_dict["attributes"] = attributes
     
     if image_urls:
-        ad_update["image_url"] = image_urls[0]
+        update_dict["image_url"] = image_urls[0]
 
     was_unpublished = not db_ad.is_published
     
-    for key, value in ad_update.items():
-        if hasattr(db_ad, key) and key not in ['id', 'user_id', 'created_at']:
+    for key, value in update_dict.items():
+        if hasattr(db_ad, key) and key not in ['id', 'user_id', 'created_at', 'is_published', 'is_hot', 'is_rejected', 'views', 'favorites_count', 'chats_count', 'source_type']:
             setattr(db_ad, key, value)
             
     is_now_published = db_ad.is_published
@@ -1874,7 +1884,7 @@ def republish_ad(ad_id: int, current_user: models.User = Depends(auth.get_curren
 # User-to-User Interactions & Notifications
 # ============================================================
 
-@app.post("/api/ads/{ad_id}/interaction/phone")
+@app.post("/api/ads/{ad_id}/interaction/phone", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
 def notify_phone_revealed(
     ad_id: int, 
     background_tasks: BackgroundTasks, 
@@ -1899,7 +1909,7 @@ def notify_phone_revealed(
         )
     return {"status": "success"}
 
-@app.post("/api/ads/{ad_id}/interaction/chat")
+@app.post("/api/ads/{ad_id}/interaction/chat", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
 def notify_chat_started(
     ad_id: int, 
     background_tasks: BackgroundTasks, 
@@ -1924,7 +1934,7 @@ def notify_chat_started(
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-@app.post("/api/ads/{ad_id}/interaction/view")
+@app.post("/api/ads/{ad_id}/interaction/view", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
 def record_ad_view(
     ad_id: int, 
     background_tasks: BackgroundTasks,
@@ -2009,7 +2019,7 @@ def read_saved_groups(db: Session = Depends(get_db)):
     return db.query(models.SavedGroup).all()
 
 @app.post("/api/saved-groups", response_model=schemas.SavedGroup)
-def create_saved_group(group: schemas.SavedGroupCreate, db: Session = Depends(get_db)):
+def create_saved_group(group: schemas.SavedGroupCreate, db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
     db_group = models.SavedGroup(**group.model_dump())
     db.add(db_group)
     db.commit()
@@ -2017,7 +2027,7 @@ def create_saved_group(group: schemas.SavedGroupCreate, db: Session = Depends(ge
     return db_group
 
 @app.delete("/api/saved-groups/{group_id}")
-def delete_saved_group(group_id: int, db: Session = Depends(get_db)):
+def delete_saved_group(group_id: int, db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
     db_group = db.query(models.SavedGroup).filter(models.SavedGroup.id == group_id).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")

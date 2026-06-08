@@ -7,6 +7,9 @@ import uuid
 import boto3
 from botocore.client import Config
 
+from auth import get_real_ip
+from security_events import log_file_upload_blocked
+
 import auth
 import models
 
@@ -37,10 +40,10 @@ def get_r2_client():
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.post("/upload")
+@router.post("/upload", dependencies=[Depends(auth.get_rate_limiter(10, 60))])
 async def upload_media(
+    request: Request,
     files: List[UploadFile] = File(...), 
-    bypass_watermark: bool = False,
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
@@ -60,6 +63,7 @@ async def upload_media(
         
         # Security: Whitelist file extensions
         if file_ext not in ALLOWED_EXTENSIONS:
+            log_file_upload_blocked(get_real_ip(request), request.url.path, f"Extension {file_ext} not allowed", str(current_user.id))
             raise HTTPException(status_code=400, detail=f"File extension {file_ext} is not allowed for security reasons.")
             
         # Check for watermarks on image uploads
@@ -68,6 +72,7 @@ async def upload_media(
             is_image = True
             
         if is_image:
+            bypass_watermark = current_user.user_type == "admin"
             content = await file.read()
             if not bypass_watermark and check_image_bytes_for_watermark(content):
                 raise HTTPException(
@@ -79,6 +84,8 @@ async def upload_media(
             if not bypass_watermark:
                 try:
                     from PIL import Image
+                    # Security: Enforce pixel limit to prevent Decompression Bombs (OOM DoS)
+                    Image.MAX_IMAGE_PIXELS = 10_000_000
                     
                     uploaded_img = Image.open(io.BytesIO(content)).convert("RGBA")
                     watermark_path = "static/watermark.png"
@@ -109,6 +116,9 @@ async def upload_media(
                         out_buffer = io.BytesIO()
                         final_img.save(out_buffer, format=save_format, quality=90)
                         content = out_buffer.getvalue()
+                except Image.DecompressionBombError as e:
+                    log_file_upload_blocked(get_real_ip(request), request.url.path, "Decompression Bomb Detected", str(current_user.id))
+                    raise HTTPException(status_code=400, detail="Image pixel limit exceeded. File is too large.")
                 except Exception as e:
                     print(f"Failed to apply watermark: {e}")
             # -----------------------
@@ -126,6 +136,19 @@ async def upload_media(
         bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
         public_url = os.getenv("R2_PUBLIC_URL", "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev")
 
+        # Determine strict MIME type from extension
+        mime_types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.webp': 'image/webp',
+            '.heic': 'image/heic',
+            '.mp4': 'video/mp4',
+            '.mov': 'video/quicktime',
+            '.pdf': 'application/pdf'
+        }
+        strict_content_type = mime_types.get(file_ext.lower(), 'application/octet-stream')
+
         if r2_client:
             # Upload to Cloudflare R2
             try:
@@ -135,7 +158,7 @@ async def upload_media(
                     file_obj_to_upload, 
                     bucket_name, 
                     unique_filename,
-                    ExtraArgs={'ContentType': file.content_type or 'application/octet-stream'}
+                    ExtraArgs={'ContentType': strict_content_type}
                 )
                 
                 # Construct public URL

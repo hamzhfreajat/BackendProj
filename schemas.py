@@ -222,6 +222,20 @@ class AdCreate(AdBase):
     phone_number: Optional[str] = None
     real_estate_detail: Optional[dict] = None
 
+class AdUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    location: Optional[str] = None
+    image_url: Optional[str] = None
+    category_id: Optional[int] = None
+    attributes: Optional[dict] = None
+    video_url: Optional[str] = None
+    linked_tags: Optional[List[str]] = []
+    image_urls: Optional[List[str]] = []
+    phone_number: Optional[str] = None
+    real_estate_detail: Optional[dict] = None
+
 class AdDraftCreate(BaseModel):
     category_id: Optional[int] = None
     title: Optional[str] = ""

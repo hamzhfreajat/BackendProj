@@ -10,7 +10,7 @@ router = APIRouter(
 )
 
 class UploadUrlRequest(BaseModel):
-    file_type: str = "image/jpeg"
+    filename: str
 
 class UploadUrlResponse(BaseModel):
     upload_url: str
@@ -51,8 +51,13 @@ from botocore.exceptions import ClientError
 
 from botocore.client import Config
 
+from database import get_db
+from sqlalchemy.orm import Session
+import auth
+import models
+
 @router.post("/upload-url", response_model=UploadUrlResponse)
-async def get_upload_url(request: UploadUrlRequest):
+async def get_upload_url(request: UploadUrlRequest, current_user: models.User = Depends(auth.get_current_user)):
     """
     Returns an actual AWS pre-signed URL for uploading to S3.
     """
@@ -68,13 +73,15 @@ async def get_upload_url(request: UploadUrlRequest):
         config=Config(signature_version='s3v4')
     )
     
-    object_name = f"kyc_uploads/{uuid.uuid4()}.jpg"
+    file_ext = request.filename.split(".")[-1].lower() if "." in request.filename else "jpg"
+    content_type = "image/png" if file_ext == "png" else "image/jpeg"
+    object_name = f"kyc_uploads/{uuid.uuid4()}.{file_ext}"
 
     try:
         response = s3_client.generate_presigned_url('put_object',
                                                     Params={'Bucket': bucket_name,
                                                             'Key': object_name,
-                                                            'ContentType': request.file_type},
+                                                            'ContentType': content_type},
                                                     ExpiresIn=3600)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -85,7 +92,7 @@ from google.cloud import vision
 import re
 
 @router.post("/ocr", response_model=OcrResponse)
-async def process_ocr(request: OcrRequest):
+async def process_ocr(request: OcrRequest, current_user: models.User = Depends(auth.get_current_user)):
     """
     Connects to GCP Vision API to perform OCR on BOTH faces of the ID.
     Fetches the uploaded ID bytes directly from S3 first.
@@ -198,7 +205,7 @@ async def process_ocr(request: OcrRequest):
         )
 
 @router.post("/liveness", status_code=200)
-async def start_liveness():
+async def start_liveness(current_user: models.User = Depends(auth.get_current_user)):
     """
     Initiates AWS Amplify liveness session and returns a session ID.
     Currently mocked.
@@ -206,7 +213,7 @@ async def start_liveness():
     return {"session_id": f"liv_{uuid.uuid4()}"}
 
 @router.post("/face-match", response_model=FaceMatchResponse)
-async def process_face_match(request: FaceMatchRequest):
+async def process_face_match(request: FaceMatchRequest, current_user: models.User = Depends(auth.get_current_user)):
     """
     Connects to AWS Rekognition in Frankfurt (eu-central-1) to perform FaceMatch.
     Since S3 might be in me-central-1, we pull the bytes first to avoid AWS cross-region Rekognition errors.
@@ -254,16 +261,18 @@ async def process_face_match(request: FaceMatchRequest):
         return FaceMatchResponse(match_score=98.5, liveness_passed=True)
 
 @router.post("/submit")
-async def submit_verification(request: SubmitVerificationRequest):
+async def submit_verification(request: SubmitVerificationRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     """
     Finalizes the KYC submission into the DB.
     """
+    request.user_id = current_user.id
+    
     # Normally we would patch the `User` model in the DB using Depends(get_db)
     # But for now, we return success to close the loop
     return {"message": "Verification submitted successfully", "status": "verified"}
 
 @router.get("/status", response_model=StatusResponse)
-async def get_verification_status():
+async def get_verification_status(current_user: models.User = Depends(auth.get_current_user)):
     """
     Retrieves the current user's verification status.
     """

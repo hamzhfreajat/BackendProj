@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-import random
+import secrets
 from typing import List
 import jwt
 import requests
@@ -8,13 +8,42 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+import time
 import models
 import schemas
 from database import get_db
 from passlib.context import CryptContext
 
+try:
+    import redis
+    redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True, socket_connect_timeout=1)
+    redis_client.ping()
+    USING_REDIS = True
+except Exception:
+    USING_REDIS = False
+    redis_client = None
+
+# Fallback in-memory stores
+IP_RATE_LIMITS = {}
+REVOKED_TOKENS = set()
+
+def revoke_token(token: str):
+    if USING_REDIS:
+        redis_client.setex(f"revoked_token:{token}", 60 * 60 * 24 * 7, "revoked")
+    else:
+        REVOKED_TOKENS.add(token)
+
+def is_token_revoked(token: str) -> bool:
+    if USING_REDIS:
+        return redis_client.exists(f"revoked_token:{token}") == 1
+    return token in REVOKED_TOKENS
+
+
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+
+from security_events import log_rate_limit_exceeded, log_auth_failure, log_auth_success, log_token_revocation, log_user_logout, log_jwt_forgery_attempt, log_expired_token
+import logging
 
 
 def send_whatsapp_otp(mobile_number: str, otp_code: str):
@@ -124,6 +153,33 @@ def check_rate_limit(db: Session, ip_address: str, mobile_number: str, endpoint:
     db.add(models.RateLimitLog(ip_address=ip_address, mobile_number=mobile_number, endpoint=endpoint))
     db.commit()
 
+def get_rate_limiter(requests: int, window: int):
+    def dependency(request: Request):
+        if TESTING_MODE:
+            return True
+        ip = get_real_ip(request)
+        current_time = time.time()
+        
+        if USING_REDIS:
+            key = f"rate_limit:{request.url.path}:{ip}"
+            current = redis_client.incr(key)
+            if current == 1:
+                redis_client.expire(key, window)
+            elif current > requests:
+                log_rate_limit_exceeded(ip, request.url.path)
+                raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+        else:
+            # Memory fallback (not distributed)
+            if ip not in IP_RATE_LIMITS:
+                IP_RATE_LIMITS[ip] = []
+            IP_RATE_LIMITS[ip] = [t for t in IP_RATE_LIMITS[ip] if current_time - t < window]
+            if len(IP_RATE_LIMITS[ip]) >= requests:
+                log_rate_limit_exceeded(ip, request.url.path)
+                raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+            IP_RATE_LIMITS[ip].append(current_time)
+        return True
+    return dependency
+
 import re
 
 def normalize_jo_phone(phone_number: str) -> str:
@@ -157,148 +213,124 @@ def normalize_jo_phone(phone_number: str) -> str:
         
     return cleaned
 
+def get_real_ip(request: Request) -> str:
+    # ProxyHeadersMiddleware sets request.client.host based on X-Forwarded-For if available
+    # But we can also manually check CF-Connecting-IP for Cloudflare if needed
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip
+    
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+        
+    if request.client and request.client.host:
+        return request.client.host
+    return "127.0.0.1"
+
 @router.post("/request-otp")
 def request_otp(data: schemas.RequestOTP, request: Request, db: Session = Depends(get_db)):
-    ip_address = request.client.host
-    mobile_number = normalize_jo_phone(data.mobile_number)
+    raise HTTPException(status_code=404, detail="OTP authentication is currently disabled.")
+#     ip_address = get_real_ip(request)
+#     mobile_number = normalize_jo_phone(data.mobile_number)
+# 
+#     # 1. Check strict rate limits (skip in testing)
+#     if not TESTING_MODE:
+#         check_rate_limit(db, ip_address, mobile_number, "request-otp")
+# 
+#     # 2. Check max 3 requests per 10 minutes (skip in testing)
+#     now = datetime.utcnow()
+#     if not TESTING_MODE:
+#         ten_mins_ago = now - timedelta(minutes=10)
+#         recent_otps_count = db.query(models.OtpCode).filter(
+#             models.OtpCode.mobile_number == mobile_number,
+#             models.OtpCode.created_at >= ten_mins_ago
+#         ).count()
+# 
+#         if recent_otps_count >= 3:
+#             raise HTTPException(status_code=429, detail="Too many OTP requests. Please wait 10 minutes.")
+# 
+#     # 3. Generate new 6-digit OTP securely
+#     otp_code = str(secrets.randbelow(900000) + 100000)
+#     # Security Gap Fix: Hash OTP before storing
+#     hashed_otp = get_password_hash(otp_code)
+#     # Expire OTP after 5 minutes
+#     expires_at = now + timedelta(minutes=5)
+# 
+#     db_otp = models.OtpCode(
+#         mobile_number=mobile_number,
+#         otp_code=hashed_otp,
+#         expires_at=expires_at,
+#         ip_address=ip_address
+#     )
+#     db.add(db_otp)
+#     db.commit()
+# 
+#     # Send via WhatsApp or SMS
+#     if data.method == "sms":
+#         print(f"*** PLACEHOLDER SMS SENT TO {mobile_number}: YOUR OTP IS {otp_code} ***")
+#     else:
+#         # Default to whatsapp
+#         send_whatsapp_otp(mobile_number, otp_code)
+# 
+#     return {"status": "success", "message": f"OTP sent successfully via {data.method or 'whatsapp'}"}
 
-    # 1. Check strict rate limits (skip in testing)
-    if not TESTING_MODE:
-        check_rate_limit(db, ip_address, mobile_number, "request-otp")
-
-    # 2. Check max 3 requests per 10 minutes (skip in testing)
-    now = datetime.utcnow()
-    if not TESTING_MODE:
-        ten_mins_ago = now - timedelta(minutes=10)
-        recent_otps_count = db.query(models.OtpCode).filter(
-            models.OtpCode.mobile_number == mobile_number,
-            models.OtpCode.created_at >= ten_mins_ago
-        ).count()
-
-        if recent_otps_count >= 3:
-            raise HTTPException(status_code=429, detail="Too many OTP requests. Please wait 10 minutes.")
-
-    # 3. Generate new 6-digit OTP
-    otp_code = f"{random.randint(100000, 999999)}"
-    # Expire OTP after 5 minutes
-    expires_at = now + timedelta(minutes=5)
-
-    db_otp = models.OtpCode(
-        mobile_number=mobile_number,
-        otp_code=otp_code,
-        expires_at=expires_at,
-        ip_address=ip_address
-    )
-    db.add(db_otp)
-    db.commit()
-
-    # Send via WhatsApp or SMS
-    if data.method == "sms":
-        print(f"*** PLACEHOLDER SMS SENT TO {mobile_number}: YOUR OTP IS {otp_code} ***")
-    else:
-        # Default to whatsapp
-        send_whatsapp_otp(mobile_number, otp_code)
-
-    return {"status": "success", "message": f"OTP sent successfully via {data.method or 'whatsapp'}"}
-
-@router.post("/admin-login", response_model=schemas.AuthResponse)
-def admin_login(data: schemas.AdminLogin, db: Session = Depends(get_db)):
+@router.post("/admin-login", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
+def admin_login(data: schemas.AdminLogin, request: Request, db: Session = Depends(get_db)):
     """
     Standard Username & Password login specifically designed for strictly Admin Dashboard access.
     """
+    ip_address = get_real_ip(request)
+
     user = db.query(models.User).filter(
         models.User.username == data.username,
         models.User.user_type == "admin"
     ).first()
     
     if not user:
+        log_auth_failure(ip_address, "/admin-login", "User not found")
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
     if not user.hashed_password:
+        log_auth_failure(ip_address, "/admin-login", "Invalid credentials configuration")
         raise HTTPException(status_code=401, detail="Invalid credentials configuration. Contact system admin.")
         
     if not verify_password(data.password, user.hashed_password):
+        log_auth_failure(ip_address, "/admin-login", "Invalid password", user_id=str(user.id))
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
     # Valid login credentials verified! Mint a new Dashboard JWT token.
+    log_auth_success(ip_address, "/admin-login", user.username, str(user.id))
     access_token = create_access_token(data={"sub": str(user.id), "username": user.username, "type": "admin"})
 
     return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/verify-otp", response_model=schemas.AuthResponse)
 def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    ip_address = request.client.host
-    mobile_number = normalize_jo_phone(data.mobile_number)
-    otp_code = data.otp_code
+    raise HTTPException(status_code=404, detail="OTP authentication is currently disabled.")
+#     ip_address = get_real_ip(request)
+#     mobile_number = normalize_jo_phone(data.mobile_number)
+#         # Send in-app notification
+#         background_tasks.add_task(
+#             send_personal_notification,
+#             target_user_id=user.id,
+#             title="مرحباً بك في سوقكم! 🎉",
+#             body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
+#             notification_type="welcome",
+#             reference_id=None
+#         )
+#         
+#         # Send chat message from admin
+#         background_tasks.add_task(
+#             send_welcome_chat_message,
+#             user_id=user.id,
+#             user_name=user.username or user.mobile_number,
+#             user_phone=user.mobile_number
+#         )
+# 
+#     return schemas.AuthResponse(token=access_token, user=user)
 
-    if not TESTING_MODE:
-        check_rate_limit(db, ip_address, mobile_number, "verify-otp")
-
-    # Get the latest OTP request for this number
-    db_otp = db.query(models.OtpCode).filter(models.OtpCode.mobile_number == mobile_number).order_by(models.OtpCode.created_at.desc()).first()
-
-    if not db_otp:
-        raise HTTPException(status_code=400, detail="No OTP requested for this number.")
-
-    if datetime.utcnow() > db_otp.expires_at:
-        raise HTTPException(status_code=400, detail="OTP has expired.")
-        
-    # Prevent OTP brute force (max 5 attempts)
-    if db_otp.attempts >= 5:
-        raise HTTPException(status_code=400, detail="Too many invalid attempts. Please request a new OTP.")
-
-    if db_otp.otp_code != otp_code:
-        db_otp.attempts += 1
-        db.commit()
-        raise HTTPException(status_code=400, detail="Invalid OTP code.")
-
-    # OTP is valid! Time to log them in.
-    # 1. Clear the OTP so it can't be reused
-    db.delete(db_otp)
-    
-    # 2. Get or Create User
-    is_new_user = False
-    user = db.query(models.User).filter(models.User.mobile_number == mobile_number).first()
-    if not user:
-        is_new_user = True
-        user = models.User(mobile_number=mobile_number)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
-        # Auto-create metrics for the new user
-        metrics = models.UserMetric(user_id=user.id)
-        db.add(metrics)
-        db.commit()
-
-    # 3. Mint JWT Token
-    access_token = create_access_token(data={"sub": str(user.id), "mobile": user.mobile_number})
-
-    # 4. Send welcome notification for new users
-    if is_new_user:
-        from notifications import send_personal_notification, send_welcome_chat_message
-        
-        # Send in-app notification
-        background_tasks.add_task(
-            send_personal_notification,
-            target_user_id=user.id,
-            title="مرحباً بك في سوقكم! 🎉",
-            body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
-            notification_type="welcome",
-            reference_id=None
-        )
-        
-        # Send chat message from admin
-        background_tasks.add_task(
-            send_welcome_chat_message,
-            user_id=user.id,
-            user_name=user.username or user.mobile_number,
-            user_phone=user.mobile_number
-        )
-
-    return schemas.AuthResponse(token=access_token, user=user)
-
-@router.post("/google", response_model=schemas.AuthResponse)
+@router.post("/google", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
 def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
         google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
@@ -531,7 +563,7 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
         return schemas.AuthResponse(token=access_token, user=user)
         
     except Exception as e:
-        print(f"Apple Token Verification Failed: {e}")
+        log_auth_failure(get_real_ip(request), "/google", f"OAuth verification failed: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid Apple authentication token.")
 
 
@@ -542,6 +574,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     
     token = auth_header.split(" ")[1]
+    if is_token_revoked(token):
+        log_token_revocation(get_real_ip(request), request.url.path)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+        
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
@@ -552,12 +588,25 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
         return user
+    except jwt.ExpiredSignatureError:
+        log_expired_token(get_real_ip(request), request.url.path)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
     except jwt.PyJWTError:
+        log_jwt_forgery_attempt(get_real_ip(request), request.url.path)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
 @router.get("/me", response_model=schemas.User)
 def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+@router.post("/logout")
+def logout(request: Request, current_user: models.User = Depends(get_current_user)):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        revoke_token(token)
+        log_user_logout(str(current_user.id), get_real_ip(request), "/logout")
+    return {"status": "success", "message": "Logged out successfully"}
 
 # Admin Dependency
 def get_current_admin(current_user: models.User = Depends(get_current_user)):
