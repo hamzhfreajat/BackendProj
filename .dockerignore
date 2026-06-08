@@ -24,6 +24,7 @@ venv/
 # Dev tools & test artifacts
 chrome_profile/
 *.txt
+!requirements.txt
 *.json
 *.md
 *.log
