@@ -1711,11 +1711,14 @@ def create_ad(
     # Trigger saved searches alerts
     from observer import trigger_saved_filter_notifications
     background_tasks.add_task(trigger_saved_filter_notifications, db, db_ad)
+    
+    # Check Category Milestones for notifications
+    background_tasks.add_task(check_category_milestone_task, db_ad.category_id)
 
     return db_ad
 
 @app.put("/api/ads/{ad_id}", response_model=schemas.Ad)
-def update_ad(ad_id: int, ad_update: dict, db: Session = Depends(get_db)):
+def update_ad(ad_id: int, ad_update: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
         raise HTTPException(status_code=404, detail="Ad not found")
@@ -1752,9 +1755,13 @@ def update_ad(ad_id: int, ad_update: dict, db: Session = Depends(get_db)):
     if image_urls:
         ad_update["image_url"] = image_urls[0]
 
+    was_unpublished = not db_ad.is_published
+    
     for key, value in ad_update.items():
         if hasattr(db_ad, key) and key not in ['id', 'user_id', 'created_at']:
             setattr(db_ad, key, value)
+            
+    is_now_published = db_ad.is_published
             
     # Process Tags
     if tags_data:
@@ -1780,6 +1787,17 @@ def update_ad(ad_id: int, ad_update: dict, db: Session = Depends(get_db)):
     
     # Sync to search index
     SearchService.sync_ad_to_search_index(db, db_ad)
+    
+    # Notify: Ad submitted confirmation to the owner if transitioned from unpublished to published
+    if was_unpublished and is_now_published:
+        background_tasks.add_task(
+            notifications.send_personal_notification,
+            target_user_id=db_ad.user_id,
+            title="تم نشر إعلانك بنجاح ✅",
+            body=f"إعلانك '{db_ad.title[:50]}' تم نشره بنجاح وأصبح متاحاً للجميع.",
+            notification_type="ad_created",
+            reference_id=db_ad.id
+        )
     
     return db_ad
 
@@ -1815,6 +1833,27 @@ def toggle_publish_ad(ad_id: int, background_tasks: BackgroundTasks, db: Session
 
     return db_ad
 
+@app.post("/api/ads/{ad_id}/republish", response_model=schemas.Ad)
+def republish_ad(ad_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if not db_ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+        
+    if db_ad.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to republish this ad")
+        
+    db_ad.created_at = datetime.utcnow()
+    db_ad.last_republished_at = datetime.utcnow()
+    db_ad.republish_notification_sent = False
+    
+    db.commit()
+    db.refresh(db_ad)
+    
+    # Sync back to search index
+    SearchService.sync_ad_to_search_index(db, db_ad)
+    
+    return db_ad
+
 # ============================================================
 # User-to-User Interactions & Notifications
 # ============================================================
@@ -1837,7 +1876,7 @@ def notify_phone_revealed(
         background_tasks.add_task(
             notifications.send_personal_notification,
             target_user_id=db_ad.user_id,
-            title="مستخدم يود التواصل معك 📞",
+            title="قام أحد المستخدمين بإظهار رقمك 📞",
             body=f"قام أحدهم بإظهار رقم هاتفك في إعلان '{db_ad.title[:30]}'",
             notification_type="phone_revealed",
             reference_id=ad_id
@@ -1872,6 +1911,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 @app.post("/api/ads/{ad_id}/interaction/view")
 def record_ad_view(
     ad_id: int, 
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -1896,6 +1936,17 @@ def record_ad_view(
     db.execute(stmt)
     db.commit()
     
+    milestones = [10, 50, 100, 500, 1000]
+    if db_ad.views in milestones:
+        background_tasks.add_task(
+            notifications.send_personal_notification,
+            target_user_id=db_ad.user_id,
+            title="تهانينا! إعلانك يحقق مشاهدات عالية 🎉",
+            body=f"وصل إعلانك '{db_ad.title[:30]}' إلى {db_ad.views} مشاهدة!",
+            notification_type="ad_milestone",
+            reference_id=ad_id
+        )
+        
     return {"status": "success"}
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
@@ -2005,6 +2056,46 @@ def update_my_profile(update_data: schemas.UserUpdate, current_user: models.User
     db.commit()
     db.refresh(current_user)
     return _enrich_user_profile(current_user, db)
+
+class LatestCategoryUpdate(BaseModel):
+    category_id: int
+
+@app.post("/api/users/me/latest-category")
+def update_latest_category(
+    payload: LatestCategoryUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    current_user.latest_category_id = payload.category_id
+    db.commit()
+    return {"status": "success", "latest_category_id": current_user.latest_category_id}
+
+@app.post("/api/users/me/category-filters/{category_id}")
+def update_category_filters(
+    category_id: int,
+    payload: schemas.CategoryFiltersPrefs,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    prefs = current_user.category_filters_prefs or {}
+    # Convert payload to dict, remove None values
+    payload_dict = payload.dict(exclude_none=True)
+    prefs[str(category_id)] = payload_dict
+    
+    current_user.category_filters_prefs = prefs
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(current_user, "category_filters_prefs")
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/users/me/category-filters/{category_id}", response_model=schemas.CategoryFiltersPrefs)
+def get_category_filters(
+    category_id: int,
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    prefs = current_user.category_filters_prefs or {}
+    category_prefs = prefs.get(str(category_id), {})
+    return category_prefs
 
 @app.get("/api/users/{user_id}/profile", response_model=schemas.User)
 def get_user_profile(user_id: int, db: Session = Depends(get_db)):
@@ -2157,11 +2248,16 @@ async def republish_notifier_worker():
             from database import SessionLocal
             from notifications import send_personal_notification
             db = SessionLocal()
+            from sqlalchemy import or_
             now_minus_24h = datetime.utcnow() - timedelta(hours=24)
             ads = db.query(models.Ad).filter(
-                models.Ad.is_sold == True,
+                models.Ad.is_sold == False,
+                models.Ad.is_published == True,
                 models.Ad.republish_notification_sent == False,
-                models.Ad.last_republished_at <= now_minus_24h
+                or_(
+                    models.Ad.last_republished_at <= now_minus_24h,
+                    (models.Ad.last_republished_at == None) & (models.Ad.created_at <= now_minus_24h)
+                )
             ).all()
             for ad in ads:
                 ad.republish_notification_sent = True
@@ -2169,9 +2265,9 @@ async def republish_notifier_worker():
                 # Run sync/async based on your architecture. We'll await since send_personal_notification is async
                 await send_personal_notification(
                     target_user_id=ad.user_id,
-                    title="إعلانك متاح لإعادة النشر",
-                    body=f"يمكنك الآن إعادة نشر إعلانك '{ad.title}' ليظهر في أعلى القائمة مجدداً.",
-                    notification_type="system",
+                    title="إحصائيات إعلانك 📊",
+                    body=f"حصل إعلانك '{ad.title}' على {ad.views} مشاهدة و {ad.chats_count} محادثة! يمكنك إعادة نشره الآن ليظهر في الأعلى.",
+                    notification_type="republish_available",
                     reference_id=ad.id
                 )
             db.close()
@@ -2182,3 +2278,61 @@ async def republish_notifier_worker():
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(republish_notifier_worker())
+    
+    # Run DB Migrations for new tracking columns
+    db = SessionLocal()
+    try:
+        # Add latest_category_id to users
+        db.execute("ALTER TABLE users ADD COLUMN latest_category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL")
+        db.commit()
+    except Exception:
+        db.rollback()
+        
+    try:
+        # Add category_filters_prefs to users
+        db.execute("ALTER TABLE users ADD COLUMN category_filters_prefs JSONB DEFAULT '{}'::jsonb")
+        db.commit()
+    except Exception:
+        db.rollback()
+        
+    try:
+        # Add last_notified_ad_count to categories
+        db.execute("ALTER TABLE categories ADD COLUMN last_notified_ad_count INTEGER DEFAULT 0")
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+async def check_category_milestone_task(category_id: int):
+    # This task opens its own DB session
+    db = SessionLocal()
+    try:
+        cat = db.query(models.Category).filter(models.Category.id == category_id).first()
+        if not cat:
+            return
+            
+        total_ads = db.query(models.Ad).filter(
+            models.Ad.category_id == category_id,
+            models.Ad.is_published == True
+        ).count()
+        
+        if total_ads >= cat.last_notified_ad_count + 1000:
+            cat.last_notified_ad_count = total_ads
+            db.commit()
+            
+            users_to_notify = db.query(models.User).filter(models.User.latest_category_id == category_id).all()
+            for u in users_to_notify:
+                try:
+                    await notifications.send_personal_notification(
+                        target_user_id=u.id,
+                        title="إعلانات جديدة تهمك 🚀",
+                        body=f"تمت إضافة 1000 إعلان جديد في قسم {cat.name}!",
+                        notification_type="category_milestone",
+                        reference_id=category_id
+                    )
+                except Exception as e:
+                    print(f"Error notifying user {u.id}: {e}")
+    finally:
+        db.close()
+

@@ -451,7 +451,10 @@ class AdReportOut(BaseModel):
     class Config:
         from_attributes = True
 
-
+class CategoryFiltersPrefs(BaseModel):
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    tags: Optional[List[str]] = []
 # --- Saved Filter Schemas ---
 
 class SavedFilterBase(BaseModel):

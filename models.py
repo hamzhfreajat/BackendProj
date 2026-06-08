@@ -140,6 +140,10 @@ class User(Base):
     shop_location = Column(Text, nullable=True)
     shop_hours = Column(String(100), nullable=True)
     
+    # Category Tracking
+    latest_category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    category_filters_prefs = Column(JSONB, default=dict)
+    
     ads = relationship("Ad", back_populates="owner")
     metrics = relationship("UserMetric", back_populates="user", uselist=False)
     reviews_received = relationship("UserReview", foreign_keys="UserReview.target_user_id", back_populates="target_user")
@@ -184,6 +188,7 @@ class Category(Base):
     tag = Column(String(50))
     slugs = Column(JSONB)
     order_index = Column(Integer, default=0)
+    last_notified_ad_count = Column(Integer, default=0)
 
     ads = relationship("Ad", back_populates="category")
     children = relationship("Category", backref="parent", remote_side=[id])
