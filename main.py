@@ -16,7 +16,7 @@ import schemas
 import auth
 import notifications
 from notifications import send_personal_notification
-from database import engine, get_db
+from database import engine, get_db, SessionLocal
 from fb_batch_router import router as fb_batch_router
 from ai_router import router as ai_router
 from search_service import SearchService
