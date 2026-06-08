@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 import models
 from database import get_db
+import auth
 
 try:
     from google import genai as _genai_new
