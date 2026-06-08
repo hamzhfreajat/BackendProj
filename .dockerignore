@@ -1,0 +1,35 @@
+# Secrets & Credentials — NEVER bake into Docker image
+.env
+.env.*
+firebase-service-account.json
+gen-lang-client-*.json
+fb_cookies.json
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# SQL dumps & data
+*.sql
+local_dump.sql
+
+# Python runtime
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Dev tools & test artifacts
+chrome_profile/
+*.txt
+*.json
+*.md
+*.log
+target/
+scripts/
+
+# Git
+.git/
+.gitignore

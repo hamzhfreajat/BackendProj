@@ -389,9 +389,13 @@ def send_chat_alert(
 def send_admin_notification(
     data: schemas.AdminNotificationCreate,
     background_tasks: BackgroundTasks,
+    current_admin: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Admin endpoint to send notifications to global or specific users."""
+    if current_admin.user_type != "admin":
+        from fastapi import status as http_status
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Admin access required")
     
     if data.target_user_id.lower() == "all":
         # Send to all users
@@ -433,18 +437,33 @@ def send_admin_notification(
 # ============================================================
 
 @router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int):
+async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = None):
     """
     WebSocket endpoint mapped strictly to a user_id.
-    Client connects with: ws://<host>/api/notifications/ws/<user_id>
-    Only receives messages targeted to this specific user_id.
+    Client connects with: ws://<host>/api/notifications/ws/<user_id>?token=<jwt>
+    Verifies the JWT token before accepting the connection.
     """
+    # Authenticate before accepting the WebSocket connection
+    if not token:
+        await websocket.close(code=4001, reason="Missing authentication token")
+        return
+    
+    try:
+        import jwt as pyjwt
+        from auth import SECRET_KEY, ALGORITHM
+        payload = pyjwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        token_user_id = int(payload.get("sub", 0))
+        if token_user_id != user_id:
+            await websocket.close(code=4003, reason="Token user does not match connection user")
+            return
+    except Exception:
+        await websocket.close(code=4001, reason="Invalid authentication token")
+        return
+    
     await manager.connect(websocket, user_id)
     try:
         while True:
-            # Keep connection alive; receive pings/messages from client
             data = await websocket.receive_text()
-            # Client can send "ping" to keep alive
             if data == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:

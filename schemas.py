@@ -18,7 +18,7 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     full_name: Optional[str] = None
     cover_image_url: Optional[str] = None
-    user_type: Optional[str] = None
+    # NOTE: user_type intentionally omitted — privilege changes must go through admin endpoints only
 
 class User(UserBase):
     id: int

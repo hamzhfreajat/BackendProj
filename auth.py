@@ -81,13 +81,15 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "fallback_secret_for_development_only_12345")
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 Days
 
-# Set to False in production to re-enable all rate limits and cooldowns
-TESTING_MODE = True
+# Disable testing mode in production to re-enable rate limits
+TESTING_MODE = os.environ.get("ENV", "development") != "production"
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    # No expiration - token lives forever
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -238,14 +240,14 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
     if not db_otp:
         raise HTTPException(status_code=400, detail="No OTP requested for this number.")
 
-    if datetime.utcnow() > db_otp.expires_at and otp_code != "123456":
+    if datetime.utcnow() > db_otp.expires_at:
         raise HTTPException(status_code=400, detail="OTP has expired.")
         
     # Prevent OTP brute force (max 5 attempts)
-    if db_otp.attempts >= 5 and otp_code != "123456":
+    if db_otp.attempts >= 5:
         raise HTTPException(status_code=400, detail="Too many invalid attempts. Please request a new OTP.")
 
-    if db_otp.otp_code != otp_code and otp_code != "123456":
+    if db_otp.otp_code != otp_code:
         db_otp.attempts += 1
         db.commit()
         raise HTTPException(status_code=400, detail="Invalid OTP code.")
@@ -299,9 +301,12 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
 @router.post("/google", response_model=schemas.AuthResponse)
 def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
-        # Verify the token without requiring a specific client ID for flexibility. 
-        # In production, you should pass audience="YOUR_WEB_CLIENT_ID"
-        idinfo = id_token.verify_oauth2_token(data.id_token, google_requests.Request())
+        google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+        idinfo = id_token.verify_oauth2_token(
+            data.id_token,
+            google_requests.Request(),
+            audience=google_client_id  # Validates token is issued for THIS app
+        )
         
         email = idinfo.get('email')
         if not email:
@@ -463,14 +468,12 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
         signing_key = jwks_client.get_signing_key_from_jwt(data.id_token)
         
         # Decode and verify the token
+        # Accept both iOS (Bundle ID) and Android (Service ID) tokens
         payload = jwt.decode(
             data.id_token,
             signing_key.key,
             algorithms=["RS256"],
-            audience="com.sooqcom.app.service", # The Service ID you created
-            # If the user logs in from iOS natively, the audience is the Bundle ID (com.sooqcom.app)
-            # You can accept both using a list if needed: audience=["com.sooqcom.app.service", "com.sooqcom.app"]
-            options={"verify_aud": False} # For flexibility between iOS and Android in this implementation
+            audience=["com.sooqcom.app", "com.sooqcom.app.service"]
         )
         
         apple_sub = payload.get("sub")

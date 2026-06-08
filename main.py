@@ -41,11 +41,12 @@ app = FastAPI(title="Classifieds Backend API")
 # Ensure all database tables exist (creates newly added tables like saved_ads)
 models.Base.metadata.create_all(bind=engine)
 
-# Add CORS middleware to allow requests from the Flutter frontend and React Dashboard
+# Add CORS middleware — restrict origins to known clients in production
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, this should be restricted
-    allow_credentials=False, # Must be False if allow_origins is ["*"]
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
@@ -284,7 +285,11 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
     return categories
 
 @app.post("/api/categories", response_model=schemas.Category)
-def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+def create_category(
+    category: schemas.CategoryCreate,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_admin)
+):
     category_data = category.model_dump(exclude={"linked_tags"})
     db_category = models.Category(**category_data)
     
@@ -307,7 +312,11 @@ def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_
     return db_category
 
 @app.put("/api/categories/reorder", response_model=dict)
-def reorder_categories(reorder_data: List[schemas.CategoryReorder], db: Session = Depends(get_db)):
+def reorder_categories(
+    reorder_data: List[schemas.CategoryReorder],
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_admin)
+):
     # Bulk update method to set correct list positions efficiently
     mappings = [{"id": item.id, "order_index": item.order_index} for item in reorder_data]
     if mappings:
@@ -316,7 +325,12 @@ def reorder_categories(reorder_data: List[schemas.CategoryReorder], db: Session 
     return {"status": "success", "message": f"Successfully reordered {len(mappings)} categories"}
 
 @app.put("/api/categories/{category_id}", response_model=schemas.Category)
-def update_category(category_id: int, category_update: schemas.CategoryUpdate, db: Session = Depends(get_db)):
+def update_category(
+    category_id: int,
+    category_update: schemas.CategoryUpdate,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_admin)
+):
     db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -340,7 +354,11 @@ def update_category(category_id: int, category_update: schemas.CategoryUpdate, d
     return db_category
 
 @app.delete("/api/categories/{category_id}", response_model=dict)
-def delete_category(category_id: int, db: Session = Depends(get_db)):
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_admin)
+):
     db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -348,6 +366,11 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
     db.delete(db_category)
     db.commit()
     return {"status": "success", "message": "Category deleted successfully"}
+
+# ============================================================
+# ADMIN-ONLY: Category Management
+# All mutation endpoints below require admin privileges
+# ============================================================
 
 # ============================================================
 # MY ADS / SELLER DASHBOARD
@@ -545,9 +568,7 @@ def get_saved_ads(current_user: models.User = Depends(auth.get_current_user), db
         ad.is_saved = True
         
     return sorted_ads
-    
-    db.commit()
-    return {"message": f"Action '{req.action}' performed on {len(ads)} ads"}
+
 
 # ============================================================
 # SEARCH & AUTOCOMPLETE
@@ -877,9 +898,6 @@ def read_ads(
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
-    with open("location_debug.txt", "a", encoding="utf-8") as f:
-        f.write(f"read_ads called with location: {location}\n")
-        
     query = db.query(models.Ad)
     
     if user_id is not None:
@@ -1533,30 +1551,12 @@ def update_ad_draft(
 @app.post("/api/ads", response_model=schemas.Ad)
 def create_ad(
     ad: schemas.AdCreate, 
-    background_tasks: BackgroundTasks, 
-    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Determine the user ID (App users will have a token, scraper won't necessarily)
-    user_id = 1 # Fallback to system/scraper user
-    user_phone = ad.phone_number
-    
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = auth_header.split(" ")[1]
-            import jwt
-            payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-            token_sub = payload.get("sub")
-            if token_sub:
-                user_id = int(token_sub)
-                
-            # Grab phone number from the user object if not manually supplied
-            user = db.query(models.User).filter(models.User.id == user_id).first()
-            if user and not user_phone:
-                user_phone = user.mobile_number
-        except:
-            pass # Use fallback
+    user_id = current_user.id
+    user_phone = ad.phone_number or current_user.mobile_number
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     
@@ -1718,10 +1718,19 @@ def create_ad(
     return db_ad
 
 @app.put("/api/ads/{ad_id}", response_model=schemas.Ad)
-def update_ad(ad_id: int, ad_update: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def update_ad(
+    ad_id: int,
+    ad_update: dict,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
         raise HTTPException(status_code=404, detail="Ad not found")
+    # Ownership check: only owner or admin may update
+    if db_ad.user_id != current_user.id and current_user.user_type != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to edit this ad")
 
     re_detail_data = ad_update.pop("real_estate_detail", None)
     tags_data = ad_update.pop("linked_tags", [])
@@ -1802,10 +1811,17 @@ def update_ad(ad_id: int, ad_update: dict, background_tasks: BackgroundTasks, db
     return db_ad
 
 @app.put("/api/ads/{ad_id}/toggle-publish", response_model=schemas.Ad)
-def toggle_publish_ad(ad_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def toggle_publish_ad(
+    ad_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
         raise HTTPException(status_code=404, detail="Ad not found")
+    if db_ad.user_id != current_user.id and current_user.user_type != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to modify this ad")
     
     db_ad.is_published = not db_ad.is_published
     db.commit()
@@ -2050,8 +2066,7 @@ def update_my_profile(update_data: schemas.UserUpdate, current_user: models.User
         current_user.avatar_url = update_data.avatar_url
     if update_data.cover_image_url is not None:
         current_user.cover_image_url = update_data.cover_image_url
-    if update_data.user_type is not None:
-        current_user.user_type = update_data.user_type
+    # NOTE: user_type is intentionally NOT settable here — use admin endpoints only
         
     db.commit()
     db.refresh(current_user)
@@ -2110,10 +2125,8 @@ def get_user_reviews(user_id: int, db: Session = Depends(get_db)):
     return reviews
 
 
-@app.on_event("startup")
-async def startup_event():
-    print("INFO: Background periodic scraper is disabled (using extension instead).")
-    # asyncio.create_task(scraper.run_periodic_scraper())
+# The full startup event with DB migrations is at the bottom of this file.
+
 
 # ---------------------------------------------------------
 # AD REPORTING ENDPOINTS

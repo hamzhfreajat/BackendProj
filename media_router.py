@@ -7,6 +7,9 @@ import uuid
 import boto3
 from botocore.client import Config
 
+import auth
+import models
+
 # Define a simple media router
 router = APIRouter(prefix="/api/media", tags=["media"])
 
@@ -35,20 +38,31 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload")
-async def upload_media(files: List[UploadFile] = File(...), bypass_watermark: bool = False):
+async def upload_media(
+    files: List[UploadFile] = File(...), 
+    bypass_watermark: bool = False,
+    current_user: models.User = Depends(auth.get_current_user)
+):
     """
     Receives multiple files, saves them to Cloudflare R2 (or locally if missing config),
     and returns a list of URLs pointing to the saved files.
     """
     uploaded_urls = []
     
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.mp4', '.mov', '.pdf'}
+    
     r2_client = get_r2_client()
     
     from fb_batch_router import check_image_bytes_for_watermark
     
     for file in files:
-        # Check for watermarks on image uploads
         file_ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        
+        # Security: Whitelist file extensions
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"File extension {file_ext} is not allowed for security reasons.")
+            
+        # Check for watermarks on image uploads
         is_image = file.content_type and file.content_type.startswith('image/')
         if not is_image and file_ext in ['.jpg', '.jpeg', '.png', '.webp', '.heic']:
             is_image = True
@@ -146,15 +160,24 @@ async def upload_media(files: List[UploadFile] = File(...), bypass_watermark: bo
     return {"urls": uploaded_urls}
 
 @router.post("/check-watermarks")
-async def check_watermarks(files: List[UploadFile] = File(...)):
+async def check_watermarks(
+    files: List[UploadFile] = File(...),
+    current_user: models.User = Depends(auth.get_current_user)
+):
     """
     Receives multiple files and ONLY checks them for watermarks.
     Returns 200 OK if clean, 400 Bad Request if a watermark is found.
     """
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic'}
+    
     from fb_batch_router import check_image_bytes_for_watermark
     
     for file in files:
         file_ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"File extension {file_ext} is not allowed.")
+            
         is_image = file.content_type and file.content_type.startswith('image/')
         if not is_image and file_ext in ['.jpg', '.jpeg', '.png', '.webp', '.heic']:
             is_image = True
