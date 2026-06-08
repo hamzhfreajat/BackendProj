@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func, or_
 from typing import List
+from pydantic import BaseModel
 
 import models
 import schemas
