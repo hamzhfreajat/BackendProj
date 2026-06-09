@@ -8,7 +8,9 @@ load_dotenv()
 
 # Default to the user's provided local environment variables, falling back to local defaults
 DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "123456")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+if not DB_PASSWORD:
+    raise RuntimeError("CRITICAL: DB_PASSWORD environment variable is not set.")
 DB_NAME = os.getenv("DB_NAME", "open")
 # Use localhost to connect to the Windows machine's native postgres instance
 DB_HOST = os.getenv("DB_HOST", "localhost")

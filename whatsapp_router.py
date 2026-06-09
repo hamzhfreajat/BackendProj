@@ -3,7 +3,10 @@ from fastapi.responses import PlainTextResponse
 
 router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
 
-VERIFY_TOKEN = "sooqcom_secure_token_123"
+import os
+VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
+if not VERIFY_TOKEN:
+    raise RuntimeError("CRITICAL: WHATSAPP_VERIFY_TOKEN environment variable is not set.")
 
 @router.get("/webhook")
 def verify_webhook(
