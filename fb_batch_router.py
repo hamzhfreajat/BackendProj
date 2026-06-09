@@ -98,7 +98,7 @@ CRITICAL LOCATION RULES:
 3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
 4. If an ad mentions being near or at a specific university (e.g., "قرب الجامعة الأردنية", "بجانب الجامعة الألمانية"), map the location directly to that university's region (e.g., "عمان, الجامعة الأردنية", "مادبا, الجامعة الألمانية الأردنية").
 - phone_number (string or null) -- phone number if mentioned
-- category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list (never use generic ID 3 if a deeper one like 301 or 3061 fits perfectly!). CRITICAL RULE: Analyze the intent of the author. If the post is completely unrelated to real estate (e.g. cars, services, products, news) OR if the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a real estate property or room.
+- category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list. CRITICAL RULE: NEVER use a parent category (like 'سكني' or 'عقارات للإيجار') if a more specific child category (like 'شقق للإيجار' or 'استوديوهات') fits perfectly! ALWAYS pick the absolute lowest/deepest leaf category. Also, analyze the intent of the author. If the post is completely unrelated to real estate (e.g. cars, services, products, news) OR if the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a real estate property or room.
 - suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
 - attributes (object) -- Extract these specific property/shared-room features if mentioned:
     - area (int) -- Property area in square meters (if mentioned, e.g., 150)
@@ -180,7 +180,7 @@ Extract:
   3. "شفا بدران" belongs to "عمان". Do NOT confuse it with "بدر".
   4. If the ad is near a university, map the location directly to that university (e.g. "مادبا, الجامعة الألمانية الأردنية").
 - phone_number: (string or null) Look closely for 10-digit numbers.
-- category_name: (string) Extract the exact real estate category (e.g. 'شقق للبيع', 'أراضي للإيجار', 'ستوديوهات'). Use empty string if author is SEEKING or if not offering real estate.
+- category_name: (string) Extract the exact real estate category (e.g. 'شقق للبيع', 'أراضي للإيجار', 'ستوديوهات'). CRITICAL RULE: NEVER output a parent category like 'سكني' or 'عقارات للإيجار' if a more specific leaf category like 'شقق للإيجار' applies. ALWAYS output the deepest, most specific subcategory. Use empty string if author is SEEKING or if not offering real estate.
 - rejection_reason: (string) If not offering real estate, provide exact reason why here.
 - suggested_tags: (list[string]) 2-4 important keywords mentioned.
 - attributes: (object) Extract basic properties into this object. Also CRITICALLY, create a nested "dynamic_data" object containing these EXACT keys if mentioned:
@@ -736,8 +736,17 @@ def _is_duplicate(db: Session, source_url: str, raw_description: str) -> Optiona
             ad = db.query(models.Ad).filter(models.Ad.source_url.like(f"%story_fbid={post_id}%")).first()
             if ad: return ad.id
 
-    return None
-            
+        match3 = re.search(r'permalink/(\d+)', source_url)
+        if match3:
+            post_id = match3.group(1)
+            ad = db.query(models.Ad).filter(models.Ad.source_url.like(f"%permalink/{post_id}%")).first()
+            if ad: return ad.id
+
+    if raw_description and len(raw_description.strip()) > 20:
+        # Prevent exact text duplicates regardless of URL
+        ad = db.query(models.Ad).filter(models.Ad.raw_description == raw_description.strip()).first()
+        if ad: return ad.id
+
     return None
 def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, default_location):
     # Dynamically extract Category from AI category_name strings
