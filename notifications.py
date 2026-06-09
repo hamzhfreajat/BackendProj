@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from database import get_db, SessionLocal
+import auth
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
