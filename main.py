@@ -1881,6 +1881,10 @@ def republish_ad(ad_id: int, current_user: models.User = Depends(auth.get_curren
     if db_ad.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to republish this ad")
         
+    last_date = db_ad.last_republished_at or db_ad.created_at
+    if last_date and datetime.utcnow() - last_date < timedelta(hours=24):
+        raise HTTPException(status_code=400, detail="already_republished")
+        
     db_ad.created_at = datetime.utcnow()
     db_ad.last_republished_at = datetime.utcnow()
     db_ad.republish_notification_sent = False
