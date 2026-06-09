@@ -2295,17 +2295,33 @@ async def republish_notifier_worker():
                     (models.Ad.last_republished_at == None) & (models.Ad.created_at <= now_minus_24h)
                 )
             ).all()
+            
+            user_ads = {}
             for ad in ads:
-                ad.republish_notification_sent = True
+                user_ads.setdefault(ad.user_id, []).append(ad)
+                
+            for user_id, u_ads in user_ads.items():
+                if len(u_ads) == 1:
+                    ad = u_ads[0]
+                    await send_personal_notification(
+                        target_user_id=user_id,
+                        title="إحصائيات إعلانك 📊",
+                        body=f"حصل إعلانك '{ad.title}' على {ad.views} مشاهدة و {ad.chats_count} محادثة! يمكنك إعادة نشره الآن ليظهر في الأعلى.",
+                        notification_type="republish_available",
+                        reference_id=ad.id
+                    )
+                else:
+                    await send_personal_notification(
+                        target_user_id=user_id,
+                        title="إعلانات جاهزة لإعادة النشر 🚀",
+                        body=f"لديك {len(u_ads)} إعلانات جاهزة لإعادة النشر الآن لترتفع إلى أعلى القائمة! اضغط هنا لإعادة نشرها.",
+                        notification_type="republish_available",
+                        reference_id=None
+                    )
+                    
+                for ad in u_ads:
+                    ad.republish_notification_sent = True
                 db.commit()
-                # Run sync/async based on your architecture. We'll await since send_personal_notification is async
-                await send_personal_notification(
-                    target_user_id=ad.user_id,
-                    title="إحصائيات إعلانك 📊",
-                    body=f"حصل إعلانك '{ad.title}' على {ad.views} مشاهدة و {ad.chats_count} محادثة! يمكنك إعادة نشره الآن ليظهر في الأعلى.",
-                    notification_type="republish_available",
-                    reference_id=ad.id
-                )
             db.close()
         except Exception as e:
             print(f"Error in republish_notifier_worker: {e}")
