@@ -67,6 +67,32 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class UserPublicProfile(BaseModel):
+    id: int
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    overall_rating: Optional[float] = 0.0
+    response_rate: Optional[int] = 100
+    average_response_time: Optional[str] = None
+    trust_score: Optional[int] = 50
+    followers_count: Optional[int] = 0
+    following_count: Optional[int] = 0
+    location: Optional[str] = ""
+    bio: Optional[str] = None
+    preferred_contact: Optional[str] = None
+    languages_spoken: Optional[List[str]] = None
+    deals_completed: Optional[int] = 0
+    shop_name: Optional[str] = None
+    active_ads_count: Optional[int] = 0
+    sold_ads_count: Optional[int] = 0
+    total_ads_count: Optional[int] = 0
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class UserReviewBase(BaseModel):
     rating: float
     text: str
@@ -82,7 +108,7 @@ class UserReview(UserReviewBase):
     created_at: datetime
     
     # We can include a nested reviewer snippet if requested
-    reviewer: Optional[User] = None
+    reviewer: Optional[UserPublicProfile] = None
 
     class Config:
         from_attributes = True
@@ -279,7 +305,7 @@ class Ad(AdBase):
     is_published: bool = False
     linked_tags: Optional[List[Tag]] = []
     
-    owner: Optional[User] = None
+    owner: Optional[UserPublicProfile] = None
     
     source_type: str = "ORGANIC_USER"
     source_url: Optional[str] = None
@@ -349,7 +375,7 @@ class Story(StoryBase):
     id: int
     user_id: int
     created_at: datetime
-    owner: Optional[User] = None
+    owner: Optional[UserPublicProfile] = None
     
     class Config:
         from_attributes = True

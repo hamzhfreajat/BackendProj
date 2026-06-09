@@ -11,6 +11,11 @@ from sqlalchemy.sql import func, or_
 from sqlalchemy import text
 from typing import List
 from pydantic import BaseModel
+import re
+
+def escape_like(s: str) -> str:
+    if not s: return ""
+    return re.sub(r'([%_\\])', r'\\\1', s)
 
 import models
 import schemas
@@ -45,7 +50,12 @@ except ImportError:
 if not os.getenv("GOOGLE_API_KEY"):
     print("WARNING: GOOGLE_API_KEY is not set in the environment.")
 
-app = FastAPI(title="Classifieds Backend API")
+app = FastAPI(
+    title="Classifieds Backend API",
+    docs_url=None if os.getenv("ENV") == "production" else "/docs",
+    redoc_url=None if os.getenv("ENV") == "production" else "/redoc",
+    openapi_url=None if os.getenv("ENV") == "production" else "/openapi.json"
+)
 
 # Ensure all database tables exist (creates newly added tables like saved_ads)
 models.Base.metadata.create_all(bind=engine)
@@ -140,7 +150,7 @@ def read_user_metrics(request: Request, db: Session = Depends(get_db)):
             user_id = payload.get("sub")
             if user_id:
                 user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-        except:
+        except jwt.PyJWTError:
             pass
 
     if not user:
@@ -232,12 +242,12 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
         else:
             city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
             if city:
-                filters.append(models.Ad.location.ilike(f"{target_loc}%"))
+                filters.append(models.Ad.location.ilike(f"{escape_like(target_loc)}%"))
             else:
                 if parent_loc:
-                    filters.append(models.Ad.location.ilike(f"{parent_loc}, {target_loc}%"))
+                    filters.append(models.Ad.location.ilike(f"{escape_like(parent_loc)}, {escape_like(target_loc)}%"))
                 else:
-                    filters.append(models.Ad.location.ilike(f"%{target_loc}%"))
+                    filters.append(models.Ad.location.ilike(f"%{escape_like(target_loc)}%"))
                     
         if filters:
             ad_query = ad_query.filter(or_(*filters))
@@ -484,7 +494,7 @@ def read_my_ads(
     query = db.query(models.Ad).filter(models.Ad.user_id == current_user.id)
     
     if search:
-        query = query.filter(models.Ad.title.ilike(f"%{search}%"))
+        query = query.filter(models.Ad.title.ilike(f"%{escape_like(search)}%"))
         
     ads = query.order_by(models.Ad.created_at.desc()).all()
     
@@ -551,7 +561,7 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)):
         user_id = payload.get("sub")
         if user_id:
             return db.query(models.User).filter(models.User.id == int(user_id)).first()
-    except:
+    except Exception:
         return None
     return None
 
@@ -930,6 +940,7 @@ def read_ads(
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
+    limit = min(limit, 100) # Security cap on pagination
     query = db.query(models.Ad)
     
     if user_id is not None:
@@ -2124,7 +2135,7 @@ def get_category_filters(
     category_prefs = prefs.get(str(category_id), {})
     return category_prefs
 
-@app.get("/api/users/{user_id}/profile", response_model=schemas.User)
+@app.get("/api/users/{user_id}/profile", response_model=schemas.UserPublicProfile)
 def get_user_profile(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:

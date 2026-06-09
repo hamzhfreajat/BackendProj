@@ -389,7 +389,7 @@ def send_chat_alert(
 def send_admin_notification(
     data: schemas.AdminNotificationCreate,
     background_tasks: BackgroundTasks,
-    current_admin: models.User = Depends(get_current_user),
+    current_admin: models.User = Depends(auth.get_current_admin),
     db: Session = Depends(get_db)
 ):
     """Admin endpoint to send notifications to global or specific users."""

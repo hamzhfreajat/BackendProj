@@ -152,7 +152,9 @@ def price_estimate(request: dict, db: Session = Depends(get_db), current_user: m
     )
     
     if region:
-        query = query.filter(models.Ad.location.ilike(f"%{region}%"))
+        import re
+        escaped_region = re.sub(r'([%_\\])', r'\\\1', region)
+        query = query.filter(models.Ad.location.ilike(f"%{escaped_region}%"))
         
     avg = query.scalar()
     

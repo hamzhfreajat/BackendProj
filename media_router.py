@@ -66,6 +66,12 @@ async def upload_media(
             log_file_upload_blocked(get_real_ip(request), request.url.path, f"Extension {file_ext} not allowed", str(current_user.id))
             raise HTTPException(status_code=400, detail=f"File extension {file_ext} is not allowed for security reasons.")
             
+        # Security: Max File Size 15MB
+        content = await file.read()
+        if len(content) > 15 * 1024 * 1024:
+            log_file_upload_blocked(get_real_ip(request), request.url.path, f"File {file.filename} exceeds 15MB limit", str(current_user.id))
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 15MB.")
+            
         # Check for watermarks on image uploads
         is_image = file.content_type and file.content_type.startswith('image/')
         if not is_image and file_ext in ['.jpg', '.jpeg', '.png', '.webp', '.heic']:
@@ -73,7 +79,6 @@ async def upload_media(
             
         if is_image:
             bypass_watermark = current_user.user_type == "admin"
-            content = await file.read()
             if not bypass_watermark and check_image_bytes_for_watermark(content):
                 raise HTTPException(
                     status_code=400, 
