@@ -8,6 +8,7 @@ from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Query, Req
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func, or_
+from sqlalchemy import text
 from typing import List
 from pydantic import BaseModel
 
@@ -2307,23 +2308,26 @@ async def startup_event():
     db = SessionLocal()
     try:
         # Add latest_category_id to users
-        db.execute("ALTER TABLE users ADD COLUMN latest_category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL")
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL"))
         db.commit()
-    except Exception:
+    except Exception as e:
+        print(f"Migration error: {e}")
         db.rollback()
         
     try:
         # Add category_filters_prefs to users
-        db.execute("ALTER TABLE users ADD COLUMN category_filters_prefs JSONB DEFAULT '{}'::jsonb")
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS category_filters_prefs JSONB DEFAULT '{}'::jsonb"))
         db.commit()
-    except Exception:
+    except Exception as e:
+        print(f"Migration error: {e}")
         db.rollback()
         
     try:
         # Add last_notified_ad_count to categories
-        db.execute("ALTER TABLE categories ADD COLUMN last_notified_ad_count INTEGER DEFAULT 0")
+        db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS last_notified_ad_count INTEGER DEFAULT 0"))
         db.commit()
-    except Exception:
+    except Exception as e:
+        print(f"Migration error: {e}")
         db.rollback()
     finally:
         db.close()
