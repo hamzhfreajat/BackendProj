@@ -37,7 +37,6 @@ class ConnectionManager:
         self.active_connections: Dict[int, List[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, user_id: int):
-        await websocket.accept()
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
@@ -445,6 +444,8 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
     Verifies the JWT token before accepting the connection.
     """
     # Authenticate before accepting the WebSocket connection
+    await websocket.accept()
+    
     if not token:
         await websocket.close(code=4001, reason="Missing authentication token")
         return
