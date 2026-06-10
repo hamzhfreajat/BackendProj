@@ -151,7 +151,12 @@ async def upload_media(
             '.heic': 'image/heic',
             '.mp4': 'video/mp4',
             '.mov': 'video/quicktime',
-            '.pdf': 'application/pdf'
+            '.pdf': 'application/pdf',
+            '.m4a': 'audio/mp4',
+            '.mp3': 'audio/mpeg',
+            '.aac': 'audio/aac',
+            '.wav': 'audio/wav',
+            '.ogg': 'audio/ogg'
         }
         strict_content_type = mime_types.get(file_ext.lower(), 'application/octet-stream')
 
