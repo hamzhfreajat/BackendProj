@@ -43,6 +43,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @router.post("/upload", dependencies=[Depends(auth.get_rate_limiter(10, 60))])
 async def upload_media(
     request: Request,
+    bypass_watermark: bool = False,
     files: List[UploadFile] = File(...), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -52,7 +53,7 @@ async def upload_media(
     """
     uploaded_urls = []
     
-    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.mp4', '.mov', '.pdf'}
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.mp4', '.mov', '.pdf', '.m4a', '.mp3', '.aac', '.wav', '.ogg'}
     
     r2_client = get_r2_client()
     
@@ -78,15 +79,15 @@ async def upload_media(
             is_image = True
             
         if is_image:
-            bypass_watermark = current_user.user_type == "admin"
-            if not bypass_watermark and check_image_bytes_for_watermark(content):
+            should_bypass_watermark = bypass_watermark or current_user.user_type == "admin"
+            if not should_bypass_watermark and check_image_bytes_for_watermark(content):
                 raise HTTPException(
                     status_code=400, 
                     detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة اخرى."
                 )
             
             # --- APPLY WATERMARK ---
-            if not bypass_watermark:
+            if not should_bypass_watermark:
                 try:
                     from PIL import Image
                     # Security: Enforce pixel limit to prevent Decompression Bombs (OOM DoS)
