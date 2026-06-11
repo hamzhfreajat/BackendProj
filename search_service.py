@@ -182,6 +182,10 @@ class SearchService:
                 elif 'ايجار' in ad.category.name or 'إيجار' in ad.category.name:
                     deal_type = "RENT"
                     
+                cat_parsed = QueryParserService.parse(ad.category.name)
+                if cat_parsed.property_type:
+                    property_type = cat_parsed.property_type
+                    
             if ad.real_estate_detail:
                 bathrooms = ad.real_estate_detail.bathrooms
                 if ad.real_estate_detail.furnished:
@@ -223,7 +227,8 @@ class SearchService:
             if not deal_type and parsed.deal_type != "BOTH":
                 deal_type = parsed.deal_type
                 
-            property_type = parsed.property_type
+            if not property_type:
+                property_type = parsed.property_type
             
             if not bedrooms:
                 # try ad.attributes directly before parsed
