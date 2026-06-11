@@ -617,7 +617,10 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
             return url
             
         try:
-            resp = requests.get(url, timeout=15)
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            resp = requests.get(url, headers=headers, timeout=15)
             if resp.status_code == 200:
                 content_type = resp.headers.get('Content-Type', 'image/jpeg')
                 file_ext = ".png" if "png" in content_type else ".jpg"
@@ -684,8 +687,13 @@ def _has_watermark_local(image_urls: List[str]) -> bool:
         if not url: return False
         try:
             import requests
-            resp = requests.get(url, timeout=10)
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            resp = requests.get(url, headers=headers, timeout=15)
             if resp.status_code != 200:
+                import logging
+                logging.getLogger(__name__).warning(f"Watermark check failed to download {url}: Status {resp.status_code}")
                 return False
             return check_image_bytes_for_watermark(resp.content)
         except Exception as e:
@@ -693,9 +701,9 @@ def _has_watermark_local(image_urls: List[str]) -> bool:
             logging.getLogger(__name__).error(f"Local OCR check failed for {url}: {e}")
             return False
 
-    # Run concurrently (max 3 images)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        results = list(executor.map(check_url, image_urls[:3]))
+    # Run concurrently for ALL images, not just the first 3
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(check_url, image_urls))
         
     return any(results)
 
