@@ -131,6 +131,21 @@ async def upload_media(
             
             file_obj_to_upload = io.BytesIO(content)
         else:
+            if file_ext == '.wav':
+                try:
+                    import wave
+                    with wave.open(io.BytesIO(content), 'rb') as w:
+                        frames = w.getnframes()
+                        rate = w.getframerate()
+                        duration = frames / float(rate)
+                        if duration > 610:  # 10 minutes + 10s buffer
+                            log_file_upload_blocked(get_real_ip(request), request.url.path, "Audio exceeds 10 minutes", str(current_user.id))
+                            raise HTTPException(status_code=400, detail="Voice message exceeds the maximum allowed duration of 10 minutes.")
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    print(f"Failed to check audio duration: {e}")
+                    
             file_obj_to_upload = file.file
             file_obj_to_upload.seek(0)
 

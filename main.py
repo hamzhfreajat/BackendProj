@@ -17,6 +17,21 @@ def escape_like(s: str) -> str:
     if not s: return ""
     return re.sub(r'([%_\\])', r'\\\1', s)
 
+def norm_str(s):
+    if not s: return s
+    for a, b in [('أ', 'ا'), ('إ', 'ا'), ('آ', 'ا'), ('ة', 'ه'), ('ى', 'ي')]:
+        s = s.replace(a, b)
+    return s
+
+def norm_col(col):
+    from sqlalchemy.sql import func
+    c = func.replace(col, 'أ', 'ا')
+    c = func.replace(c, 'إ', 'ا')
+    c = func.replace(c, 'آ', 'ا')
+    c = func.replace(c, 'ة', 'ه')
+    c = func.replace(c, 'ى', 'ي')
+    return c
+
 import models
 import schemas
 import auth
@@ -235,19 +250,22 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
             if parent_loc == "محافظة العاصمة": parent_loc = "عمان"
             elif parent_loc.startswith("محافظة "): parent_loc = parent_loc.replace("محافظة ", "")
             
+        target_loc_norm = norm_str(target_loc)
+        parent_loc_norm = norm_str(parent_loc) if parent_loc else None
+            
         filters = []
-        if target_loc == "أخرى" and parent_loc:
-            filters.append(models.Ad.location.ilike(f"{parent_loc}, أخرى%"))
-            filters.append(models.Ad.location.ilike(f"{parent_loc}, other%"))
+        if target_loc_norm == norm_str("أخرى") and parent_loc_norm:
+            filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc_norm}, أخرى%"))
+            filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc_norm}, other%"))
         else:
-            city = db.query(models.City).filter(models.City.name_ar == target_loc).first()
+            city = db.query(models.City).filter(norm_col(models.City.name_ar) == target_loc_norm).first()
             if city:
-                filters.append(models.Ad.location.ilike(f"{escape_like(target_loc)}%"))
+                filters.append(norm_col(models.Ad.location).ilike(f"{escape_like(target_loc_norm)}%"))
             else:
-                if parent_loc:
-                    filters.append(models.Ad.location.ilike(f"{escape_like(parent_loc)}, {escape_like(target_loc)}%"))
+                if parent_loc_norm:
+                    filters.append(norm_col(models.Ad.location).ilike(f"{escape_like(parent_loc_norm)}, {escape_like(target_loc_norm)}%"))
                 else:
-                    filters.append(models.Ad.location.ilike(f"%{escape_like(target_loc)}%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"%{escape_like(target_loc_norm)}%"))
                     
         if filters:
             ad_query = ad_query.filter(or_(*filters))
@@ -618,19 +636,7 @@ def get_saved_ads(current_user: models.User = Depends(auth.get_current_user), db
 
 from sqlalchemy.sql.expression import literal
 
-def norm_str(s):
-    if not s: return s
-    for a, b in [('أ', 'ا'), ('إ', 'ا'), ('آ', 'ا'), ('ة', 'ه'), ('ى', 'ي')]:
-        s = s.replace(a, b)
-    return s
 
-def norm_col(col):
-    c = func.replace(col, 'أ', 'ا')
-    c = func.replace(c, 'إ', 'ا')
-    c = func.replace(c, 'آ', 'ا')
-    c = func.replace(c, 'ة', 'ه')
-    c = func.replace(c, 'ى', 'ي')
-    return c
 
 SEARCH_SYNONYMS = {
     "سياره": ["سياره", "سيارات", "مركبه", "عربيه"],
@@ -970,36 +976,39 @@ def read_ads(
         if first_loc == "محافظة العاصمة": first_loc = "عمان"
         elif first_loc.startswith("محافظة "): first_loc = first_loc.replace("محافظة ", "")
         
-        city = db.query(models.City).filter(models.City.name_ar == first_loc).first()
+        target_loc_norm = norm_str(first_loc)
+        city = db.query(models.City).filter(norm_col(models.City.name_ar) == target_loc_norm).first()
         if city:
-            parent_loc = first_loc
+            parent_loc = target_loc_norm
             target_locs = location[1:]
         else:
             target_locs = location
             
         filters = []
         if parent_loc and not target_locs:
-            filters.append(models.Ad.location.like(f"{parent_loc}%"))
+            filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}%"))
         elif parent_loc and target_locs:
             for t_loc in target_locs:
                 if t_loc == "محافظة العاصمة": t_loc = "عمان"
                 elif t_loc.startswith("محافظة "): t_loc = t_loc.replace("محافظة ", "")
+                t_loc_norm = norm_str(t_loc)
                 
-                if t_loc == "أخرى":
-                    filters.append(models.Ad.location.like(f"{parent_loc}, أخرى%"))
-                    filters.append(models.Ad.location.like(f"{parent_loc}, other%"))
+                if t_loc_norm == norm_str("أخرى"):
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, other%"))
                 else:
-                    filters.append(models.Ad.location.like(f"{parent_loc}, {t_loc}%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm}%"))
         else:
             for t_loc in target_locs:
                 if t_loc == "محافظة العاصمة": t_loc = "عمان"
                 elif t_loc.startswith("محافظة "): t_loc = t_loc.replace("محافظة ", "")
+                t_loc_norm = norm_str(t_loc)
                 
-                if t_loc == "أخرى":
-                    filters.append(models.Ad.location.like(f"%أخرى%"))
-                    filters.append(models.Ad.location.like(f"%other%"))
+                if t_loc_norm == norm_str("أخرى"):
+                    filters.append(norm_col(models.Ad.location).ilike(f"%أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"%other%"))
                 else:
-                    filters.append(models.Ad.location.like(f"%{t_loc}%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm}%"))
                     
         if filters:
             query = query.filter(or_(*filters))

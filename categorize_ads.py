@@ -88,19 +88,23 @@ def run():
     # 1. Fetch all categories and format them for the prompt
     print("Fetching categories from database...")
     db_categories = db.query(models.Category).all()
+    parent_ids = {c.parent_id for c in db_categories if c.parent_id is not None}
+    
     categories_context_lines = []
     for cat in db_categories:
-        # Build a hierarchy string if possible, or just the name and ID
+        if cat.id in parent_ids:
+            continue # Skip parent categories
+            
         parent_name = ""
         if cat.parent_id:
             parent = next((p for p in db_categories if p.id == cat.parent_id), None)
             if parent:
-                parent_name = f" (Child of {parent.name})"
+                parent_name = f"{parent.name} > "
         
         linked_tags_str = ", ".join([tag.name for tag in getattr(cat, 'linked_tags', [])]) if getattr(cat, 'linked_tags', []) else ""
         tags = f" | Tag: {cat.tag}" if cat.tag else ""
         keywords = f" | Keywords: {linked_tags_str}" if linked_tags_str else ""
-        categories_context_lines.append(f"ID: {cat.id} | Name: {cat.name}{parent_name}{tags}{keywords}")
+        categories_context_lines.append(f"ID: {cat.id} | Name: {parent_name}{cat.name}{tags}{keywords}")
         
     categories_context = "\n".join(categories_context_lines)
     print(f"Loaded {len(db_categories)} categories.")

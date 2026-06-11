@@ -380,7 +380,22 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
             
         genai.configure(api_key=gemini_api_key)
         db_categories = db.query(models.Category).all()
-        categories_context = "\\n".join([f"ID: {cat.id} | Name: {cat.name} | Tags: {cat.slugs}" for cat in db_categories])
+        parent_ids = {c.parent_id for c in db_categories if c.parent_id is not None}
+        
+        categories_context_lines = []
+        for cat in db_categories:
+            if cat.id in parent_ids:
+                continue # Skip parent categories
+                
+            parent_name = ""
+            if cat.parent_id:
+                parent = next((p for p in db_categories if p.id == cat.parent_id), None)
+                if parent:
+                    parent_name = f"{parent.name} > "
+            
+            categories_context_lines.append(f"ID: {cat.id} | Name: {parent_name}{cat.name} | Tags: {cat.slugs}")
+            
+        categories_context = "\n".join(categories_context_lines)
 
         system_instruction = (
             "You are an expert AI data extraction assistant specialized in Jordanian classifieds ( العقارات, السيارات, الوظائف ).\\n"
@@ -443,11 +458,14 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                             
                         # Fallback logic for Category ID
                         final_category_id = ai_ad.get("category_id")
-                        if not final_category_id or final_category_id == 0:
+                        valid_category_ids = {c.id for c in db_categories}
+                        
+                        if not final_category_id or final_category_id not in valid_category_ids:
                             final_category_id = category_id
                             
-                        # If we still don't have a category ID, we can't save it to the DB! skip.
-                        if not final_category_id:
+                        # If we still don't have a valid category ID, we can't save it to the DB! skip.
+                        if not final_category_id or final_category_id not in valid_category_ids:
+                            print(f"INFO: [Scraper] Skipping post due to invalid or missing category ID ({final_category_id}).")
                             continue
                             
                         # Prevents duplicates by checking if the exact raw text is already in the database
@@ -462,7 +480,8 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                             if not user:
                                 user = models.User(
                                     email="ai_scraper@system.com",
-                                    username="AI Auto Scraper",
+                                    username="أحمد صالح",
+                                    full_name="أحمد صالح",
                                     hashed_password="mock",
                                     followers_count=random.randint(5000, 9500)
                                 )
