@@ -1,8 +1,0 @@
-import io, sys
-from sqlalchemy import create_engine, text
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-engine = create_engine('postgresql+psycopg2://postgres:123456@localhost:5432/open')
-with engine.connect() as conn:
-    res = conn.execute(text("SELECT id, parent_id, name, is_active FROM categories WHERE parent_id = 2"))
-    for row in res:
-        print(row)

@@ -13,3 +13,9 @@ firebase-service-account.json
 google-services.json
 *.pem
 *.key
+
+# Seed Scripts
+seed_*.py
+clean_seed.py
+dedup_seed.py
+rebuild_seed.py
