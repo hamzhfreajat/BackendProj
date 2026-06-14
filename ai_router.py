@@ -337,5 +337,5 @@ def generate_ad_suggestions(request: dict, current_user: models.User = Depends(a
                     raw = raw[4:]
             return json.loads(raw.strip())
         except Exception as fallback_e:
-            print(f"DeepSeek fallback error: {fallback_e}")
-            raise HTTPException(status_code=500, detail="فشل في توليد الاقتراحات")
+            print(f"DeepSeek fallback error: {fallback_e}", flush=True)
+            raise HTTPException(status_code=500, detail=f"فشل في توليد الاقتراحات. السبب: {fallback_e}")
