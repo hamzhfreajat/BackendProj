@@ -133,7 +133,33 @@ def location_intelligence(request: dict, current_user: models.User = Depends(aut
         return {"landmarks": json.loads(raw.strip())}
     except Exception as e:
         print(f"Location Intelligence error: {e}")
-        return {"landmarks": []}
+        try:
+            print("Attempting fallback to DeepSeek...")
+            import openai
+            import os
+            import json
+            deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+            if not deepseek_key:
+                raise Exception("DEEPSEEK_API_KEY not set")
+            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json\n"):
+                    raw = raw[5:]
+                elif raw.startswith("json"):
+                    raw = raw[4:]
+            parsed = json.loads(raw.strip())
+            if isinstance(parsed, dict) and "landmarks" in parsed:
+                return parsed
+            return {"landmarks": parsed}
+        except Exception as fallback_e:
+            print(f"DeepSeek fallback error: {fallback_e}")
+            return {"landmarks": []}
 
 @router.post("/price-estimate")
 def price_estimate(request: dict, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -216,7 +242,31 @@ def evaluate_ad(request: dict, current_user: models.User = Depends(auth.get_curr
         return json.loads(raw.strip())
     except Exception as e:
         print(f"Evaluate Ad error: {e}")
-        return {"score": 75, "tips": ["تأكد من إرفاق صور واضحة للحصول على مشاهدات أكثر"]}
+        try:
+            print("Attempting fallback to DeepSeek...")
+            import openai
+            import os
+            import json
+            deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+            if not deepseek_key:
+                raise Exception("DEEPSEEK_API_KEY not set")
+            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json\n"):
+                    raw = raw[5:]
+                elif raw.startswith("json"):
+                    raw = raw[4:]
+            return json.loads(raw.strip())
+        except Exception as fallback_e:
+            print(f"DeepSeek fallback error: {fallback_e}")
+            return {"score": 75, "tips": ["تأكد من إرفاق صور واضحة للحصول على مشاهدات أكثر"]}
 
 @router.post("/generate-suggestions")
 def generate_ad_suggestions(request: dict, current_user: models.User = Depends(auth.get_current_user)):
@@ -266,4 +316,26 @@ def generate_ad_suggestions(request: dict, current_user: models.User = Depends(a
         return json.loads(raw.strip())
     except Exception as e:
         print(f"Suggestions error: {e}")
-        raise HTTPException(status_code=500, detail="فشل في توليد الاقتراحات")
+        try:
+            print("Attempting fallback to DeepSeek...")
+            import openai
+            deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+            if not deepseek_key:
+                raise Exception("DEEPSEEK_API_KEY not set in environment.")
+            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json\n"):
+                    raw = raw[5:]
+                elif raw.startswith("json"):
+                    raw = raw[4:]
+            return json.loads(raw.strip())
+        except Exception as fallback_e:
+            print(f"DeepSeek fallback error: {fallback_e}")
+            raise HTTPException(status_code=500, detail="فشل في توليد الاقتراحات")
