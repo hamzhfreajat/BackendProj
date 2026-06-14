@@ -2,7 +2,8 @@ import os
 import json
 import base64
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from limiter import limiter
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -26,7 +27,8 @@ def _get_api_key():
     return api_key
 
 @router.post("/analyze-image")
-async def analyze_image(file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+async def analyze_image(request: Request, file: UploadFile = File(...), current_user: models.User = Depends(auth.get_current_user)):
     """
     Visual AI: Processes the first uploaded image to detect category and quality.
     """
@@ -89,14 +91,15 @@ async def analyze_image(file: UploadFile = File(...), current_user: models.User 
         return {"category_name": None, "image_quality": "good"}
 
 @router.post("/location-intelligence")
-def location_intelligence(request: dict, current_user: models.User = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+def location_intelligence(request: Request, data: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     Returns landmarks near the given region and city in Jordan.
     Uses Gemini to synthesize nearby landmarks if lat/lng not strictly coded.
     """
     api_key = _get_api_key()
-    region = request.get("region", "")
-    city = request.get("city", "")
+    region = data.get("region", "")
+    city = data.get("city", "")
     
     if not region and not city:
         return {"landmarks": []}
@@ -162,12 +165,13 @@ def location_intelligence(request: dict, current_user: models.User = Depends(aut
             return {"landmarks": []}
 
 @router.post("/price-estimate")
-def price_estimate(request: dict, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+def price_estimate(request: Request, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
     """
     Calculates the median/average price of similar ads.
     """
-    cat_id = request.get("category_id")
-    region = request.get("region")
+    cat_id = data.get("category_id")
+    region = data.get("region")
     
     if not cat_id:
         return {"average_price": 0, "message": ""}
@@ -203,7 +207,8 @@ def price_estimate(request: dict, db: Session = Depends(get_db), current_user: m
     return {"average_price": 0, "message": "لا توجد بيانات كافية لتقدير السعر المتوسط لهذا القسم حتى الآن."}
 
 @router.post("/evaluate-ad")
-def evaluate_ad(request: dict, current_user: models.User = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+def evaluate_ad(request: Request, data: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     AI Coach: Evaluates the complete ad payload right before publishing.
     """
@@ -216,7 +221,7 @@ def evaluate_ad(request: dict, current_user: models.User = Depends(auth.get_curr
     2. A list of 2 or 3 short 'tips' (in Arabic) to improve it (e.g. "أضف المزيد من الصور", "وصفك ممتاز ومفصل!", "السعر قد يكون مرتفعاً قليلاً").
     
     Ad Data:
-    {json.dumps(request, ensure_ascii=False)}
+    {json.dumps(data, ensure_ascii=False)}
     
     Return a JSON object:
     {{"score": 85, "tips": ["نصيحة 1", "نصيحة 2"]}}
@@ -269,7 +274,8 @@ def evaluate_ad(request: dict, current_user: models.User = Depends(auth.get_curr
             return {"score": 75, "tips": ["تأكد من إرفاق صور واضحة للحصول على مشاهدات أكثر"]}
 
 @router.post("/generate-suggestions")
-def generate_ad_suggestions(request: dict, current_user: models.User = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+def generate_ad_suggestions(request: Request, data: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     Generative AI: Title, Description, and Smart Tags.
     """
@@ -282,7 +288,7 @@ def generate_ad_suggestions(request: dict, current_user: models.User = Depends(a
     قم أيضاً باستخراج **3 إلى 5 كلمات مفتاحية (Tags)** ذكية ومناسبة للإعلان ككل.
     
     المعلومات المدخلة من المستخدم:
-    {json.dumps(request, ensure_ascii=False, indent=2)}
+    {json.dumps(data, ensure_ascii=False, indent=2)}
 
     قم بإرجاع النتيجة حصرياً بصيغة JSON، يحتوي على مصفوفة "suggestions" ومصفوفة "smart_tags".
     لا تقم بإضافة أي نصوص أخرى أو Markdowns خارج سياق الـ JSON. 

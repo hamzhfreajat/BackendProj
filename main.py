@@ -72,6 +72,13 @@ app = FastAPI(
     openapi_url=None if os.getenv("ENV") == "production" else "/openapi.json"
 )
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from limiter import limiter
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Ensure all database tables exist (creates newly added tables like saved_ads)
 models.Base.metadata.create_all(bind=engine)
 
