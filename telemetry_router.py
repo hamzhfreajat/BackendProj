@@ -83,8 +83,51 @@ def get_analytics(db: Session = Depends(get_db)):
         {"name": "Contacts", "value": funnel_result.step3 if funnel_result else 0},
     ]
 
+    # Sankey User Flow
+    sankey_query = text('''
+        SELECT 
+          metadata_json->>'previous_screen' as source_screen,
+          metadata_json->>'screen_name' as target_screen,
+          COUNT(*) as value
+        FROM telemetry_events
+        WHERE event_name = 'screen_viewed'
+          AND metadata_json->>'previous_screen' IS NOT NULL
+          AND metadata_json->>'screen_name' IS NOT NULL
+        GROUP BY source_screen, target_screen
+        HAVING COUNT(*) > 0
+        ORDER BY value DESC
+        LIMIT 50;
+    ''')
+    sankey_results = db.execute(sankey_query).fetchall()
+    
+    nodes_dict = {}
+    links = []
+    for r in sankey_results:
+        src = r.source_screen
+        tgt = r.target_screen
+        val = r.value
+        
+        # Filter out self-loops to make sankey cleaner
+        if src == tgt:
+            continue
+            
+        if src not in nodes_dict:
+            nodes_dict[src] = len(nodes_dict)
+        if tgt not in nodes_dict:
+            nodes_dict[tgt] = len(nodes_dict)
+            
+        links.append({
+            "source": nodes_dict[src],
+            "target": nodes_dict[tgt],
+            "value": val
+        })
+        
+    nodes = [{"name": name} for name in nodes_dict.keys()]
+    sankey_data = {"nodes": nodes, "links": links}
+
     return {
         "dau": dau_data,
         "top_screens": top_screens,
-        "funnel": funnel_data
+        "funnel": funnel_data,
+        "sankey": sankey_data
     }
