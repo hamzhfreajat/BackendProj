@@ -2359,7 +2359,13 @@ async def startup_event():
     
     try:
         redis_host = os.getenv("REDIS_HOST", "redis")
-        app.state.arq_pool = await create_pool(RedisSettings(host=redis_host, port=6379))
+        redis_port = int(os.getenv("REDIS_PORT", 6379))
+        redis_password = os.getenv("REDIS_PASSWORD", None)
+        app.state.arq_pool = await create_pool(RedisSettings(
+            host=redis_host, 
+            port=redis_port, 
+            password=redis_password
+        ))
     except Exception as e:
         print(f"Failed to connect to ARQ Redis pool: {e}")
         app.state.arq_pool = None

@@ -33,4 +33,8 @@ async def process_telemetry_batch(ctx, batch):
 
 class WorkerSettings:
     functions = [process_telemetry_batch]
-    redis_settings = RedisSettings(host=os.getenv("REDIS_HOST", "redis"), port=6379)
+    redis_settings = RedisSettings(
+        host=os.getenv("REDIS_HOST", "redis"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        password=os.getenv("REDIS_PASSWORD", None)
+    )
