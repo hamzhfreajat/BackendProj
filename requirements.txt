@@ -18,3 +18,4 @@ Pillow>=10.0.0
 google-auth>=2.23.0
 redis>=5.0.1
 slowapi>=0.1.9
+arq>=0.25.0

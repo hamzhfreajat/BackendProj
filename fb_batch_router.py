@@ -959,8 +959,14 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     except Exception as e:
         logger.error(f"Failed to trigger notifications: {e}")
         
+    # SYNC TO NLP SEARCH INDEX
+    try:
+        from search_service import SearchService
+        SearchService.sync_ad_to_search_index(db, ad)
+    except Exception as e:
+        logger.error(f"Failed to sync ad to search index: {e}")
+        
     return ad
-
 
 # -- Main endpoint -----------------------------------------------------------
 

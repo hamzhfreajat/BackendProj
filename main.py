@@ -152,6 +152,9 @@ app.include_router(tracking_router)
 from whatsapp_router import router as whatsapp_router
 app.include_router(whatsapp_router)
 
+from telemetry_router import router as telemetry_router
+app.include_router(telemetry_router)
+
 
 # Mount the uploads directory to serve media files
 import os
@@ -2347,9 +2350,19 @@ async def republish_notifier_worker():
             print(f"Error in republish_notifier_worker: {e}")
         await asyncio.sleep(600)
 
+from arq import create_pool
+from arq.connections import RedisSettings
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(republish_notifier_worker())
+    
+    try:
+        redis_host = os.getenv("REDIS_HOST", "redis")
+        app.state.arq_pool = await create_pool(RedisSettings(host=redis_host, port=6379))
+    except Exception as e:
+        print(f"Failed to connect to ARQ Redis pool: {e}")
+        app.state.arq_pool = None
     
     # Run DB Migrations for new tracking columns
     db = SessionLocal()

@@ -490,3 +490,13 @@ class SearchQueryLog(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
     
     user = relationship("User")
+
+class TelemetryEvent(Base):
+    __tablename__ = "telemetry_events"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    event_name = Column(String(100), nullable=False, index=True)
+    user_id = Column(String(100), nullable=True, index=True) # Could be string (device ID) or integer
+    screen = Column(String(100), nullable=True)
+    metadata_json = Column(JSONB, nullable=True)
+    timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)

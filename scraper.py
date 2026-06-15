@@ -511,6 +511,12 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                             db.add(new_ad)
                             db.commit()
                             db.refresh(new_ad)
+                            
+                            try:
+                                from search_service import SearchService
+                                SearchService.sync_ad_to_search_index(db, new_ad)
+                            except Exception as sync_e:
+                                print(f"WARNING: Failed to sync ad {new_ad.id} to search index: {sync_e}")
 
                             processed_count += 1
                             
