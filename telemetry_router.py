@@ -56,31 +56,31 @@ def get_analytics(db: Session = Depends(get_db)):
 
     # Top Visited Screens
     screens_query = text('''
-        SELECT screen, COUNT(*) as views
+        SELECT metadata_json->>'screen_name' as screen, COUNT(*) as views
         FROM telemetry_events
-        WHERE event_name = 'screen_view' AND screen IS NOT NULL
-        GROUP BY screen 
+        WHERE event_name = 'screen_viewed' AND metadata_json->>'screen_name' IS NOT NULL
+        GROUP BY metadata_json->>'screen_name'
         ORDER BY views DESC 
         LIMIT 10;
     ''')
     screens_results = db.execute(screens_query).fetchall()
     top_screens = [{"screen": r.screen, "views": r.views} for r in screens_results]
 
-    # Funnel: view_home -> view_cart -> checkout_success
+    # Funnel: category_viewed -> property_viewed -> contact_agent_initiated
     funnel_query = text('''
         SELECT
-          COUNT(DISTINCT CASE WHEN event_name = 'view_home' THEN user_id END) AS step1_home,
-          COUNT(DISTINCT CASE WHEN event_name = 'view_cart' THEN user_id END) AS step2_cart,
-          COUNT(DISTINCT CASE WHEN event_name = 'checkout_success' THEN user_id END) AS step3_checkout
+          COUNT(DISTINCT CASE WHEN event_name = 'category_viewed' THEN user_id END) AS step1,
+          COUNT(DISTINCT CASE WHEN event_name = 'property_viewed' THEN user_id END) AS step2,
+          COUNT(DISTINCT CASE WHEN event_name = 'contact_agent_initiated' THEN user_id END) AS step3
         FROM telemetry_events
         WHERE timestamp >= CURRENT_DATE - INTERVAL '7 days';
     ''')
     funnel_result = db.execute(funnel_query).fetchone()
     
     funnel_data = [
-        {"name": "Home", "value": funnel_result.step1_home if funnel_result else 0},
-        {"name": "Cart", "value": funnel_result.step2_cart if funnel_result else 0},
-        {"name": "Checkout", "value": funnel_result.step3_checkout if funnel_result else 0},
+        {"name": "Categories", "value": funnel_result.step1 if funnel_result else 0},
+        {"name": "Properties", "value": funnel_result.step2 if funnel_result else 0},
+        {"name": "Contacts", "value": funnel_result.step3 if funnel_result else 0},
     ]
 
     return {
