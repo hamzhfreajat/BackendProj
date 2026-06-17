@@ -953,6 +953,7 @@ def read_ads(
     tags: List[str] = Query(None),
     user_lat: float = None,
     user_lng: float = None,
+    only_others: bool = False,
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
@@ -1022,6 +1023,13 @@ def read_ads(
                     
         if filters:
             query = query.filter(or_(*filters))
+            
+    if only_others:
+        query = query.filter(or_(
+            models.Ad.location.ilike("%أخرى%"),
+            models.Ad.location.ilike("%اخرى%"),
+            models.Ad.location.ilike("%other%")
+        ))
         
     if min_price is not None:
         query = query.filter(models.Ad.price >= min_price)
