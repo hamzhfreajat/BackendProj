@@ -1819,8 +1819,9 @@ def update_ad(
     # Handle automatic region creation if location specifies a new region
     if "location" in update_dict and update_dict["location"]:
         loc_str = update_dict["location"].strip()
-        if "," in loc_str or "،" in loc_str:
-            parts = [p.strip() for p in loc_str.replace("،", ",").split(",")]
+        loc_str = loc_str.replace("،", ",").replace("-", ",").replace(" - ", ",")
+        if "," in loc_str:
+            parts = [p.strip() for p in loc_str.split(",")]
             if len(parts) >= 2:
                 city_name = parts[0]
                 region_name = parts[1]
