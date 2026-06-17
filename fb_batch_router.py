@@ -1063,8 +1063,16 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if unique_key_url: seen_in_batch_urls.add(unique_key_url)
 
         raw_text = post.text or ""
-        clean_text = re.sub(r'[\s-]', '', raw_text)
-        if not re.search(r'\d{9,}', clean_text):
+        # 1. Strip spaces, dashes, dots, parens
+        clean_text = re.sub(r'[\s\-\.\(\)]', '', raw_text)
+        # 2. Convert Arabic numerals to English
+        arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
+        clean_text = clean_text.translate(arabic_to_english)
+        
+        # 3. Check for Jordanian mobile pattern: 07[789] followed by 7 digits (with optional country codes)
+        # Allows: 079XXXXXXX, 0096279XXXXXXX, 96279XXXXXXX, +96279XXXXXXX
+        phone_match = re.search(r'(?:00962|962|\+962|0)?(7[789]\d{7})', clean_text)
+        if not phone_match:
             skipped += 1
             results.append(PostResult(index=idx, status="skipped", reason="No phone number found"))
             continue
@@ -1155,6 +1163,20 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             is_legacy_reject = not ai_data.get("category_id") and not ai_data.get("category_name")
             
             # Check if AI successfully extracted a phone number
+            if not ai_data.get("phone_number"):
+                # Fallback: Extract using Regex directly from the post text
+                import re
+                raw_text_clean = re.sub(r'[\s\-\.\(\)]', '', post.text or "")
+                arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
+                raw_text_clean = raw_text_clean.translate(arabic_to_english)
+                
+                # Match Jordanian numbers
+                phone_match = re.search(r'(?:00962|962|\+962|0)?(7[789]\d{7})', raw_text_clean)
+                if phone_match:
+                    phone_core = phone_match.group(1)
+                    ai_data["phone_number"] = f"0{phone_core}"
+                    logger.info(f"Fallback Regex recovered phone number: 0{phone_core} for Post #{idx}")
+
             has_no_phone = not ai_data.get("phone_number")
             
             if is_explicit_reject or is_legacy_reject or has_no_phone:
