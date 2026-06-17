@@ -143,7 +143,7 @@ def get_analytics(db: Session = Depends(get_db)):
     # Dead Clicks
     dead_clicks_query = text('''
         SELECT 
-          COALESCE(metadata_json->>'screen_name', 'Unknown') as screen,
+          COALESCE(screen, 'Unknown') as screen,
           COUNT(*) as count
         FROM telemetry_events
         WHERE event_name = 'dead_click'
@@ -170,7 +170,7 @@ def get_analytics(db: Session = Depends(get_db)):
     # U-Turns
     u_turns_query = text('''
         SELECT 
-          metadata_json->>'screen_name' as screen,
+          COALESCE(screen, 'Unknown') as screen,
           COUNT(*) as count
         FROM telemetry_events
         WHERE event_name = 'u_turn'
