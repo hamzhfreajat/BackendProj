@@ -1227,6 +1227,8 @@ def read_ads(
         query = query.order_by(distance.asc().nulls_last(), models.Ad.id.desc())
     elif sort_by == 'newest':
         query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+    elif sort_by == 'strict_newest':
+        query = query.order_by(models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
         query = query.order_by(models.Ad.is_hot.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'recommended' or sort_by is None:
