@@ -1165,7 +1165,6 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             # Check if AI successfully extracted a phone number
             if not ai_data.get("phone_number"):
                 # Fallback: Extract using Regex directly from the post text
-                import re
                 raw_text_clean = re.sub(r'[\s\-\.\(\)]', '', post.text or "")
                 arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
                 raw_text_clean = raw_text_clean.translate(arabic_to_english)
