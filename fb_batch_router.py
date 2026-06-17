@@ -1246,9 +1246,44 @@ def log_scraping_run(req: ScrapingLogRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/scraping-logs")
-def get_scraping_logs(limit: int = 50, skip: int = 0, db: Session = Depends(get_db)):
-    logs = db.query(models.ScrapingLog).order_by(models.ScrapingLog.created_at.desc()).offset(skip).limit(limit).all()
-    return [{
+def get_scraping_logs(
+    page: int = 1,
+    limit: int = 50,
+    sort_by: str = "created_at",
+    sort_desc: bool = True,
+    group_name: Optional[str] = None,
+    min_saved_ads: Optional[int] = None,
+    min_errors: Optional[int] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.ScrapingLog)
+    
+    if group_name:
+        query = query.filter(models.ScrapingLog.group_name.ilike(f"%{group_name}%"))
+    if min_saved_ads is not None:
+        query = query.filter(models.ScrapingLog.saved_ads >= min_saved_ads)
+    if min_errors is not None:
+        query = query.filter(models.ScrapingLog.errors_count >= min_errors)
+    if start_date:
+        query = query.filter(models.ScrapingLog.created_at >= start_date)
+    if end_date:
+        query = query.filter(models.ScrapingLog.created_at <= end_date)
+        
+    total = query.count()
+    
+    # Sorting
+    sort_column = getattr(models.ScrapingLog, sort_by, models.ScrapingLog.created_at)
+    if sort_desc:
+        query = query.order_by(sort_column.desc())
+    else:
+        query = query.order_by(sort_column.asc())
+        
+    skip = (page - 1) * limit
+    logs = query.offset(skip).limit(limit).all()
+    
+    items = [{
         "id": l.id,
         "group_name": l.group_name,
         "saved_ads": l.saved_ads,
@@ -1257,3 +1292,5 @@ def get_scraping_logs(limit: int = 50, skip: int = 0, db: Session = Depends(get_
         "created_at": l.created_at.isoformat() if l.created_at else None,
         "json_data": l.json_data
     } for l in logs]
+    
+    return {"total": total, "items": items}
