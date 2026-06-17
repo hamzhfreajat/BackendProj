@@ -125,9 +125,72 @@ def get_analytics(db: Session = Depends(get_db)):
     nodes = [{"name": name} for name in nodes_dict.keys()]
     sankey_data = {"nodes": nodes, "links": links}
 
+    # Friction Metrics
+    # Rage Taps
+    rage_taps_query = text('''
+        SELECT 
+          metadata_json->>'location' as location,
+          metadata_json->>'target_name' as target,
+          COUNT(*) as count
+        FROM telemetry_events
+        WHERE event_name = 'rage_tap'
+        GROUP BY location, target
+        ORDER BY count DESC LIMIT 10;
+    ''')
+    rage_taps_results = db.execute(rage_taps_query).fetchall()
+    rage_taps_data = [{"location": f"{r.location} - {r.target}", "count": r.count} for r in rage_taps_results]
+
+    # Dead Clicks
+    dead_clicks_query = text('''
+        SELECT 
+          COALESCE(metadata_json->>'screen_name', 'Unknown') as screen,
+          COUNT(*) as count
+        FROM telemetry_events
+        WHERE event_name = 'dead_click'
+        GROUP BY screen
+        ORDER BY count DESC LIMIT 10;
+    ''')
+    dead_clicks_results = db.execute(dead_clicks_query).fetchall()
+    dead_clicks_data = [{"screen": r.screen, "count": r.count} for r in dead_clicks_results]
+
+    # Form Abandonment
+    form_abandoned_query = text('''
+        SELECT 
+          metadata_json->>'form_name' as form,
+          metadata_json->>'last_active_field' as field,
+          COUNT(*) as count
+        FROM telemetry_events
+        WHERE event_name = 'form_abandoned'
+        GROUP BY form, field
+        ORDER BY count DESC LIMIT 10;
+    ''')
+    form_abandoned_results = db.execute(form_abandoned_query).fetchall()
+    form_abandoned_data = [{"form_field": f"{r.form} ({r.field})", "count": r.count} for r in form_abandoned_results]
+
+    # U-Turns
+    u_turns_query = text('''
+        SELECT 
+          metadata_json->>'screen_name' as screen,
+          COUNT(*) as count
+        FROM telemetry_events
+        WHERE event_name = 'u_turn'
+        GROUP BY screen
+        ORDER BY count DESC LIMIT 10;
+    ''')
+    u_turns_results = db.execute(u_turns_query).fetchall()
+    u_turns_data = [{"screen": r.screen, "count": r.count} for r in u_turns_results]
+    
+    friction_metrics = {
+        "rage_taps": rage_taps_data,
+        "dead_clicks": dead_clicks_data,
+        "form_abandonment": form_abandoned_data,
+        "u_turns": u_turns_data
+    }
+
     return {
         "dau": dau_data,
         "top_screens": top_screens,
         "funnel": funnel_data,
-        "sankey": sankey_data
+        "sankey": sankey_data,
+        "friction_metrics": friction_metrics
     }
