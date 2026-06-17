@@ -134,7 +134,7 @@ def get_analytics(db: Session = Depends(get_db)):
           COUNT(*) as count
         FROM telemetry_events
         WHERE event_name = 'rage_tap'
-        GROUP BY location, target
+        GROUP BY 1, 2
         ORDER BY count DESC LIMIT 10;
     ''')
     rage_taps_results = db.execute(rage_taps_query).fetchall()
@@ -147,7 +147,7 @@ def get_analytics(db: Session = Depends(get_db)):
           COUNT(*) as count
         FROM telemetry_events
         WHERE event_name = 'dead_click'
-        GROUP BY screen
+        GROUP BY 1
         ORDER BY count DESC LIMIT 10;
     ''')
     dead_clicks_results = db.execute(dead_clicks_query).fetchall()
@@ -161,7 +161,7 @@ def get_analytics(db: Session = Depends(get_db)):
           COUNT(*) as count
         FROM telemetry_events
         WHERE event_name = 'form_abandoned'
-        GROUP BY form, field
+        GROUP BY 1, 2
         ORDER BY count DESC LIMIT 10;
     ''')
     form_abandoned_results = db.execute(form_abandoned_query).fetchall()
@@ -174,7 +174,7 @@ def get_analytics(db: Session = Depends(get_db)):
           COUNT(*) as count
         FROM telemetry_events
         WHERE event_name = 'u_turn'
-        GROUP BY screen
+        GROUP BY 1
         ORDER BY count DESC LIMIT 10;
     ''')
     u_turns_results = db.execute(u_turns_query).fetchall()
