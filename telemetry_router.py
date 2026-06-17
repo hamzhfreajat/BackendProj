@@ -61,7 +61,7 @@ def get_analytics(db: Session = Depends(get_db)):
         WHERE event_name = 'screen_viewed' AND metadata_json->>'screen_name' IS NOT NULL
         GROUP BY metadata_json->>'screen_name'
         ORDER BY views DESC 
-        LIMIT 10;
+        LIMIT 50;
     ''')
     screens_results = db.execute(screens_query).fetchall()
     top_screens = [{"screen": r.screen, "views": r.views} for r in screens_results]
@@ -135,7 +135,7 @@ def get_analytics(db: Session = Depends(get_db)):
         FROM telemetry_events
         WHERE event_name = 'rage_tap'
         GROUP BY 1, 2
-        ORDER BY count DESC LIMIT 10;
+        ORDER BY count DESC LIMIT 50;
     ''')
     rage_taps_results = db.execute(rage_taps_query).fetchall()
     rage_taps_data = [{"location": f"{r.location} - {r.target}", "count": r.count} for r in rage_taps_results]
@@ -148,7 +148,7 @@ def get_analytics(db: Session = Depends(get_db)):
         FROM telemetry_events
         WHERE event_name = 'dead_click'
         GROUP BY 1
-        ORDER BY count DESC LIMIT 10;
+        ORDER BY count DESC LIMIT 50;
     ''')
     dead_clicks_results = db.execute(dead_clicks_query).fetchall()
     dead_clicks_data = [{"screen": r.screen, "count": r.count} for r in dead_clicks_results]
@@ -162,7 +162,7 @@ def get_analytics(db: Session = Depends(get_db)):
         FROM telemetry_events
         WHERE event_name = 'form_abandoned'
         GROUP BY 1, 2
-        ORDER BY count DESC LIMIT 10;
+        ORDER BY count DESC LIMIT 50;
     ''')
     form_abandoned_results = db.execute(form_abandoned_query).fetchall()
     form_abandoned_data = [{"form_field": f"{r.form} ({r.field})", "count": r.count} for r in form_abandoned_results]
@@ -175,7 +175,7 @@ def get_analytics(db: Session = Depends(get_db)):
         FROM telemetry_events
         WHERE event_name = 'u_turn'
         GROUP BY 1
-        ORDER BY count DESC LIMIT 10;
+        ORDER BY count DESC LIMIT 50;
     ''')
     u_turns_results = db.execute(u_turns_query).fetchall()
     u_turns_data = [{"screen": r.screen, "count": r.count} for r in u_turns_results]
