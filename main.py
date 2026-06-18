@@ -1576,6 +1576,9 @@ def update_ad_draft(
 
     for key, value in update_data.items():
         setattr(db_ad, key, value)
+        
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(db_ad, "attributes")
 
     if tags_data is not None:
         db_ad.linked_tags.clear()
@@ -1690,6 +1693,11 @@ def create_ad(
     tags_data = ad_data.pop("linked_tags", [])
     
     image_urls = ad_data.pop("image_urls", [])
+    if len(image_urls) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail="A minimum of 3 images is required to publish an ad."
+        )
     
     # We must explicitly pop phone_number and rooms to prevent SQLAlchemy from crashing as they are not columns
     ad_data.pop("phone_number", None)
@@ -1786,13 +1794,23 @@ def update_ad(
     update_dict = ad_update.model_dump(exclude_unset=True)
     re_detail_data = update_dict.pop("real_estate_detail", None)
     tags_data = update_dict.pop("linked_tags", [])
-    image_urls = update_dict.pop("image_urls", [])
+    
+    image_urls_updated = False
+    if "image_urls" in update_dict:
+        image_urls = update_dict.pop("image_urls")
+        if len(image_urls) < 3:
+            raise HTTPException(
+                status_code=400,
+                detail="A minimum of 3 images is required to publish an ad."
+            )
+        image_urls_updated = True
 
     update_dict.pop("phone_number", None)
     update_dict.pop("rooms", None)
     
     attributes = update_dict.get("attributes") or {}
-    attributes["image_urls"] = image_urls
+    if image_urls_updated:
+        attributes["image_urls"] = image_urls
     
     dynamic_data = attributes.get("dynamic_data", {})
     if dynamic_data:
