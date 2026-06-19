@@ -339,7 +339,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     cat_id = item.get("category_id")
                     rej_reason = item.get("rejection_reason", "")
                     if cat_id == 0 and not rej_reason:
-                        rej_reason = "Explicitly rejected by AI rule"
+                        rej_reason = "مرفوض من الذكاء الاصطناعي: الإعلان ليس عرضاً عقارياً أو أنه طلب (مطلوب)"
 
                     raw_attrs = item.get("attributes", {})
                     if not isinstance(raw_attrs, dict): raw_attrs = {}
