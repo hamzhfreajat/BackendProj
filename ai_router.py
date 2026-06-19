@@ -139,8 +139,8 @@ def location_intelligence(request: Request, data: dict, current_user: models.Use
         try:
             print("Attempting fallback to DeepSeek...")
             import openai
-            import os
-            import json
+
+
             deepseek_key = os.getenv("DEEPSEEK_API_KEY")
             if not deepseek_key:
                 raise Exception("DEEPSEEK_API_KEY not set")
@@ -250,8 +250,8 @@ def evaluate_ad(request: Request, data: dict, current_user: models.User = Depend
         try:
             print("Attempting fallback to DeepSeek...")
             import openai
-            import os
-            import json
+
+
             deepseek_key = os.getenv("DEEPSEEK_API_KEY")
             if not deepseek_key:
                 raise Exception("DEEPSEEK_API_KEY not set")

@@ -1515,6 +1515,9 @@ def create_ad_draft(
     attributes["image_urls"] = image_urls
     ad_data["attributes"] = attributes
 
+    if image_urls:
+        ad_data["image_url"] = image_urls[0]
+
     db_ad = models.Ad(
         **ad_data,
         user_id=user_id,
@@ -1567,7 +1570,9 @@ def update_ad_draft(
     attributes = db_ad.attributes or {}
     if image_urls is not None:
         attributes["image_urls"] = image_urls
-    
+        if image_urls:
+            update_data["image_url"] = image_urls[0]
+
     new_attrs = update_data.pop("attributes", None)
     if new_attrs:
         attributes.update(new_attrs)
@@ -1610,6 +1615,13 @@ def create_ad(
 ):
     user_id = current_user.id
     user_phone = ad.phone_number or current_user.mobile_number
+
+    # Validate image count
+    if not ad.image_urls or len(ad.image_urls) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail="A minimum of 3 images is required to publish an ad."
+        )
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     
@@ -1707,6 +1719,9 @@ def create_ad(
     attributes["image_urls"] = image_urls
     if user_phone:
         attributes["phone_number"] = user_phone
+        
+    if image_urls:
+        ad_data["image_url"] = image_urls[0]
         
     dynamic_data = attributes.get("dynamic_data", {})
     if dynamic_data:
