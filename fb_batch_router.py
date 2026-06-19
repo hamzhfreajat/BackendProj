@@ -337,9 +337,9 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
                     if not isinstance(item, dict): continue
 
                     cat_id = item.get("category_id")
-                    rej_reason = ""
-                    if cat_id == 0:
-                        rej_reason = "Seeking property, explicitly rejected by AI rule"
+                    rej_reason = item.get("rejection_reason", "")
+                    if cat_id == 0 and not rej_reason:
+                        rej_reason = "Explicitly rejected by AI rule"
 
                     raw_attrs = item.get("attributes", {})
                     if not isinstance(raw_attrs, dict): raw_attrs = {}
@@ -1075,6 +1075,13 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if not phone_match:
             skipped += 1
             results.append(PostResult(index=idx, status="skipped", reason="No phone number found"))
+            continue
+
+        # 4. Pre-filter explicitly unrelated or seeking posts via Regex to save AI costs
+        seeking_service_pattern = r'\b(مطلوب|نشتري|ابحث عن|نبحث عن|مين عنده|حدا عنده|استفسار|فني|صيانة|تصليح|ترحيل|نجار|نجّار|سباك|مواسرجي|تنسيق حدائق|حجامه|حجامة|دهان منازل|تزفيت|مواصلات|رحلات|سكراب|خردة|توصيلة|توصيل|نقليات)\b|\bنقل\b.*\b(عفش|اثاث|أثاث|الاثاث|الأثاث)\b|\b(عفش|اثاث|أثاث|الاثاث|الأثاث)\b.*\bنقل\b|\bتركيب\b.*\b(عفش|اثاث|أثاث|الاثاث|الأثاث|غرف نوم|ستائر|برادي)\b|\b(تنظيف|تغليف|فك وتركيب)\b'
+        if re.search(seeking_service_pattern, raw_text):
+            skipped += 1
+            results.append(PostResult(index=idx, status="skipped", reason="Seeking property or offering services (Regex filtered)"))
             continue
 
         post_index_map[len(posts_to_process)] = idx
