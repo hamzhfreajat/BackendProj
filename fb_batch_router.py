@@ -773,7 +773,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
     ai_loc_str = ai_data.get("location", "")
     mapped_location = map_location(ai_loc_str, location_map)
     
-    # DYNAMIC REGION ADDITION
+    # DYNAMIC REGION ADDITION with Fuzzy Match Check
     if (not mapped_location or "أخرى" in mapped_location) and ai_loc_str and "," in ai_loc_str:
         parts = [p.strip() for p in ai_loc_str.split(",", 1)]
         if len(parts) == 2:
@@ -782,11 +782,20 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
                 from models import City, Region
                 city_obj = db.query(City).filter(City.name_ar == city_name).first()
                 if city_obj:
-                    existing_region = db.query(Region).filter(
-                        Region.city_id == city_obj.id,
-                        Region.name_ar == region_name
-                    ).first()
-                    if not existing_region:
+                    # Fuzzy match check to avoid "قرب عقربا" if "عقربا" exists
+                    all_regions_in_city = db.query(Region).filter(Region.city_id == city_obj.id).all()
+                    fuzzy_matched_region = None
+                    # Sort by longest first to match the best region
+                    all_regions_in_city.sort(key=lambda r: len(r.name_ar), reverse=True)
+                    for existing_r in all_regions_in_city:
+                        if existing_r.name_ar in region_name:
+                            fuzzy_matched_region = existing_r
+                            break
+
+                    if fuzzy_matched_region:
+                        mapped_location = f"{city_name}, {fuzzy_matched_region.name_ar}"
+                    else:
+                        # Proceed with dynamic region addition since it doesn't match anything
                         try:
                             new_region = Region(
                                 city_id=city_obj.id,
@@ -800,8 +809,6 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
                         except Exception as e:
                             db.rollback()
                             logger.error(f"Failed to add dynamic region: {e}")
-                    else:
-                        mapped_location = f"{city_name}, {region_name}"
 
     if not mapped_location:
         mapped_location = default_location or ""
@@ -1251,6 +1258,30 @@ def log_scraping_run(req: ScrapingLogRequest, db: Session = Depends(get_db)):
         db.rollback()
         logger.error(f"Failed to save scraping log: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+from sqlalchemy import func
+
+@router.get("/scraping-logs/summary")
+def get_scraping_logs_summary(db: Session = Depends(get_db)):
+    summary = db.query(
+        models.ScrapingLog.group_name,
+        func.count(models.ScrapingLog.id).label('total_runs'),
+        func.sum(models.ScrapingLog.saved_ads).label('total_saved'),
+        func.sum(models.ScrapingLog.skipped_ads).label('total_skipped'),
+        func.sum(models.ScrapingLog.errors_count).label('total_errors'),
+        func.max(models.ScrapingLog.created_at).label('last_run')
+    ).group_by(models.ScrapingLog.group_name).order_by(func.sum(models.ScrapingLog.saved_ads).desc()).all()
+    
+    result = []
+    for row in summary:
+        result.append({
+            "group_name": row.group_name,
+            "total_runs": row.total_runs,
+            "total_saved": row.total_saved or 0,
+            "total_skipped": row.total_skipped or 0,
+            "total_errors": row.total_errors or 0,
+            "last_run": row.last_run
+        })
+    return {"items": result, "total": len(result)}
 
 @router.get("/scraping-logs")
 def get_scraping_logs(
