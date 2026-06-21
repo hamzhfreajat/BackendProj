@@ -1262,14 +1262,17 @@ from sqlalchemy import func
 
 @router.get("/scraping-logs/summary")
 def get_scraping_logs_summary(db: Session = Depends(get_db)):
+    # Clean the group name by removing the Facebook notification prefix like "(20+) " or "(7) "
+    clean_group_name = func.regexp_replace(models.ScrapingLog.group_name, r'^\(\d+\+?\)\s*', '')
+    
     summary = db.query(
-        models.ScrapingLog.group_name,
+        clean_group_name.label('group_name'),
         func.count(models.ScrapingLog.id).label('total_runs'),
         func.sum(models.ScrapingLog.saved_ads).label('total_saved'),
         func.sum(models.ScrapingLog.skipped_ads).label('total_skipped'),
         func.sum(models.ScrapingLog.errors_count).label('total_errors'),
         func.max(models.ScrapingLog.created_at).label('last_run')
-    ).group_by(models.ScrapingLog.group_name).order_by(func.sum(models.ScrapingLog.saved_ads).desc()).all()
+    ).group_by(clean_group_name).order_by(func.sum(models.ScrapingLog.saved_ads).desc()).all()
     
     result = []
     for row in summary:
