@@ -1,0 +1,6 @@
+Parts: ['إربد', 'المقابلة']
+City Name: إربد, c_norm: اربد
+City matched: إربد
+Region Name: المقابلة, r_norm: المقابله
+Region matched: None
+Action: WOULD CREATE REGION
