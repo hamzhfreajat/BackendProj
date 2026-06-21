@@ -17,7 +17,7 @@ def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
     # AND have instant alerts enabled.
     filters = db.query(models.SavedFilter).filter(
         models.SavedFilter.is_active == True,
-        models.SavedFilter.alert_frequency.in_(['فوري', 'instant']),
+        models.SavedFilter.alert_frequency.in_(['فوري', 'instant', 'batch_100']),
         (models.SavedFilter.category_id == ad.category_id) | (models.SavedFilter.category_id == None)
     ).all()
 
@@ -96,22 +96,42 @@ def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
                 if failed_kv:
                     continue
 
-        # If it reaches here, all criteria match! Emit a notification.
-        alert_title = f"إعلان جديد يطابق اهتمامك!"
-        if f.name:
-            alert_title = f"بحثك المحفوظ: {f.name}"
-            
-        alert_body = f"وجدنا: {ad.title[:40]}... بسعر {ad.price} دينار."
-        
-        # Async invocation (using asyncio.run since background tasks run in a threadpool)
+        # If it reaches here, all criteria match!
         import asyncio
-        try:
-            asyncio.run(send_personal_notification(
-                target_user_id=f.user_id,
-                title=alert_title,
-                body=alert_body,
-                notification_type="saved_filter_alert",
-                reference_id=ad.id
-            ))
-        except Exception as e:
-            print(f"Error sending filter notification: {e}")
+        if f.alert_frequency in ['فوري', 'instant']:
+            alert_title = f"إعلان جديد يطابق اهتمامك!"
+            if f.name:
+                alert_title = f"بحثك المحفوظ: {f.name}"
+                
+            alert_body = f"وجدنا: {ad.title[:40]}... بسعر {ad.price} دينار."
+            
+            try:
+                asyncio.run(send_personal_notification(
+                    target_user_id=f.user_id,
+                    title=alert_title,
+                    body=alert_body,
+                    notification_type="saved_filter_alert",
+                    reference_id=ad.id
+                ))
+            except Exception as e:
+                print(f"Error sending filter notification: {e}")
+        elif f.alert_frequency == 'batch_100':
+            f.match_count = (f.match_count or 0) + 1
+            if f.match_count >= 100:
+                alert_title = "100 إعلان جديد يطابق بحثك"
+                alert_body = "تصفح أحدث الإعلانات التي تم إضافتها بناءً على بحثك المحفوظ"
+                if f.name:
+                    alert_title = f"100 إعلان لـ {f.name}"
+                try:
+                    asyncio.run(send_personal_notification(
+                        target_user_id=f.user_id,
+                        title=alert_title,
+                        body=alert_body,
+                        notification_type="saved_search_batch",
+                        reference_id=f.id # Passing filter_id as reference_id for navigation
+                    ))
+                except Exception as e:
+                    print(f"Error sending batch notification: {e}")
+                f.match_count = 0
+            
+    db.commit()

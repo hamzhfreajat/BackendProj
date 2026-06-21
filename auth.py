@@ -336,10 +336,13 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
 def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
         google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+        google_client_id_web = os.environ.get("GOOGLE_CLIENT_ID_WEB")
+        audiences = [aud for aud in [google_client_id, google_client_id_web] if aud]
+        
         idinfo = id_token.verify_oauth2_token(
             data.id_token,
             google_requests.Request(),
-            audience=google_client_id  # Validates token is issued for THIS app
+            audience=audiences  # Validates token is issued for either Mobile or Web app
         )
         
         email = idinfo.get('email')
@@ -609,6 +612,22 @@ def logout(request: Request, current_user: models.User = Depends(get_current_use
         revoke_token(token)
         log_user_logout(str(current_user.id), get_real_ip(request), "/logout")
     return {"status": "success", "message": "Logged out successfully"}
+
+@router.delete("/account")
+def delete_account(request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Safely log the user out
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        revoke_token(token)
+        log_user_logout(str(current_user.id), get_real_ip(request), "/delete_account")
+        
+    # Delete the user from the database
+    # This will cascade delete their ads, messages, saved filters, etc. based on models.py foreign keys
+    db.delete(current_user)
+    db.commit()
+    
+    return {"status": "success", "message": "Account and all associated data have been permanently deleted"}
 
 # Admin Dependency
 def get_current_admin(current_user: models.User = Depends(get_current_user)):
