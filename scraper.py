@@ -406,7 +406,7 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
             f"4. If you can confidently determine the Category ID from this list, use it:\\n{categories_context}\\n"
             "If you CANNOT determine the ID, you may leave `category_id` as 0.\\n"
             "5. Ensure prices are purely numeric (JOD). Extract any Jordanian phone numbers precisely.\\n"
-            "6. CRITICAL LOCATION RULES: Be very precise with locations. 'التاسعة' typically means 'العقبة, المنطقة التاسعة' NOT 'عمان, الدوار التاسع'. Do not confuse 'بدر' with 'شفا بدران'. Do not hallucinate cities."
+            "6. CRITICAL LOCATION RULES: Be very precise with locations. 'العاشرة' typically means 'العقبة, المنطقة العاشرة' NOT 'عمان, الدوار العاشر'. Do not confuse 'بدر' with 'بدر الجديدة'.\n7. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region.\n8. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc. Do not hallucinate cities."
         )
         model = genai.GenerativeModel("gemini-2.5-flash", system_instruction=system_instruction)
         

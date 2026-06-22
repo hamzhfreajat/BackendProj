@@ -97,6 +97,8 @@ CRITICAL LOCATION RULES:
 2. "الدوار الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن" belong strictly to "عمان" (Amman). Example: "عمان, الدوار السابع".
 3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
 4. If an ad mentions being near or at a specific university (e.g., "قرب الجامعة الأردنية", "بجانب الجامعة الألمانية"), map the location directly to that university's region (e.g., "عمان, الجامعة الأردنية", "مادبا, الجامعة الألمانية الأردنية").
+    5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
+    6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
 - phone_number (string or null) -- phone number if mentioned
 - category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list. CRITICAL RULE: NEVER use a parent category (like 'سكني' or 'عقارات للإيجار') if a more specific child category (like 'شقق للإيجار' or 'استوديوهات') fits perfectly! ALWAYS pick the absolute lowest/deepest leaf category. Also, analyze the intent of the author. If the post is completely unrelated to real estate (e.g. cars, services, products, news) OR if the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a real estate property or room.
 - suggested_tags (list of strings) -- Array of specific feature keywords mentioned in the ad (e.g. "غرفة مفروشة", "طابق ارضي", "اوتوماتيك")
@@ -253,6 +255,8 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     2. "الدوار الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن" belong strictly to "عمان" (Amman). 
     3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
     4. If an ad mentions being near or at a specific university, map the location directly to that university's region (e.g. "مادبا, الجامعة الألمانية الأردنية").
+    5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
+    6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
     
     Valid Regions List:
     {json.dumps(regions_list, ensure_ascii=False)}
