@@ -1243,8 +1243,13 @@ class ScrapingLogRequest(BaseModel):
 @router.post("/fb-posts/log-run")
 def log_scraping_run(req: ScrapingLogRequest, db: Session = Depends(get_db)):
     try:
+        import re
+        clean_name = req.group_name
+        if clean_name:
+            clean_name = re.sub(r'^\(\d+\+?\)\s*', '', clean_name)
+            
         log_entry = models.ScrapingLog(
-            group_name=req.group_name,
+            group_name=clean_name,
             saved_ads=req.saved_ads,
             skipped_ads=req.skipped_ads,
             errors_count=req.errors_count,
@@ -1315,11 +1320,18 @@ def get_scraping_logs(
     total = query.count()
     
     # Sorting
-    sort_column = getattr(models.ScrapingLog, sort_by, models.ScrapingLog.created_at)
-    if sort_desc:
-        query = query.order_by(sort_column.desc())
+    if sort_by == "group_name":
+        clean_group_name = func.regexp_replace(models.ScrapingLog.group_name, r'^\(\d+\+?\)\s*', '')
+        if sort_desc:
+            query = query.order_by(clean_group_name.desc(), models.ScrapingLog.created_at.desc())
+        else:
+            query = query.order_by(clean_group_name.asc(), models.ScrapingLog.created_at.desc())
     else:
-        query = query.order_by(sort_column.asc())
+        sort_column = getattr(models.ScrapingLog, sort_by, models.ScrapingLog.created_at)
+        if sort_desc:
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
         
     skip = (page - 1) * limit
     logs = query.offset(skip).limit(limit).all()
