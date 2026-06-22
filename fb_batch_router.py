@@ -248,7 +248,7 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     I will also provide you a list of ALL valid regions in Jordan in the format "City, Region".
     
     Your task is to read the title, description, and raw_description of each ad, and determine the exact valid region from the provided list.
-    If you cannot determine the exact region from the text, return the closest matching valid region based on the city, or keep it as is if completely unknown, but try your best to find a valid region from the list.
+    If you cannot determine the exact region from the text, return the closest matching valid region based on the city, If a landmark, hospital, roundabout, or street is mentioned, use your geographic knowledge of Jordan to determine its city and closest region. NEVER keep it as is if it contains relative words like 'قرب', 'خلف', 'مقابل' or if it's not in the Valid Regions List. You MUST output either a region from the Valid Regions List, OR just the City name if completely unknown.
     
     CRITICAL LOCATION RULES:
     1. In Aqaba (العقبة), "المنطقة الأولى" maps to "العقبة, السكنية 1", "المنطقة الثانية" maps to "العقبة, السكنية 2", "المنطقة الثالثة" maps to "العقبة, السكنية 3", "المنطقة الرابعة" maps to "العقبة, السكنية 4", "الخامسة" to "العقبة, السكنية 5", "السادسة" to "العقبة, السكنية 6", "السابعة" to "العقبة, السكنية 7", "الثامنة" to "العقبة, السكنية 8", "التاسعة" to "العقبة, السكنية 9", and "العاشرة" to "العقبة, السكنية 10".
