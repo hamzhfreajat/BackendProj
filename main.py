@@ -39,6 +39,7 @@ import notifications
 from notifications import send_personal_notification
 from database import engine, get_db, SessionLocal
 from fb_batch_router import router as fb_batch_router
+from fb_publisher_router import router as fb_publisher_router
 from ai_router import router as ai_router
 from search_service import SearchService
 from autocomplete_service import AutocompleteService
@@ -138,6 +139,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 app.include_router(fb_batch_router)
+app.include_router(fb_publisher_router)
 app.include_router(ai_router)
 app.include_router(media_router)
 app.include_router(auth.router)
@@ -2423,12 +2425,62 @@ async def republish_notifier_worker():
             print(f"Error in republish_notifier_worker: {e}")
         await asyncio.sleep(600)
 
+async def facebook_autopost_worker():
+    while True:
+        try:
+            from database import SessionLocal
+            from facebook_publisher import publish_facebook_post
+            from sqlalchemy import func
+            import models
+            
+            db = SessionLocal()
+            
+            # Fetch rules from DB
+            rules = db.query(models.FacebookAutoPostRule).all()
+            rules_dict = {rule.region_name: rule.threshold for rule in rules}
+            
+            if not rules_dict:
+                db.close()
+                await asyncio.sleep(1800)
+                continue
+                
+            # Find regions with >= threshold unsent scraper ads
+            region_counts = db.query(
+                models.Ad.location, 
+                func.count(models.Ad.id).label('ad_count')
+            ).filter(
+                models.Ad.source_type == models.SourceType.SCRAPER_BOT,
+                models.Ad.is_facebook_posted == False,
+                models.Ad.location != None
+            ).group_by(models.Ad.location).all()
+            
+            for location, count in region_counts:
+                threshold = rules_dict.get(location)
+                if threshold is not None and count >= threshold:
+                    # Publish to facebook
+                    msg = f"أكثر من {count} عقار جديد تمت إضافته للتو في منطقة ({location})! 🏡✨\nتصفح أحدث العروض الآن على تطبيق سوقكم."
+                    success = await publish_facebook_post(msg, "https://sooq-com.com/")
+                    if success:
+                        # Update all ads in this location as posted
+                        db.query(models.Ad).filter(
+                            models.Ad.source_type == models.SourceType.SCRAPER_BOT,
+                            models.Ad.is_facebook_posted == False,
+                            models.Ad.location == location
+                        ).update({"is_facebook_posted": True}, synchronize_session=False)
+                        db.commit()
+            
+            db.close()
+        except Exception as e:
+            print(f"Error in facebook_autopost_worker: {e}")
+        await asyncio.sleep(1800) # Check every 30 minutes
+
 from arq import create_pool
 from arq.connections import RedisSettings
 
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(republish_notifier_worker())
+    asyncio.create_task(facebook_autopost_worker())
     
     try:
         redis_host = os.getenv("REDIS_HOST", "redis")

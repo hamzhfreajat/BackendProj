@@ -228,6 +228,7 @@ class Ad(Base):
     # Scraper Support Fields
     source_type = Column(Enum(SourceType), default=SourceType.ORGANIC_USER)
     source_url = Column(Text, nullable=True)
+    is_facebook_posted = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
@@ -501,3 +502,11 @@ class TelemetryEvent(Base):
     screen = Column(String(100), nullable=True)
     metadata_json = Column(JSONB, nullable=True)
     timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+
+class FacebookAutoPostRule(Base):
+    __tablename__ = "facebook_autopost_rules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    region_name = Column(Text, unique=True, index=True)
+    threshold = Column(Integer, default=100)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
