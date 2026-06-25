@@ -55,11 +55,27 @@ def delete_rule(region_name: str, db: Session = Depends(get_db)):
 
 @router.post("/manual-publish")
 async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db)):
-    # Fetch the latest N ads for this region
-    ads = db.query(models.Ad).filter(
-        models.Ad.location == req.region_name
-    ).order_by(models.Ad.created_at.desc()).limit(req.count).all()
+    # Try to resolve region_id from the given region_name
+    region = db.query(models.Region).filter(models.Region.name_ar == req.region_name).first()
     
+    ads = []
+    if region:
+        # Use AdSearchIndex to find ads by region_id
+        ad_ids_query = db.query(models.AdSearchIndex.ad_id).filter(
+            models.AdSearchIndex.region_id == region.id
+        ).order_by(models.AdSearchIndex.created_at.desc()).limit(req.count).all()
+        
+        ad_ids = [r[0] for r in ad_ids_query]
+        if ad_ids:
+            ads = db.query(models.Ad).filter(models.Ad.id.in_(ad_ids)).all()
+            # Sort them back in descending order as returned by AdSearchIndex
+            ads.sort(key=lambda x: ad_ids.index(x.id))
+    else:
+        # Fallback to text matching
+        ads = db.query(models.Ad).filter(
+            models.Ad.location.ilike(f"%{req.region_name}%")
+        ).order_by(models.Ad.created_at.desc()).limit(req.count).all()
+        
     if not ads:
         raise HTTPException(status_code=404, detail="No ads found in this region.")
         
