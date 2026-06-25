@@ -44,6 +44,7 @@ from ai_router import router as ai_router
 from search_service import SearchService
 from autocomplete_service import AutocompleteService
 from media_router import router as media_router
+from og_router import router as og_router
 from fastapi.staticfiles import StaticFiles
 
 import uuid
@@ -142,6 +143,7 @@ app.include_router(fb_batch_router)
 app.include_router(fb_publisher_router)
 app.include_router(ai_router)
 app.include_router(media_router)
+app.include_router(og_router)
 app.include_router(auth.router)
 app.include_router(notifications.router)
 
