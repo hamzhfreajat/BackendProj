@@ -19,6 +19,7 @@ from database import engine, get_db
 from fb_batch_router import router as fb_batch_router
 from ai_router import router as ai_router
 from media_router import router as media_router
+from og_router import router as og_router
 from fastapi.staticfiles import StaticFiles
 
 import os
@@ -70,6 +71,7 @@ async def cloudflare_edge_caching(request: Request, call_next):
 app.include_router(fb_batch_router)
 app.include_router(ai_router)
 app.include_router(media_router)
+app.include_router(og_router)
 app.include_router(auth.router)
 app.include_router(notifications.router)
 
@@ -475,10 +477,12 @@ def get_trending_searches(db: Session = Depends(get_db)):
              .limit(10).all()
     
     trending = []
+    seen = set()
     for tag in tags:
         name = tag[0].split(":", 1)[-1].replace("_", " ")
-        if name not in trending:
-            trending.append(name)
+        if name not in seen:
+            seen.add(name)
+            trending.append({"text": name, "raw_value": tag[0]})
             
     if not trending:
         return []
@@ -509,7 +513,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         name = name.replace("_", " ")
         if name not in seen and name.strip():
             seen.add(name)
-            suggestions.append({"text": name, "count": count})
+            suggestions.append({"text": name, "count": count, "type": "tag", "raw_value": tag.name})
             if len(suggestions) >= 5:
                 break
                 
@@ -525,7 +529,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         for ad_title, count in ads:
             if ad_title not in seen and ad_title.strip():
                 seen.add(ad_title)
-                suggestions.append({"text": ad_title, "count": count})
+                suggestions.append({"text": ad_title, "count": count, "type": "text"})
                 if len(suggestions) >= 8:
                     break
                     
