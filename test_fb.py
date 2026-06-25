@@ -1,21 +1,11 @@
 import asyncio
-import os
-import sys
+import aiohttp
+from facebook_publisher import upload_unpublished_photo
 
-# Add backend directory to sys.path
-sys.path.append(os.path.abspath('D:/open/classifieds-app/backend'))
+async def main():
+    async with aiohttp.ClientSession() as session:
+        res = await upload_unpublished_photo(session, 'https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev/8e79a9df4cc6473bbbd458d02d8c6d39.jpg')
+        print('Media ID:', res)
 
-from facebook_publisher import publish_facebook_post
-
-async def test_publish():
-    msg = "?? ?????? ????: ?? ????? ???? ????? ???????? ????? ?? ????? ??????! ???? ?????? ??? ???????? ??????? ???????? ???."
-    success = await publish_facebook_post(msg, "https://sooq-com.com/")
-    if success:
-        print("Success! Check your Facebook page.")
-    else:
-        print("Failed to publish.")
-
-if __name__ == '__main__':
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    asyncio.run(test_publish())
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -94,20 +94,43 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
     # We will use the first ad's link as the main link preview, but only if we don't have images
-    main_link = f"https://sooq-com.com/ad/{ads[0].id}" if ads else "https://sooq-com.com/"
+    main_link = "https://sooq-com.com/"
     
-    # Extract images from all ads (limit to 10 for facebook carousel max)
-    image_urls = []
+    import json
+    
+    # Extract images and build child attachments for carousel
+    child_attachments = []
+    
     for ad in ads:
+        # Determine main image for the ad
+        main_image = None
         if hasattr(ad, 'image_urls') and ad.image_urls:
-            image_urls.extend(ad.image_urls)
+            main_image = ad.image_urls[0] if ad.image_urls else None
         elif hasattr(ad, 'image_url') and ad.image_url:
-            image_urls.append(ad.image_url)
+            try:
+                parsed = json.loads(ad.image_url)
+                if isinstance(parsed, list) and parsed:
+                    main_image = parsed[0]
+                else:
+                    main_image = ad.image_url
+            except:
+                main_image = ad.image_url
+                
+        if main_image and isinstance(main_image, str):
+            price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
+            title = ad.title[:30] + "..." if ad.title and len(ad.title) > 30 else (ad.title or "عقار")
             
-    # Filter valid URLs and take max 10
-    image_urls = [url for url in image_urls if url][:10]
+            child_attachments.append({
+                "link": f"https://sooq-com.com/ad/{ad.id}",
+                "name": title,
+                "description": price_str,
+                "picture": main_image
+            })
+            
+    # Max 10 items for a carousel
+    child_attachments = child_attachments[:10]
     
-    success = await publish_facebook_post(msg, main_link, image_urls)
+    success = await publish_facebook_post(msg, main_link, child_attachments=child_attachments)
     if success:
         # Mark these ads as posted so auto-publisher doesn't republish them
         for ad in ads:

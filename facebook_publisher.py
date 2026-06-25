@@ -25,7 +25,7 @@ async def upload_unpublished_photo(session: aiohttp.ClientSession, image_url: st
             return result.get("id")
         return None
 
-async def publish_facebook_post(message: str, link: str = None, image_urls: list = None) -> bool:
+async def publish_facebook_post(message: str, link: str = None, image_urls: list = None, child_attachments: list = None) -> bool:
     """
     Publishes a post to the configured Facebook Page.
     Returns True if successful, False otherwise.
@@ -36,11 +36,16 @@ async def publish_facebook_post(message: str, link: str = None, image_urls: list
         "message": message,
         "access_token": FACEBOOK_ACCESS_TOKEN
     }
+    import json
     
     try:
         async with aiohttp.ClientSession() as session:
-            # If we have images, upload them first
-            if image_urls and len(image_urls) > 0:
+            # If child_attachments is provided, it creates a true link carousel!
+            if child_attachments and len(child_attachments) > 0:
+                payload["link"] = link if link else "https://sooq-com.com"
+                payload["child_attachments"] = json.dumps(child_attachments[:10])
+            # Otherwise fallback to basic photo attachments if we have image_urls
+            elif image_urls and len(image_urls) > 0:
                 media_ids = []
                 for img_url in image_urls[:10]: # Max 10 images for a post usually
                     if img_url:
@@ -50,11 +55,10 @@ async def publish_facebook_post(message: str, link: str = None, image_urls: list
                 
                 if media_ids:
                     # Construct attached_media array
-                    import json
                     attached_media = [{"media_fbid": str(mid)} for mid in media_ids]
                     payload["attached_media"] = json.dumps(attached_media)
             else:
-                # Can only use link if no attached_media
+                # Can only use link if no attached_media and no child_attachments
                 if link:
                     payload["link"] = link
                     
