@@ -77,10 +77,21 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
-    # We will use the first ad's link as the main link preview
+    # We will use the first ad's link as the main link preview, but only if we don't have images
     main_link = f"https://sooq-com.com/ad/{ads[0].id}" if ads else "https://sooq-com.com/"
     
-    success = await publish_facebook_post(msg, main_link)
+    # Extract images from all ads (limit to 10 for facebook carousel max)
+    image_urls = []
+    for ad in ads:
+        if hasattr(ad, 'image_urls') and ad.image_urls:
+            image_urls.extend(ad.image_urls)
+        elif hasattr(ad, 'image_url') and ad.image_url:
+            image_urls.append(ad.image_url)
+            
+    # Filter valid URLs and take max 10
+    image_urls = [url for url in image_urls if url][:10]
+    
+    success = await publish_facebook_post(msg, main_link, image_urls)
     if success:
         # Mark these ads as posted so auto-publisher doesn't republish them
         for ad in ads:
