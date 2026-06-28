@@ -141,7 +141,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.include_router(fb_batch_router)
 app.include_router(fb_publisher_router)
+
+from routers import users_admin_router
 app.include_router(users_admin_router.router)
+
 app.include_router(ai_router)
 app.include_router(media_router)
 app.include_router(og_router)
