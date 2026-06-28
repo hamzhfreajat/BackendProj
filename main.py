@@ -945,7 +945,7 @@ def get_search_logs(
         "query_text": l.query_text, 
         "results_count": l.results_count, 
         "created_at": l.created_at.isoformat(),
-        "user": {"id": l.user.id, "name": f"{l.user.first_name or ''} {l.user.last_name or ''}".strip() or l.user.name, "email": l.user.email} if l.user else None
+        "user": {"id": l.user.id, "name": l.user.full_name or l.user.username or "Unknown", "email": l.user.email} if l.user else None
     } for l in logs]
 
 @app.get("/api/ads", response_model=List[schemas.Ad], dependencies=[Depends(auth.get_rate_limiter(60, 60))])
