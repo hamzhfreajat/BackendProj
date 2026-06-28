@@ -220,9 +220,23 @@ class AutocompleteService:
                     "items": valid_fallback
                 })
 
+        # Compute remaining text to prevent redundant full-text search
+        remaining_text = parsed.normalized_query
+        if parsed.location:
+            remaining_text = remaining_text.replace(parsed.location, "")
+            
+        from nlp_dictionaries import DEAL_MAP, PROPERTY_MAP
+        for w in parsed.normalized_query.split():
+            # Remove mapped real estate words and common stop words
+            if w in DEAL_MAP or w in PROPERTY_MAP or w in ['لل', 'في', 'ب', 'من', 'على', 'مع', 'ع', 'و']:
+                remaining_text = remaining_text.replace(w, "")
+                
+        import re
+        remaining_text = re.sub(r'\s+', ' ', remaining_text).strip()
+
         return {
             "query": query,
-            "normalized_query": parsed.normalized_query,
+            "normalized_query": remaining_text,
             "intent": intent,
             "groups": groups
         }
