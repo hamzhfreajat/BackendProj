@@ -911,16 +911,6 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         from autocomplete_service import AutocompleteService
         from models import SearchQueryLog
         
-        # Save raw query log since autocomplete was removed and this is called on submit
-        if q and len(q.strip()) > 1:
-            try:
-                log_entry = SearchQueryLog(query_text=q.strip())
-                db.add(log_entry)
-                db.commit()
-            except Exception as log_err:
-                db.rollback()
-                print(f"Error saving search log: {log_err}")
-
         return AutocompleteService.generate_suggestions(db, q)
     except Exception as e:
         print(f"Autocomplete Error: {e}")
@@ -990,6 +980,21 @@ def read_ads(
     
     if search:
         ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
+        
+        # Log the search query and results count
+        try:
+            from models import SearchQueryLog
+            log_entry = SearchQueryLog(
+                query_text=search.strip(),
+                results_count=len(ranked_ad_ids),
+                user_id=current_user.id if hasattr(current_user, 'id') else None
+            )
+            db.add(log_entry)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error logging search: {e}")
+
         if not ranked_ad_ids:
             return []
             
@@ -1298,6 +1303,7 @@ def get_ads_count(
     
     if search:
         ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
+        
         if not ranked_ad_ids:
             return {"total_count": 0}
             
