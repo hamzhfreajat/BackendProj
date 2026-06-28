@@ -19,6 +19,38 @@ class AutocompleteService:
         return "unknown"
 
     @staticmethod
+    def _get_category_info(deal_type: str, property_type: str) -> tuple:
+        if deal_type == "RENT":
+            mapping = {
+                "APARTMENT": (301, "شقق للايجار"),
+                "STUDIO": (302, "ستوديوهات للايجار"),
+                "VILLA": (3101, "فلل وقصور"),
+                "HOUSE": (3102, "بيوت مستقلة"),
+                "ROOF": (3103, "روف"),
+                "BUILDING": (3104, "عمارة كاملة"),
+                "SHOP": (303, "محلات تجارية"),
+                "OFFICE": (304, "مكاتب"),
+                "LAND": (313, "اراضي"),
+                "FARM": (314, "مزارع")
+            }
+            return mapping.get(property_type, (3, "عقارات للايجار"))
+        elif deal_type == "SALE":
+            mapping = {
+                "APARTMENT": (10301, "شقق للبيع"),
+                "STUDIO": (10302, "ستوديوهات للبيع"),
+                "VILLA": (10101, "فلل وقصور"),
+                "HOUSE": (10102, "بيوت مستقلة"),
+                "BUILDING": (10104, "عمارة كاملة"),
+                "ROOF": (10105, "ملحق / روف"),
+                "SHOP": (10303, "محلات تجارية"),
+                "OFFICE": (10304, "مكاتب"),
+                "LAND": (10313, "اراضي"),
+                "FARM": (10314, "مزارع")
+            }
+            return mapping.get(property_type, (2, "عقارات للبيع"))
+        return None, None
+
+    @staticmethod
     def generate_suggestions(db: Session, query: str) -> Dict[str, Any]:
         if not query or len(query.strip()) < 2:
             return {
@@ -28,7 +60,9 @@ class AutocompleteService:
                     "deal_type": "UNKNOWN",
                     "property_type": "UNKNOWN",
                     "location": None,
-                    "price_intent": "unknown"
+                    "price_intent": "unknown",
+                    "category_id": None,
+                    "category_name": None
                 },
                 "groups": []
             }
@@ -54,13 +88,17 @@ class AutocompleteService:
             elif parsed.bedrooms >= 6: intent_tags.append("bedrooms:+6")
             else: intent_tags.append(f"bedrooms:{parsed.bedrooms}")
 
+        cat_id, cat_name = AutocompleteService._get_category_info(parsed.deal_type, parsed.property_type)
+
         # Base intent object
         intent = {
             "deal_type": parsed.deal_type or "UNKNOWN",
             "property_type": parsed.property_type or "UNKNOWN",
             "location": parsed.location,
             "price_intent": price_intent,
-            "tags": intent_tags
+            "tags": intent_tags,
+            "category_id": cat_id,
+            "category_name": cat_name
         }
 
         # Query completions based on intent
