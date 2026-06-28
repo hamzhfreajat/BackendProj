@@ -521,20 +521,19 @@ class SavedFilterResponse(SavedFilterBase):
     class Config:
         from_attributes = True
 
-c l a s s   S u p p o r t M e s s a g e B a s e ( B a s e M o d e l ) : 
-         m e s s a g e :   s t r 
-         s e n d e r :   s t r 
- 
- c l a s s   S u p p o r t M e s s a g e C r e a t e ( B a s e M o d e l ) : 
-         m e s s a g e :   s t r 
- 
- c l a s s   S u p p o r t M e s s a g e ( S u p p o r t M e s s a g e B a s e ) : 
-         i d :   i n t 
-         u s e r _ i d :   i n t 
-         i s _ r e a d :   b o o l 
-         c r e a t e d _ a t :   d a t e t i m e 
- 
-         c l a s s   C o n f i g : 
-                 f r o m _ a t t r i b u t e s   =   T r u e 
-  
- 
+class SupportMessageBase(BaseModel):
+    message: str
+    sender: str
+
+class SupportMessageCreate(BaseModel):
+    message: str
+
+class SupportMessage(SupportMessageBase):
+    id: int
+    user_id: int
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
