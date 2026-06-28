@@ -978,6 +978,15 @@ def read_ads(
         
     from sqlalchemy.sql.expression import case
     
+    ignore_location = False
+    if search:
+        try:
+            from search_parser import QueryParserService
+            parsed = QueryParserService.parse(search)
+            if parsed.location:
+                ignore_location = True
+        except:
+            pass
     if search:
         ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
         
@@ -1007,7 +1016,7 @@ def read_ads(
         if whens:
             query = query.order_by(case(*whens))
         
-    if location:
+    if location and not ignore_location:
         parent_loc = None
         target_locs = []
         
@@ -1301,6 +1310,15 @@ def get_ads_count(
 ):
     query = db.query(models.Ad)
     
+    ignore_location = False
+    if search:
+        try:
+            from search_parser import QueryParserService
+            parsed = QueryParserService.parse(search)
+            if parsed.location:
+                ignore_location = True
+        except:
+            pass
     if search:
         ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
         
@@ -1309,7 +1327,7 @@ def get_ads_count(
             
         query = query.filter(models.Ad.id.in_(ranked_ad_ids))
         
-    if location:
+    if location and not ignore_location:
         parent_loc = None
         target_locs = []
         
