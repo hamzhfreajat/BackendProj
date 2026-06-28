@@ -80,11 +80,9 @@ async def upload_media(
             
         if is_image:
             should_bypass_watermark = bypass_watermark or current_user.user_type == "admin"
-            if not should_bypass_watermark and check_image_bytes_for_watermark(content):
-                raise HTTPException(
-                    status_code=400, 
-                    detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة اخرى."
-                )
+            # Watermark check bypassed for add ads per user request
+            # if not should_bypass_watermark and check_image_bytes_for_watermark(content):
+            #     raise HTTPException(status_code=400, detail="Watermark found")
             
             # --- APPLY WATERMARK ---
             if not should_bypass_watermark:
@@ -216,26 +214,6 @@ async def check_watermarks(
     """
     Receives multiple files and ONLY checks them for watermarks.
     Returns 200 OK if clean, 400 Bad Request if a watermark is found.
+    (Watermark check disabled per user request)
     """
-    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic'}
-    
-    from fb_batch_router import check_image_bytes_for_watermark
-    
-    for file in files:
-        file_ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
-        
-        if file_ext not in ALLOWED_EXTENSIONS:
-            raise HTTPException(status_code=400, detail=f"File extension {file_ext} is not allowed.")
-            
-        is_image = file.content_type and file.content_type.startswith('image/')
-        if not is_image and file_ext in ['.jpg', '.jpeg', '.png', '.webp', '.heic']:
-            is_image = True
-            
-        if is_image:
-            content = await file.read()
-            if check_image_bytes_for_watermark(content):
-                raise HTTPException(
-                    status_code=400, 
-                    detail="عذراً، الصورة المرفقة تحتوي على شعارات لمواقع أخرى أو نصوص إضافية تمنع نشرها. يرجى اختيار صورة طبيعية."
-                )
     return {"status": "clean"}
