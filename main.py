@@ -950,7 +950,13 @@ def get_search_logs(
         query = query.filter(SearchQueryLog.results_count == results_count)
         
     logs = query.order_by(SearchQueryLog.created_at.desc()).limit(limit).all()
-    return [{"id": l.id, "query_text": l.query_text, "results_count": l.results_count, "created_at": l.created_at.isoformat()} for l in logs]
+    return [{
+        "id": l.id, 
+        "query_text": l.query_text, 
+        "results_count": l.results_count, 
+        "created_at": l.created_at.isoformat(),
+        "user": {"id": l.user.id, "name": f"{l.user.first_name or ''} {l.user.last_name or ''}".strip() or l.user.name, "email": l.user.email} if l.user else None
+    } for l in logs]
 
 @app.get("/api/ads", response_model=List[schemas.Ad], dependencies=[Depends(auth.get_rate_limiter(60, 60))])
 def read_ads(
