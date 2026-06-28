@@ -937,11 +937,20 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
         }
 
 @app.get("/api/admin/search_logs")
-def get_search_logs(limit: int = 50, db: Session = Depends(get_db)):
+def get_search_logs(
+    limit: int = 100, 
+    results_count: int = Query(None, description="Filter by exact results count"),
+    db: Session = Depends(get_db)
+):
     """Admin endpoint to fetch recent raw search queries."""
     from models import SearchQueryLog
-    logs = db.query(SearchQueryLog).order_by(SearchQueryLog.created_at.desc()).limit(limit).all()
-    return [{"id": l.id, "query_text": l.query_text, "created_at": l.created_at.isoformat()} for l in logs]
+    query = db.query(SearchQueryLog)
+    
+    if results_count is not None:
+        query = query.filter(SearchQueryLog.results_count == results_count)
+        
+    logs = query.order_by(SearchQueryLog.created_at.desc()).limit(limit).all()
+    return [{"id": l.id, "query_text": l.query_text, "results_count": l.results_count, "created_at": l.created_at.isoformat()} for l in logs]
 
 @app.get("/api/ads", response_model=List[schemas.Ad], dependencies=[Depends(auth.get_rate_limiter(60, 60))])
 def read_ads(
