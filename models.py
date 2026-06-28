@@ -110,6 +110,8 @@ class User(Base):
     is_phone_verified = Column(Boolean, default=False)
     is_identity_verified = Column(Boolean, default=False)
     location = Column(String(100), default="")
+    is_active = Column(Boolean, default=True)
+    is_banned = Column(Boolean, default=False)
     
     # KYC Identity Verification
     full_name = Column(String(100), nullable=True)
@@ -149,6 +151,18 @@ class User(Base):
     reviews_received = relationship("UserReview", foreign_keys="UserReview.target_user_id", back_populates="target_user")
     reviews_given = relationship("UserReview", foreign_keys="UserReview.reviewer_id", back_populates="reviewer")
     viewed_ads = relationship("Ad", secondary=user_viewed_ads, back_populates="viewed_by_users")
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender = Column(String(50), nullable=False) # 'user' or 'admin'
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    user = relationship("User")
 
 class UserReview(Base):
     __tablename__ = "user_reviews"

@@ -141,6 +141,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.include_router(fb_batch_router)
 app.include_router(fb_publisher_router)
+app.include_router(users_admin_router.router)
 app.include_router(ai_router)
 app.include_router(media_router)
 app.include_router(og_router)
@@ -2499,6 +2500,27 @@ async def startup_event():
     
     # Run DB Migrations for new tracking columns
     db = SessionLocal()
+    try:
+        # Add is_active and is_banned to users
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE"))
+        
+        # Create support_messages table if it doesn't exist
+        db.execute(text("""
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            sender VARCHAR(50) NOT NULL,
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """))
+        db.commit()
+    except Exception as e:
+        print(f"Migration error for users: {e}")
+        db.rollback()
+
     try:
         # Add latest_category_id to users
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL"))
