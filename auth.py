@@ -337,12 +337,13 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
     try:
         google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
         google_client_id_web = os.environ.get("GOOGLE_CLIENT_ID_WEB")
-        audiences = [aud for aud in [google_client_id, google_client_id_web] if aud]
+        google_client_id_ios = os.environ.get("GOOGLE_CLIENT_ID_IOS")
+        audiences = [aud for aud in [google_client_id, google_client_id_web, google_client_id_ios] if aud]
         
         idinfo = id_token.verify_oauth2_token(
             data.id_token,
             google_requests.Request(),
-            audience=audiences  # Validates token is issued for either Mobile or Web app
+            audience=audiences  # Validates token is issued for either Mobile, Web, or iOS app
         )
         
         email = idinfo.get('email')
