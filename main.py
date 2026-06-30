@@ -1608,6 +1608,12 @@ def update_ad_draft(
         log_bola_attempt(str(user_id), get_real_ip(request), request.url.path, str(ad_id))
         raise HTTPException(status_code=403, detail="Not authorized to edit this ad")
 
+    if db_ad.is_published:
+        # Prevent draft autosaves from modifying published ads. 
+        # This prevents the frontend's Wizard dispose() callbacks from 
+        # overwriting the ad with stale data (like wiping image_urls) right after publishing.
+        return db_ad
+
     update_data = ad_draft.model_dump(exclude_unset=True)
     re_detail_data = update_data.pop("real_estate_detail", None)
     tags_data = update_data.pop("linked_tags", None)
@@ -1622,6 +1628,12 @@ def update_ad_draft(
 
     new_attrs = update_data.pop("attributes", None)
     if new_attrs:
+        # Protect image_urls from being wiped by stale frontend attributes dictionary
+        existing_images = attributes.get("image_urls", [])
+        if "image_urls" in new_attrs:
+            incoming_images = new_attrs["image_urls"]
+            if not incoming_images and existing_images:
+                del new_attrs["image_urls"]
         attributes.update(new_attrs)
         
     update_data["attributes"] = attributes
@@ -1877,6 +1889,14 @@ def update_ad(
     update_dict.pop("rooms", None)
     
     attributes = update_dict.get("attributes") or {}
+    
+    # Protect image_urls from being wiped by stale frontend attributes dictionary
+    existing_images = db_ad.attributes.get("image_urls", []) if db_ad.attributes else []
+    if "image_urls" in attributes:
+        incoming_images = attributes["image_urls"]
+        if not incoming_images and existing_images:
+            del attributes["image_urls"]
+            
     if image_urls_updated:
         attributes["image_urls"] = image_urls
     
