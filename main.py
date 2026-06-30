@@ -1627,6 +1627,12 @@ def update_ad_draft(
     update_data["attributes"] = attributes
 
     for key, value in update_data.items():
+        if key == "is_published" and value is True:
+            if not attributes.get("image_urls") or len(attributes.get("image_urls", [])) < 3:
+                raise HTTPException(
+                    status_code=400,
+                    detail="لابد من رفع 3 صور على الأقل لنشر الإعلان"
+                )
         setattr(db_ad, key, value)
         
     from sqlalchemy.orm.attributes import flag_modified
@@ -1988,6 +1994,13 @@ def toggle_publish_ad(
     if db_ad.user_id != current_user.id and current_user.user_type != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to modify this ad")
     
+    if not db_ad.is_published:
+        if len(db_ad.image_urls) < 3:
+            raise HTTPException(
+                status_code=400,
+                detail="لابد من رفع 3 صور على الأقل لنشر الإعلان"
+            )
+            
     db_ad.is_published = not db_ad.is_published
     db.commit()
     db.refresh(db_ad)
