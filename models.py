@@ -421,7 +421,7 @@ class SavedFilter(Base):
     tags = Column(JSONB, nullable=True)      # ["مفروشة", "عمان", ...]
     locations = Column(JSONB, nullable=True) # ["عمان", "صويلح", ...]
     alert_frequency = Column(String(50), default="none") # e.g. "فوري", "يومي", "none"
-    match_count = Column(Integer, default=0)
+    search_query = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
