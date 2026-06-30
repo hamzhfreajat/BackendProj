@@ -1,0 +1,62 @@
+[
+  {
+    "query": "شقق للايجار في اربد",
+    "intent": {
+      "deal_type": "RENT",
+      "property_type": "APARTMENT",
+      "location": "اربد",
+      "price_intent": "unknown",
+      "tags": [],
+      "category_id": 301,
+      "category_name": "شقق للايجار"
+    }
+  },
+  {
+    "query": "اراضي للبيع بالمفرق",
+    "intent": {
+      "deal_type": "SALE",
+      "property_type": "LAND",
+      "location": "المفرق",
+      "price_intent": "unknown",
+      "tags": [],
+      "category_id": 10313,
+      "category_name": "اراضي"
+    }
+  },
+  {
+    "query": "مكاتب للبيع في عمان",
+    "intent": {
+      "deal_type": "SALE",
+      "property_type": "OFFICE",
+      "location": "عمان",
+      "price_intent": "unknown",
+      "tags": [],
+      "category_id": 10304,
+      "category_name": "مكاتب"
+    }
+  },
+  {
+    "query": "عمارة للايجار",
+    "intent": {
+      "deal_type": "RENT",
+      "property_type": "BUILDING",
+      "location": null,
+      "price_intent": "unknown",
+      "tags": [],
+      "category_id": 3104,
+      "category_name": "عمارة كاملة"
+    }
+  },
+  {
+    "query": "مزارع للبيع",
+    "intent": {
+      "deal_type": "SALE",
+      "property_type": "FARM",
+      "location": null,
+      "price_intent": "unknown",
+      "tags": [],
+      "category_id": 10314,
+      "category_name": "مزارع"
+    }
+  }
+]

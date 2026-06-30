@@ -263,6 +263,7 @@ class AdUpdate(BaseModel):
     image_urls: Optional[List[str]] = []
     phone_number: Optional[str] = None
     real_estate_detail: Optional[dict] = None
+    is_published: Optional[bool] = None
 
 class AdDraftCreate(BaseModel):
     category_id: Optional[int] = None

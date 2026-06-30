@@ -1929,8 +1929,11 @@ def update_ad(
     was_unpublished = not db_ad.is_published
     
     for key, value in update_dict.items():
-        if hasattr(db_ad, key) and key not in ['id', 'user_id', 'created_at', 'is_published', 'is_hot', 'is_rejected', 'views', 'favorites_count', 'chats_count', 'source_type']:
+        if hasattr(db_ad, key) and key not in ['id', 'user_id', 'created_at', 'is_hot', 'is_rejected', 'views', 'favorites_count', 'chats_count', 'source_type']:
             setattr(db_ad, key, value)
+            
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(db_ad, "attributes")
             
     is_now_published = db_ad.is_published
             
