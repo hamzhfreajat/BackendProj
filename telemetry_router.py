@@ -36,6 +36,43 @@ async def ingest_telemetry_batch(payload: TelemetryBatchPayload, request: Reques
     
     return {"status": "accepted"}
 
+@router.get("/errors")
+def get_errors(db: Session = Depends(get_db)):
+    """
+    Get recent error logs for the admin dashboard.
+    """
+    query = text("""
+        SELECT 
+            t.id, 
+            t.timestamp, 
+            t.user_id, 
+            u.full_name, 
+            u.phone,
+            t.metadata_json
+        FROM telemetry_events t
+        LEFT JOIN users u ON u.id::varchar = t.user_id
+        WHERE t.event_name = 'error'
+        ORDER BY t.timestamp DESC
+        LIMIT 100;
+    """)
+    result = db.execute(query).fetchall()
+    
+    errors = []
+    for row in result:
+        meta = row.metadata_json or {}
+        errors.append({
+            "id": row.id,
+            "timestamp": row.timestamp.isoformat() if row.timestamp else None,
+            "user_id": row.user_id,
+            "user_name": row.full_name,
+            "user_phone": row.phone,
+            "screen_name": meta.get("screen_name", "Unknown"),
+            "error_message": meta.get("error_message", "Unknown Error"),
+            "stack_trace": meta.get("stack_trace", "")
+        })
+    
+    return errors
+
 @router.get("/analytics")
 def get_analytics(db: Session = Depends(get_db)):
     """
