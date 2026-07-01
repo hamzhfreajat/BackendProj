@@ -320,13 +320,14 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
         
         active_cat_ids = set([ad.category_id for ad in all_ads])
         
-        # Determine parent retention - if a child is active, the parent must be kept
+        # Determine parent retention - if a child is active, the ENTIRE ancestral chain must be kept
+        parent_map = {cat.id: cat.parent_id for cat in categories}
         retained_cat_ids = set()
-        for cat in categories:
-            if cat.id in active_cat_ids:
-                retained_cat_ids.add(cat.id)
-                if cat.parent_id:
-                    retained_cat_ids.add(cat.parent_id)
+        for active_id in active_cat_ids:
+            curr_id = active_id
+            while curr_id is not None:
+                retained_cat_ids.add(curr_id)
+                curr_id = parent_map.get(curr_id)
         
         # 2. Extract active tags efficiently
         active_tag_ids = set()
