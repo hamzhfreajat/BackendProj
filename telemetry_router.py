@@ -96,7 +96,7 @@ def get_analytics(db: Session = Depends(get_db)):
         GROUP BY source_screen, target_screen
         HAVING COUNT(*) > 0
         ORDER BY value DESC
-        LIMIT 50;
+        LIMIT 500;
     ''')
     sankey_results = db.execute(sankey_query).fetchall()
     
