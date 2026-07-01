@@ -166,29 +166,52 @@ def get_analytics(db: Session = Depends(get_db)):
     # Rage Taps
     rage_taps_query = text('''
         SELECT 
+          COALESCE(screen, 'Unknown') as screen,
           metadata_json->>'location' as location,
-          metadata_json->>'target_name' as target,
-          COUNT(*) as count
+          metadata_json->>'target_name' as target
         FROM telemetry_events
         WHERE event_name = 'rage_tap'
-        GROUP BY 1, 2
-        ORDER BY count DESC LIMIT 50;
+          AND metadata_json->>'location' IS NOT NULL
+        LIMIT 500;
     ''')
     rage_taps_results = db.execute(rage_taps_query).fetchall()
-    rage_taps_data = [{"location": f"{r.location} - {r.target}", "count": r.count} for r in rage_taps_results]
+    
+    rage_taps_data = []
+    for r in rage_taps_results:
+        try:
+            x_str, y_str = r.location.split(',')
+            rage_taps_data.append({
+                "screen": r.screen,
+                "x": float(x_str.strip()),
+                "y": float(y_str.strip()),
+                "target": r.target
+            })
+        except:
+            continue
 
     # Dead Clicks
     dead_clicks_query = text('''
         SELECT 
           COALESCE(screen, 'Unknown') as screen,
-          COUNT(*) as count
+          metadata_json->>'x_pos' as x,
+          metadata_json->>'y_pos' as y
         FROM telemetry_events
         WHERE event_name = 'dead_click'
-        GROUP BY 1
-        ORDER BY count DESC LIMIT 50;
+          AND metadata_json->>'x_pos' IS NOT NULL
+        LIMIT 500;
     ''')
     dead_clicks_results = db.execute(dead_clicks_query).fetchall()
-    dead_clicks_data = [{"screen": r.screen, "count": r.count} for r in dead_clicks_results]
+    
+    dead_clicks_data = []
+    for r in dead_clicks_results:
+        try:
+            dead_clicks_data.append({
+                "screen": r.screen,
+                "x": float(r.x),
+                "y": float(r.y)
+            })
+        except:
+            continue
 
     # Form Abandonment
     form_abandoned_query = text('''
