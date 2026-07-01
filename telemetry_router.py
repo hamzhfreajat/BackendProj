@@ -166,12 +166,14 @@ def get_analytics(db: Session = Depends(get_db)):
     # Rage Taps
     rage_taps_query = text('''
         SELECT 
-          COALESCE(screen, 'Unknown') as screen,
+          screen,
           metadata_json->>'location' as location,
           metadata_json->>'target_name' as target
         FROM telemetry_events
         WHERE event_name = 'rage_tap'
           AND metadata_json->>'location' IS NOT NULL
+          AND screen IS NOT NULL 
+          AND screen != ''
         LIMIT 500;
     ''')
     rage_taps_results = db.execute(rage_taps_query).fetchall()
@@ -192,12 +194,14 @@ def get_analytics(db: Session = Depends(get_db)):
     # Dead Clicks
     dead_clicks_query = text('''
         SELECT 
-          COALESCE(screen, 'Unknown') as screen,
+          screen,
           metadata_json->>'x_pos' as x,
           metadata_json->>'y_pos' as y
         FROM telemetry_events
         WHERE event_name = 'dead_click'
           AND metadata_json->>'x_pos' IS NOT NULL
+          AND screen IS NOT NULL 
+          AND screen != ''
         LIMIT 500;
     ''')
     dead_clicks_results = db.execute(dead_clicks_query).fetchall()
