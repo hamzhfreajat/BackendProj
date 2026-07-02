@@ -262,7 +262,7 @@ def get_analytics(db: Session = Depends(get_db)):
 @router.get("/advanced-analytics")
 def get_advanced_analytics(db: Session = Depends(get_db)):
     """
-    Get advanced SaaS and Category analytics for the premium dashboard tabs.
+    Get 100% real advanced SaaS and Category analytics from the database.
     """
     # ---- USERS ANALYTICS ----
     total_users_query = text("SELECT COUNT(*) FROM users;")
@@ -276,6 +276,72 @@ def get_advanced_analytics(db: Session = Depends(get_db)):
 
     stickiness = round((dau / mau * 100), 1) if mau > 0 else 0
 
+    # User Growth Rate
+    growth_query = text("""
+        WITH this_month AS (SELECT count(*) as cnt FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'),
+             last_month AS (SELECT count(*) as cnt FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '60 days' AND created_at < CURRENT_DATE - INTERVAL '30 days')
+        SELECT this_month.cnt as this, last_month.cnt as last FROM this_month, last_month;
+    """)
+    growth_res = db.execute(growth_query).fetchone()
+    growth_this = growth_res.this if growth_res else 0
+    growth_last = growth_res.last if growth_res else 1
+    growth_rate = round(((growth_this - growth_last) / max(growth_last, 1)) * 100, 1)
+    growth_str = f"+{growth_rate}%" if growth_rate > 0 else f"{growth_rate}%"
+
+    # Time to Value (TTV)
+    ttv_query = text("""
+        SELECT AVG(EXTRACT(EPOCH FROM (first_ad.created_at - u.created_at))) / 86400 as avg_days
+        FROM users u
+        JOIN (SELECT user_id, MIN(created_at) as created_at FROM ads GROUP BY user_id) first_ad ON u.id = first_ad.user_id;
+    """)
+    ttv_res = db.execute(ttv_query).scalar()
+    ttv_str = f"{round(ttv_res, 1)} أيام" if ttv_res else "غير متاح"
+
+    # Active Users History
+    au_query = text("""
+        SELECT to_char(DATE_TRUNC('month', timestamp), 'Mon YYYY') as month, 
+               COUNT(DISTINCT user_id) as mau,
+               COUNT(DISTINCT user_id) / 30 as avg_dau
+        FROM telemetry_events 
+        WHERE timestamp >= CURRENT_DATE - INTERVAL '6 months' 
+        GROUP BY DATE_TRUNC('month', timestamp), month 
+        ORDER BY DATE_TRUNC('month', timestamp) ASC;
+    """)
+    au_res = db.execute(au_query).fetchall()
+    au_categories = [r.month for r in au_res]
+    au_mau = [r.mau for r in au_res]
+    au_dau = [int(r.avg_dau) for r in au_res]
+
+    # Onboarding Funnel (Real)
+    funnel_users = total_users
+    funnel_active = db.execute(text("SELECT count(distinct user_id) FROM telemetry_events WHERE user_id IS NOT NULL;")).scalar() or 0
+    funnel_searched = db.execute(text("SELECT count(distinct user_id) FROM telemetry_events WHERE event_name = 'search';")).scalar() or 0
+    funnel_posted = db.execute(text("SELECT count(distinct user_id) FROM ads;")).scalar() or 0
+    f1 = 100
+    f2 = round((funnel_active / max(funnel_users, 1) * 100))
+    f3 = round((funnel_searched / max(funnel_users, 1) * 100))
+    f4 = round((funnel_posted / max(funnel_users, 1) * 100))
+
+    # Geographic Distribution (Real)
+    geo_query = text("""
+        SELECT 
+          CASE 
+            WHEN phone LIKE '07%' THEN 'الأردن' 
+            WHEN phone LIKE '+966%' THEN 'السعودية'
+            WHEN phone LIKE '+971%' THEN 'الإمارات'
+            WHEN phone LIKE '+20%' THEN 'مصر'
+            ELSE 'أخرى' 
+          END as country, 
+          COUNT(*) as cnt
+        FROM users 
+        WHERE phone IS NOT NULL
+        GROUP BY country
+        ORDER BY cnt DESC;
+    """)
+    geo_res = db.execute(geo_query).fetchall()
+    geo_labels = [r.country for r in geo_res]
+    geo_data = [r.cnt for r in geo_res]
+
     # ---- CATEGORY ANALYTICS ----
     total_categories_query = text("SELECT COUNT(*) FROM categories;")
     total_categories = db.execute(total_categories_query).scalar() or 0
@@ -288,7 +354,7 @@ def get_advanced_analytics(db: Session = Depends(get_db)):
 
     failed_classifications_query = text("SELECT COUNT(*) FROM ai_training_logs WHERE status != 'success';")
     failed_classifications = db.execute(failed_classifications_query).scalar() or 0
-    failed_rate = round((failed_classifications / total_classifications * 100), 1) if total_classifications > 0 else 0
+    failed_rate = round((failed_classifications / max(total_classifications, 1) * 100), 1)
 
     # Classification Volume by Category
     vol_query = text("""
@@ -301,34 +367,63 @@ def get_advanced_analytics(db: Session = Depends(get_db)):
     """)
     vol_results = db.execute(vol_query).fetchall()
     
-    # Map category IDs to names
     cat_names_query = text("SELECT id, name FROM categories;")
     cat_names = {str(r.id): r.name for r in db.execute(cat_names_query).fetchall()}
 
     classification_volume = []
     for r in vol_results:
         cat_id_str = str(r.cat_id)
-        # Strip decimal if it's like 19000.0
-        if cat_id_str.endswith(".0"):
-            cat_id_str = cat_id_str[:-2]
-            
+        if cat_id_str.endswith(".0"): cat_id_str = cat_id_str[:-2]
         classification_volume.append({
             "category": cat_names.get(cat_id_str, f"Category {cat_id_str}"),
             "volume": r.vol
         })
+
+    # AI Classification Trend (Last 7 Days)
+    trend_query = text("""
+        SELECT to_char(DATE(created_at), 'Dy') as day, COUNT(*) as vol 
+        FROM ai_training_logs 
+        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days' 
+        GROUP BY DATE(created_at), day 
+        ORDER BY DATE(created_at) ASC;
+    """)
+    trend_res = db.execute(trend_query).fetchall()
+    trend_categories = [r.day for r in trend_res]
+    trend_data = [r.vol for r in trend_res]
 
     return {
         "users": {
             "total_users": total_users,
             "dau": dau,
             "mau": mau,
-            "stickiness": stickiness
+            "stickiness": stickiness,
+            "growth_rate": growth_str,
+            "ttv": ttv_str,
+            "total_ads_posted": funnel_posted,
+            "charts": {
+                "active_users": {
+                    "categories": au_categories,
+                    "mau": au_mau,
+                    "dau": au_dau
+                },
+                "funnel": [f1, f2, f3, f4],
+                "geo": {
+                    "labels": geo_labels,
+                    "data": geo_data
+                }
+            }
         },
         "categories": {
             "total_categories": total_categories,
             "active_categories": active_categories,
             "total_classifications": total_classifications,
             "failed_rate": failed_rate,
-            "classification_volume": classification_volume
+            "classification_volume": classification_volume,
+            "charts": {
+                "trend": {
+                    "categories": trend_categories,
+                    "data": trend_data
+                }
+            }
         }
     }
