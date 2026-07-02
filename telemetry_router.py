@@ -258,3 +258,77 @@ def get_analytics(db: Session = Depends(get_db)):
         "sankey": sankey_data,
         "friction_metrics": friction_metrics
     }
+
+@router.get("/advanced-analytics")
+def get_advanced_analytics(db: Session = Depends(get_db)):
+    """
+    Get advanced SaaS and Category analytics for the premium dashboard tabs.
+    """
+    # ---- USERS ANALYTICS ----
+    total_users_query = text("SELECT COUNT(*) FROM users;")
+    total_users = db.execute(total_users_query).scalar() or 0
+
+    dau_query = text("SELECT COUNT(DISTINCT user_id) FROM telemetry_events WHERE timestamp >= CURRENT_DATE - INTERVAL '1 day' AND user_id IS NOT NULL;")
+    dau = db.execute(dau_query).scalar() or 0
+
+    mau_query = text("SELECT COUNT(DISTINCT user_id) FROM telemetry_events WHERE timestamp >= CURRENT_DATE - INTERVAL '30 days' AND user_id IS NOT NULL;")
+    mau = db.execute(mau_query).scalar() or 0
+
+    stickiness = round((dau / mau * 100), 1) if mau > 0 else 0
+
+    # ---- CATEGORY ANALYTICS ----
+    total_categories_query = text("SELECT COUNT(*) FROM categories;")
+    total_categories = db.execute(total_categories_query).scalar() or 0
+
+    active_categories_query = text("SELECT COUNT(DISTINCT category_id) FROM ads WHERE created_at >= CURRENT_DATE - INTERVAL '30 days';")
+    active_categories = db.execute(active_categories_query).scalar() or 0
+
+    total_classifications_query = text("SELECT COUNT(*) FROM ai_training_logs;")
+    total_classifications = db.execute(total_classifications_query).scalar() or 0
+
+    failed_classifications_query = text("SELECT COUNT(*) FROM ai_training_logs WHERE status != 'success';")
+    failed_classifications = db.execute(failed_classifications_query).scalar() or 0
+    failed_rate = round((failed_classifications / total_classifications * 100), 1) if total_classifications > 0 else 0
+
+    # Classification Volume by Category
+    vol_query = text("""
+        SELECT ai_output->>'category_id' as cat_id, COUNT(*) as vol 
+        FROM ai_training_logs 
+        WHERE ai_output->>'category_id' IS NOT NULL 
+        GROUP BY cat_id 
+        ORDER BY vol DESC 
+        LIMIT 10;
+    """)
+    vol_results = db.execute(vol_query).fetchall()
+    
+    # Map category IDs to names
+    cat_names_query = text("SELECT id, name FROM categories;")
+    cat_names = {str(r.id): r.name for r in db.execute(cat_names_query).fetchall()}
+
+    classification_volume = []
+    for r in vol_results:
+        cat_id_str = str(r.cat_id)
+        # Strip decimal if it's like 19000.0
+        if cat_id_str.endswith(".0"):
+            cat_id_str = cat_id_str[:-2]
+            
+        classification_volume.append({
+            "category": cat_names.get(cat_id_str, f"Category {cat_id_str}"),
+            "volume": r.vol
+        })
+
+    return {
+        "users": {
+            "total_users": total_users,
+            "dau": dau,
+            "mau": mau,
+            "stickiness": stickiness
+        },
+        "categories": {
+            "total_categories": total_categories,
+            "active_categories": active_categories,
+            "total_classifications": total_classifications,
+            "failed_rate": failed_rate,
+            "classification_volume": classification_volume
+        }
+    }
