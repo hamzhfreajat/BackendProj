@@ -756,7 +756,7 @@ def _compute_image_hash(url: str) -> Optional[str]:
         logging.getLogger(__name__).warning(f"Failed to hash image {url}: {e}")
     return None
 
-def _is_duplicate(db: Session, post: schemas.FbPost, seen_in_batch_hashes: set) -> Optional[int]:
+def _is_duplicate(db: Session, post: FbPost, seen_in_batch_hashes: set) -> Optional[int]:
     source_url = post.postUrl or ""
     raw_description = post.text or ""
     if source_url:
