@@ -360,7 +360,8 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
                 full_name=idinfo.get('name'),
                 avatar_url=idinfo.get('picture'),
                 is_email_verified=True,
-                username=email.split('@')[0]
+                username=email.split('@')[0],
+                ip_address=get_real_ip(request) if request else None
             )
             db.add(user)
             db.commit()
@@ -429,7 +430,8 @@ def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: Backgroun
                 full_name=fb_data.get('name'),
                 avatar_url=avatar_url,
                 is_email_verified=True,
-                username=email.split('@')[0]
+                username=email.split('@')[0],
+                ip_address=get_real_ip(request) if request else None
             )
             db.add(user)
             db.commit()
@@ -537,7 +539,7 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
                 email=email,
                 full_name=full_name,
                 is_email_verified=True,
-                username=email.split(\'@\')[0] if email else f"apple_user_{apple_sub[:8]}",
+                username=email.split('@')[0] if email else f"apple_user_{apple_sub[:8]}",
                 ip_address=get_real_ip(request) if request else None
             )
             db.add(user)
