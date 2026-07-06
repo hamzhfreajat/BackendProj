@@ -28,8 +28,17 @@ async def ingest_telemetry_batch(payload: TelemetryBatchPayload, request: Reques
         # Fallback if ARQ is not running or not configured
         raise HTTPException(status_code=503, detail="Task queue unavailable")
     
+    # Extract IP address
+    ip_address = request.headers.get('x-forwarded-for') or request.client.host
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+
     # Convert Pydantic payload to dicts for ARQ
-    events_list = [event.dict() for event in payload.events]
+    events_list = []
+    for event in payload.events:
+        event_dict = event.dict()
+        event_dict['ip_address'] = ip_address
+        events_list.append(event_dict)
     
     # Enqueue job
     await arq_pool.enqueue_job('process_telemetry_batch', events_list)
@@ -427,3 +436,65 @@ def get_advanced_analytics(db: Session = Depends(get_db)):
             }
         }
     }
+
+
+@router.get("/user-sankey")
+def get_user_sankey(email: str, db: Session = Depends(get_db)):
+    # 1. Lookup user by email
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user_id_str = str(user.id)
+    
+    # 2. Query telemetry events for this user_id
+    sankey_query = text('''
+        SELECT 
+          metadata_json->>'previous_screen' as source_screen,
+          metadata_json->>'screen_name' as target_screen,
+          COUNT(*) as value
+        FROM telemetry_events
+        WHERE event_name = 'screen_viewed'
+          AND metadata_json->>'previous_screen' IS NOT NULL
+          AND metadata_json->>'screen_name' IS NOT NULL
+          AND user_id = :uid
+        GROUP BY source_screen, target_screen
+        HAVING COUNT(*) > 0
+        ORDER BY value DESC
+        LIMIT 500;
+    ''')
+    
+    results = db.execute(sankey_query, {"uid": user_id_str}).fetchall()
+    
+    nodes_dict = {}
+    links = []
+    for r in results:
+        src = r.source_screen
+        tgt = r.target_screen
+        val = r.value
+        
+        if src == tgt:
+            continue
+            
+        if src not in nodes_dict:
+            nodes_dict[src] = len(nodes_dict)
+        if tgt not in nodes_dict:
+            nodes_dict[tgt] = len(nodes_dict)
+            
+        links.append({
+            "source": nodes_dict[src],
+            "target": nodes_dict[tgt],
+            "value": val
+        })
+        
+    nodes = [{"name": name} for name in nodes_dict.keys()]
+    
+    return {
+        "user_id": user.id,
+        "email": user.email,
+        "sankey": {
+            "nodes": nodes,
+            "links": links
+        }
+    }
+

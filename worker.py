@@ -16,7 +16,8 @@ async def process_telemetry_batch(ctx, batch):
                     user_id=event.get('user_id'),
                     screen=event.get('screen'),
                     metadata_json=event.get('metadata_json'),
-                    timestamp=event.get('timestamp') or datetime.utcnow()
+                    timestamp=event.get('timestamp') or datetime.utcnow(),
+                    ip_address=event.get('ip_address')
                 )
             )
         

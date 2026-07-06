@@ -138,6 +138,9 @@ class User(Base):
     cancellation_rate = Column(Integer, default=0)
     buyer_satisfaction = Column(Integer, default=0)
     shop_name = Column(String(100), nullable=True)
+    
+    # Tracking
+    ip_address = Column(String(50), nullable=True)
     business_policy = Column(Text, nullable=True)
     shop_location = Column(Text, nullable=True)
     shop_hours = Column(String(100), nullable=True)
@@ -243,8 +246,10 @@ class Ad(Base):
     source_type = Column(Enum(SourceType), default=SourceType.ORGANIC_USER)
     source_url = Column(Text, nullable=True)
     is_facebook_posted = Column(Boolean, default=False)
+    primary_image_hash = Column(String(64), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    ip_address = Column(String(50), nullable=True)
 
     owner = relationship("User", back_populates="ads")
     category = relationship("Category", back_populates="ads")
@@ -516,6 +521,7 @@ class TelemetryEvent(Base):
     screen = Column(String(100), nullable=True)
     metadata_json = Column(JSONB, nullable=True)
     timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+    ip_address = Column(String(50), nullable=True)
 
 class FacebookAutoPostRule(Base):
     __tablename__ = "facebook_autopost_rules"

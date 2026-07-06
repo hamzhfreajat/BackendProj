@@ -968,11 +968,15 @@ def read_ads(
     user_lat: float = None,
     user_lng: float = None,
     only_others: bool = False,
+    location_search: str = None,
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     limit = min(limit, 100) # Security cap on pagination
     query = db.query(models.Ad)
+    
+    if location_search:
+        query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
     
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
@@ -1307,9 +1311,21 @@ def get_ads_count(
     is_published: bool = None,
     source_type: str = None,
     tags: List[str] = Query(None),
+    only_others: bool = False,
+    location_search: str = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Ad)
+    
+    if location_search:
+        query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
+        
+    if only_others:
+        query = query.filter(or_(
+            models.Ad.location.ilike("%أخرى%"),
+            models.Ad.location.ilike("%اخرى%"),
+            models.Ad.location.ilike("%other%")
+        ))
     
     ignore_location = False
     if search:
@@ -1550,7 +1566,8 @@ def get_ads_count(
 def create_ad_draft(
     ad_draft: schemas.AdDraftCreate,
     current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None
 ):
     user_id = current_user.id
     ad_data = ad_draft.model_dump()
@@ -1677,7 +1694,8 @@ def create_ad(
     ad: schemas.AdCreate, 
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None
 ):
     user_id = current_user.id
     user_phone = ad.phone_number or current_user.mobile_number

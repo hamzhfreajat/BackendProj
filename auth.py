@@ -333,7 +333,7 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
 #     return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/google", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
-def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), request: Request = None):
     try:
         google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
         google_client_id_web = os.environ.get("GOOGLE_CLIENT_ID_WEB")
@@ -397,7 +397,7 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
         raise HTTPException(status_code=401, detail="Invalid Google authentication token.")
 
 @router.post("/facebook", response_model=schemas.AuthResponse)
-def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), request: Request = None):
     try:
         # Verify Facebook token via Graph API
         fb_url = f"https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token={data.access_token}"
@@ -499,7 +499,7 @@ def apple_callback(
     return RedirectResponse(url=intent_url, status_code=307)
 
 @router.post("/apple", response_model=schemas.AuthResponse)
-def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), request: Request = None):
     try:
         # Fetch Apple's public keys
         jwks_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
@@ -537,7 +537,8 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
                 email=email,
                 full_name=full_name,
                 is_email_verified=True,
-                username=email.split('@')[0] if email else f"apple_user_{apple_sub[:8]}"
+                username=email.split(\'@\')[0] if email else f"apple_user_{apple_sub[:8]}",
+                ip_address=get_real_ip(request) if request else None
             )
             db.add(user)
             db.commit()

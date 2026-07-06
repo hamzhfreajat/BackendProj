@@ -4,6 +4,7 @@ import time
 from sqlalchemy.orm import Session
 from datetime import datetime
 import models
+from mapper import get_dynamic_location_rules, map_location, get_location_map, map_location_with_fallback
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -23,8 +24,9 @@ active_scrape_status = {
     "is_scraping": False,
     "progress": 0,
     "total": 0,
-    "message": "Idle"
 }
+
+city_regions_map = get_location_map()
 
 # --- Pydantic Schema for Gemini Strict JSON Extraction ---
 class ExtractedAdAttributes(BaseModel):
@@ -397,6 +399,9 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
             
         categories_context = "\n".join(categories_context_lines)
 
+        dynamic_rules_text = get_dynamic_location_rules()
+        dynamic_rules_instruction = f"\\n10. DYNAMIC LOCATION OVERRIDES:\\n{dynamic_rules_text}" if dynamic_rules_text else ""
+
         system_instruction = (
             "You are an expert AI data extraction assistant specialized in Jordanian classifieds ( العقارات, السيارات, الوظائف ).\\n"
             "You will receive an array of raw text posts from Facebook groups or classifieds sites.\\n"
@@ -406,7 +411,8 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
             f"4. If you can confidently determine the Category ID from this list, use it:\\n{categories_context}\\n"
             "If you CANNOT determine the ID, you may leave `category_id` as 0.\\n"
             "5. Ensure prices are purely numeric (JOD). Extract any Jordanian phone numbers precisely.\\n"
-            "6. CRITICAL LOCATION RULES: Be very precise with locations. 'العاشرة' typically means 'العقبة, المنطقة العاشرة' NOT 'عمان, الدوار العاشر'. Do not confuse 'بدر' with 'بدر الجديدة'.\n7. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region.\n8. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين', 'بن العميد', 'خلف بن العميد' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, بن العميد' etc. Do not hallucinate cities.\n9. CRITICAL: If the location mentions 'عزريت' or 'قصر العوادين' (or variants like 'لواء بني كنانة, عزريت' or 'قرب قصر العوادين'), ALWAYS format the location EXACTLY as 'قصر العوادين , عزريت' without any additional words."
+            "6. CRITICAL LOCATION RULES: Be very precise with locations. 'العاشرة' typically means 'العقبة, المنطقة العاشرة' NOT 'عمان, الدوار العاشر'. Do not confuse 'بدر' with 'بدر الجديدة'.\n7. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region.\n8. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين', 'بن العميد', 'خلف بن العميد' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, بن العميد' etc. Do not hallucinate cities. You MUST ONLY use regions that officially exist. If the neighborhood mentioned is completely unknown, not a standard region, or you are completely unsure, you MUST output the City name followed by \'أخرى\' (e.g. \'عمان, أخرى\'). NEVER invent or hallucinate a new region name.\n9. CRITICAL: If the location mentions 'عزريت' or 'قصر العوادين' (or variants like 'لواء بني كنانة, عزريت' or 'قرب قصر العوادين'), ALWAYS format the location EXACTLY as 'قصر العوادين , عزريت' without any additional words."
+            f"{dynamic_rules_instruction}"
         )
         model = genai.GenerativeModel("gemini-2.5-flash", system_instruction=system_instruction)
         
@@ -491,6 +497,11 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
 
                             # 2. Add Location fallback
                             loc = ai_ad.get("location")
+                            raw_text = original_post.get('text', '')
+                            if loc:
+                                mapped_loc = map_location_with_fallback(loc, raw_text, city_regions_map, city)
+                                if mapped_loc:
+                                    loc = mapped_loc
                             if not loc:
                                 loc = city
 

@@ -1,3 +1,4 @@
+from mapper import get_dynamic_location_rules
 """
 fb_batch_router.py - Facebook Posts Batch Ingestion Endpoint
 ============================================================
@@ -98,6 +99,9 @@ CRITICAL LOCATION RULES:
 3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
 4. If an ad mentions being near or at a specific university (e.g., "قرب الجامعة الأردنية", "بجانب الجامعة الألمانية"), map the location directly to that university's region (e.g., "عمان, الجامعة الأردنية", "مادبا, الجامعة الألمانية الأردنية").
     5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
+    6. DYNAMIC OVERRIDES:
+{get_dynamic_location_rules()}
+
     6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
 - phone_number (string or null) -- phone number if mentioned
 - category_id  (int) -- Map to the MOST SPECIFIC deepest sub-category ID from the list. CRITICAL RULE: NEVER use a parent category (like 'سكني' or 'عقارات للإيجار') if a more specific child category (like 'شقق للإيجار' or 'استوديوهات') fits perfectly! ALWAYS pick the absolute lowest/deepest leaf category. Also, analyze the intent of the author. If the post is completely unrelated to real estate (e.g. cars, services, products, news) OR if the author is SEEKING, ASKING FOR, or REQUESTING an apartment or roommate (meaning they do NOT have a property to offer, but are looking for one), set category_id to 0 to explicitly reject the post. Only accept posts where the author is realistically OFFERING a real estate property or room.
@@ -175,12 +179,15 @@ Now, process the following post. Respond ONLY with a JSON object.
 Extract:
 - title: (string) generate a concise, professional arabic title (Empty if category_id is 0)
 - price: (float) numeric price (0.0 if missing)
-- location: (string) Extract the exact city and region found in the post. Format as "City, Region" (e.g. "عمان, عبدون") if known, otherwise just output the region name. 
+- location: (string) Extract the exact city and region found in the post. Format as "City, Region" (e.g. "عمان, عبدون") if known, otherwise just output the region name. You MUST ONLY use regions that officially exist in the Valid Regions List. If the specific neighborhood is completely unknown or not a standard region, output \'City, أخرى\'. NEVER invent or hallucinate a new region name! 
   CRITICAL LOCATION RULES: 
   1. In Aqaba, "المنطقة الثالثة" maps to "العقبة, السكنية 3", "الرابعة" to "العقبة, السكنية 4", "الخامسة" to "العقبة, السكنية 5", "السادسة" to "العقبة, السكنية 6", "السابعة" to "العقبة, السكنية 7", "الثامنة" to "العقبة, السكنية 8", "التاسعة" to "العقبة, السكنية 9", "العاشرة" to "العقبة, السكنية 10".
   2. "الدوار الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن" belong strictly to "عمان". 
   3. "شفا بدران" belongs to "عمان". Do NOT confuse it with "بدر".
   4. If the ad is near a university, map the location directly to that university (e.g. "مادبا, الجامعة الألمانية الأردنية").
+
+  5. DYNAMIC OVERRIDES:
+{get_dynamic_location_rules()}
 - phone_number: (string or null) Look closely for 10-digit numbers.
 - category_name: (string) Extract the exact real estate category (e.g. 'شقق للبيع', 'أراضي للإيجار', 'ستوديوهات'). CRITICAL RULE: NEVER output a parent category like 'سكني' or 'عقارات للإيجار' if a more specific leaf category like 'شقق للإيجار' applies. ALWAYS output the deepest, most specific subcategory. Use empty string if author is SEEKING or if not offering real estate.
 - rejection_reason: (string) If not offering real estate, provide exact reason why here.
@@ -256,7 +263,13 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
     4. If an ad mentions being near or at a specific university, map the location directly to that university's region (e.g. "مادبا, الجامعة الألمانية الأردنية").
     5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
+    6. DYNAMIC OVERRIDES:
+{get_dynamic_location_rules()}
+
     6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
+    7. DYNAMIC OVERRIDES:
+{get_dynamic_location_rules()}
+
     
     Valid Regions List:
     {json.dumps(regions_list, ensure_ascii=False)}
@@ -727,8 +740,25 @@ def _get_or_create_ai_user(db: Session) -> models.User:
         db.refresh(ai_user)
     return ai_user
 
+def _compute_image_hash(url: str) -> Optional[str]:
+    try:
+        if not url: return None
+        import requests
+        from PIL import Image
+        from io import BytesIO
+        import imagehash
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            img = Image.open(BytesIO(resp.content))
+            return str(imagehash.dhash(img))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to hash image {url}: {e}")
+    return None
 
-def _is_duplicate(db: Session, source_url: str, raw_description: str) -> Optional[int]:
+def _is_duplicate(db: Session, post: schemas.FbPost, seen_in_batch_hashes: set) -> Optional[int]:
+    source_url = post.postUrl or ""
+    raw_description = post.text or ""
     if source_url:
         import re
         # 1. Check exact match
@@ -754,10 +784,35 @@ def _is_duplicate(db: Session, source_url: str, raw_description: str) -> Optiona
             ad = db.query(models.Ad).filter(models.Ad.source_url.like(f"%permalink/{post_id}%")).first()
             if ad: return ad.id
 
-    if raw_description and len(raw_description.strip()) > 20:
-        # Prevent exact text duplicates regardless of URL
-        ad = db.query(models.Ad).filter(models.Ad.raw_description == raw_description.strip()).first()
-        if ad: return ad.id
+    clean_text = ""
+    if raw_description:
+        # Strip all whitespaces, tabs, newlines for a very strict duplicate text check
+        import re
+        clean_text = re.sub(r'\s+', '', raw_description.strip())
+        if len(clean_text) > 20:
+            # Check DB for strictly identical description
+            # Since raw_description in DB might have original spaces, we can't easily SQL query it with REPLACE.
+            # However, we can check memory batch text
+            if clean_text in seen_in_batch_hashes:
+                return -1 # Magic number for "intra-batch text duplicate"
+            seen_in_batch_hashes.add(clean_text)
+
+            # Check exact DB match just in case
+            ad = db.query(models.Ad).filter(models.Ad.raw_description == raw_description.strip()).first()
+            if ad: return ad.id
+            
+    # Perceptual Image Hashing check
+    if getattr(post, 'images', None) and len(post.images) > 0:
+        first_img = post.images[0]
+        img_hash = _compute_image_hash(first_img)
+        if img_hash:
+            if img_hash in seen_in_batch_hashes:
+                return -2 # Magic number for "intra-batch image duplicate"
+            seen_in_batch_hashes.add(img_hash)
+            
+            # Check DB for existing ad with the same image hash
+            ad_img = db.query(models.Ad).filter(models.Ad.primary_image_hash == img_hash).first()
+            if ad_img: return ad_img.id
 
     return None
 def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, default_location):
@@ -882,6 +937,10 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         },
         is_published=True,
     )
+    
+    # Store the computed image hash to prevent future duplicates!
+    if post.images and len(post.images) > 0:
+        ad.primary_image_hash = _compute_image_hash(post.images[0])
     
     if ad_created_at:
         ad.created_at = ad_created_at
@@ -1042,7 +1101,7 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             results.append(PostResult(index=idx, status="skipped", reason="No text or URL"))
             continue
 
-        dup_ad_id = _is_duplicate(db, post.postUrl or "", post.text or "")
+        dup_ad_id = _is_duplicate(db, post, seen_in_batch_texts)
         if dup_ad_id:
             skipped += 1
             reason = f"Duplicate post (Matches Ad ID {dup_ad_id})"

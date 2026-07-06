@@ -1,0 +1,43 @@
+Region:  أخرى -> Cities: إربد , الزرقاء , السلط , العقبة , الكرك , المفرق , جرش , عجلون , عمان , مادبا , معان 
+Region:  البلد -> Cities: إربد , عجلون 
+Region:  الحي الجنوبي -> Cities: إربد , المفرق 
+Region:  الرابية -> Cities: إربد , عمان 
+Region:  السوق -> Cities: إربد , الزرقاء 
+Region:  المنشية -> Cities: إربد , السلط 
+Region:  النزهة -> Cities: إربد , مادبا 
+Region:  ايدون -> Cities: إربد , المفرق 
+Region:  حنينا -> Cities: إربد , مادبا 
+Region:  حوارة -> Cities: إربد , عمان 
+Region:  حي الزهور -> Cities: إربد , المفرق 
+Region:  شارع الجامعة -> Cities: إربد , عمان 
+Region:  ضاحية الحسين -> Cities: إربد , عمان 
+Region:  أم رمانة -> Cities: الزرقاء , عمان 
+Region:  البستان -> Cities: الزرقاء , المفرق 
+Region:  المشيرفة -> Cities: الزرقاء , الكرك , جرش 
+Region:  النصر -> Cities: الزرقاء , مادبا 
+Region:  الهاشمية -> Cities: الزرقاء , جرش , عجلون 
+Region:  بيرين -> Cities: الزرقاء , عمان 
+Region:  حي الحسين -> Cities: الزرقاء , المفرق 
+Region:  وادي العش -> Cities: الزرقاء , عمان 
+Region:  السرو -> Cities: السلط , عمان 
+Region:  القلعة -> Cities: السلط , عجلون 
+Region:  القصر -> Cities: الطفيلة , الكرك 
+Region:  الرضوان -> Cities: العقبة , عمان 
+Region:  الزيتونة -> Cities: المفرق , عمان 
+Region:  دحل -> Cities: المفرق , جرش 
+Region:  الزعفران -> Cities: عمان , مادبا 
+Region:  جلول -> Cities: عمان , مادبا 
+Region: وادي زيد -> Cities: عمان, الطفيلة
+Region: واد زيد -> Cities: عمان, معان
+Region: بلعما -> Cities: إربد, عمان
+Region: وسط البلد -> Cities: معان, المفرق
+Region: الجامعة الأردنية -> Cities: العقبة, عمان
+Region: طبربور -> Cities: العقبة, معان
+Region: عبين عبلين -> Cities: عجلون, المفرق
+Region: الحوية -> Cities: الكرك, عمان
+Region: دوار اليوسفي -> Cities: إربد, عمان
+Region: الزنية -> Cities: إربد, الزرقاء
+Region: المدور -> Cities: جرش, عمان, العقبة
+Region: سواده -> Cities: السلط, عمان
+Region: دبات أبو النصر -> Cities: عمان, إربد
+Region: حي عاليا -> Cities: إربد, عمان
