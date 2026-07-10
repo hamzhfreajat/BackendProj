@@ -197,7 +197,7 @@ async def send_personal_notification(
                 from firebase_admin import messaging
 
                 if not init_firebase_admin():
-                    print("[FCM] Failed to initialize firebase.")
+                    print("[FCM] Failed to initialize firebase.", flush=True)
 
                 if firebase_admin._apps:
                     for device in user_tokens:
@@ -237,14 +237,14 @@ async def send_personal_notification(
                             )
                             messaging.send(message)
                         except Exception as e:
-                            print(f"[FCM] Failed to send to token {device.fcm_token[:20]}...: {e}")
+                            print(f"[FCM] Failed to send to token {device.fcm_token[:20]}...: {e}", flush=True)
             except ImportError:
-                print("[FCM] firebase-admin not installed. Skipping push notification.")
+                print("[FCM] firebase-admin not installed. Skipping push notification.", flush=True)
 
         # 3. Broadcast via WebSocket to the specific user ONLY
         await manager.send_personal_message(target_user_id, notification_payload)
 
-        print(f"[NOTIFY] Sent to user {target_user_id}: {title}")
+        print(f"[NOTIFY] Sent to user {target_user_id}: {title}", flush=True)
 
     finally:
         db.close()
