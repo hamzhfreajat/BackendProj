@@ -214,27 +214,27 @@ async def send_personal_notification(
                             data_payload["title"] = title
                             data_payload["body"] = body
 
-                            is_android_chat = (device.device_type == "android" and notification_type == "chat_message")
-
-                            if is_android_chat:
-                                message = messaging.Message(
-                                    android=messaging.AndroidConfig(priority="high"),
-                                    data=data_payload,
-                                    token=device.fcm_token,
-                                )
-                            else:
-                                message = messaging.Message(
-                                    notification=messaging.Notification(title=title, body=body),
-                                    android=messaging.AndroidConfig(
-                                        priority="high",
-                                        notification=messaging.AndroidNotification(
-                                            channel_id="high_importance_channel",
-                                            visibility="private"
+                            message = messaging.Message(
+                                notification=messaging.Notification(title=title, body=body),
+                                android=messaging.AndroidConfig(
+                                    priority="high",
+                                    notification=messaging.AndroidNotification(
+                                        channel_id="high_importance_channel",
+                                        sound="default",
+                                        click_action="FLUTTER_NOTIFICATION_CLICK"
+                                    )
+                                ),
+                                apns=messaging.APNSConfig(
+                                    payload=messaging.APNSPayload(
+                                        aps=messaging.Aps(
+                                            sound="default",
+                                            content_available=True
                                         )
                                     ),
-                                    data=data_payload,
-                                    token=device.fcm_token,
-                                )
+                                ),
+                                data=data_payload,
+                                token=device.fcm_token,
+                            )
                             messaging.send(message)
                         except Exception as e:
                             print(f"[FCM] Failed to send to token {device.fcm_token[:20]}...: {e}")
