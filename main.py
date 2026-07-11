@@ -2010,7 +2010,7 @@ def update_ad(
     # Notify: Ad submitted confirmation to the owner if transitioned from unpublished to published
     if was_unpublished and is_now_published:
         background_tasks.add_task(
-            notifications.send_personal_notification,
+            send_personal_notification,
             target_user_id=db_ad.user_id,
             title="تم نشر إعلانك بنجاح ✅",
             body=f"إعلانك '{db_ad.title[:50]}' تم نشره بنجاح وأصبح متاحاً للجميع.",
@@ -2111,7 +2111,7 @@ def notify_phone_revealed(
     if db_ad.user_id != current_user.id:
         # Prevent spamming: only send once per user per ad per hour/day (simple implementation just sends)
         background_tasks.add_task(
-            notifications.send_personal_notification,
+            send_personal_notification,
             target_user_id=db_ad.user_id,
             title="قام أحد المستخدمين بإظهار رقمك 📞",
             body=f"قام أحدهم بإظهار رقم هاتفك في إعلان '{db_ad.title[:30]}'",
@@ -2134,7 +2134,7 @@ def notify_chat_started(
         
     if db_ad.user_id != current_user.id:
         background_tasks.add_task(
-            notifications.send_personal_notification,
+            send_personal_notification,
             target_user_id=db_ad.user_id,
             title="رسالة محتملة جديدة 💬",
             body=f"مستخدم مهتم بإعلانك '{db_ad.title[:30]}' وانتقل للمحادثة.",
@@ -2176,7 +2176,7 @@ def record_ad_view(
     milestones = [10, 50, 100, 500, 1000]
     if db_ad.views in milestones:
         background_tasks.add_task(
-            notifications.send_personal_notification,
+            send_personal_notification,
             target_user_id=db_ad.user_id,
             title="تهانينا! إعلانك يحقق مشاهدات عالية 🎉",
             body=f"وصل إعلانك '{db_ad.title[:30]}' إلى {db_ad.views} مشاهدة!",
@@ -2664,7 +2664,7 @@ async def check_category_milestone_task(category_id: int):
             users_to_notify = db.query(models.User).filter(models.User.latest_category_id == category_id).all()
             for u in users_to_notify:
                 try:
-                    await notifications.send_personal_notification(
+                    await send_personal_notification(
                         target_user_id=u.id,
                         title="إعلانات جديدة تهمك 🚀",
                         body=f"تمت إضافة 1000 إعلان جديد في قسم {cat.name}!",
@@ -2675,4 +2675,13 @@ async def check_category_milestone_task(category_id: int):
                     print(f"Error notifying user {u.id}: {e}")
     finally:
         db.close()
+
+
+@app.get("/api/config/version")
+def get_version_config():
+    return {
+        "latest_ios": "1.0.5",
+        "min_ios": "1.0.0",
+        "testflight_url": "https://testflight.apple.com/join/W73QoHhW"
+    }
 

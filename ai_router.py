@@ -144,7 +144,7 @@ def location_intelligence(request: Request, data: dict, current_user: models.Use
             deepseek_key = os.getenv("DEEPSEEK_API_KEY")
             if not deepseek_key:
                 raise Exception("DEEPSEEK_API_KEY not set")
-            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}]
@@ -255,7 +255,7 @@ def evaluate_ad(request: Request, data: dict, current_user: models.User = Depend
             deepseek_key = os.getenv("DEEPSEEK_API_KEY")
             if not deepseek_key:
                 raise Exception("DEEPSEEK_API_KEY not set")
-            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
@@ -328,7 +328,7 @@ def generate_ad_suggestions(request: Request, data: dict, current_user: models.U
             deepseek_key = os.getenv("DEEPSEEK_API_KEY")
             if not deepseek_key:
                 raise Exception("DEEPSEEK_API_KEY not set in environment.")
-            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],

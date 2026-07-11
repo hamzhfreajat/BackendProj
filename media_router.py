@@ -34,7 +34,7 @@ def get_r2_client():
         aws_secret_access_key=sk,
         endpoint_url=eu,
         region_name="auto",
-        config=Config(signature_version='s3v4')
+        config=Config(signature_version='s3v4', connect_timeout=5, read_timeout=30, retries={'max_attempts': 1})
     )
 
 UPLOAD_DIR = "uploads"

@@ -70,7 +70,7 @@ async def get_upload_url(request: UploadUrlRequest, current_user: models.User = 
         aws_secret_access_key=os.getenv("R2_SECRET_ACCESS_KEY"),
         endpoint_url=r2_endpoint,
         region_name="auto",
-        config=Config(signature_version='s3v4')
+        config=Config(signature_version='s3v4', connect_timeout=5, read_timeout=30, retries={'max_attempts': 1})
     )
     
     file_ext = request.filename.split(".")[-1].lower() if "." in request.filename else "jpg"
@@ -109,7 +109,7 @@ async def process_ocr(request: OcrRequest, current_user: models.User = Depends(a
             aws_secret_access_key=os.getenv("R2_SECRET_ACCESS_KEY"),
             endpoint_url=r2_endpoint,
             region_name="auto",
-            config=Config(signature_version='s3v4')
+            config=Config(signature_version='s3v4', connect_timeout=5, read_timeout=30, retries={'max_attempts': 1})
         )
         bucket_name = os.getenv("R2_BUCKET_NAME_KYC", "joapp-kyc")
         

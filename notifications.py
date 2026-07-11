@@ -220,15 +220,14 @@ async def send_personal_notification(
                                     priority="high",
                                     notification=messaging.AndroidNotification(
                                         channel_id="high_importance_channel",
-                                        sound="default",
-                                        click_action="FLUTTER_NOTIFICATION_CLICK"
+                                        sound="default"
                                     )
                                 ),
                                 apns=messaging.APNSConfig(
                                     payload=messaging.APNSPayload(
                                         aps=messaging.Aps(
                                             sound="default",
-                                            content_available=True
+                                            mutable_content=True
                                         )
                                     ),
                                 ),
@@ -236,6 +235,10 @@ async def send_personal_notification(
                                 token=device.fcm_token,
                             )
                             messaging.send(message)
+                        except messaging.UnregisteredError:
+                            print(f"[FCM] Token {device.fcm_token[:20]} is unregistered. Removing from DB.", flush=True)
+                            db.delete(device)
+                            db.commit()
                         except Exception as e:
                             print(f"[FCM] Failed to send to token {device.fcm_token[:20]}...: {e}", flush=True)
             except ImportError:
