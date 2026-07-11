@@ -226,6 +226,7 @@ async def send_personal_notification(
                                 apns=messaging.APNSConfig(
                                     payload=messaging.APNSPayload(
                                         aps=messaging.Aps(
+                                            alert=messaging.ApsAlert(title=title, body=body),
                                             sound="default",
                                             mutable_content=True
                                         )
