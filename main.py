@@ -91,7 +91,7 @@ if _raw_origins and _raw_origins != "*":
     ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 else:
     # Default to the specific frontend domain if not set
-    ALLOWED_ORIGINS = ["https://joapp.space", "https://www.joapp.space", "https://dash.sooq-com.com", "http://localhost:3000"]
+    ALLOWED_ORIGINS = ["https://joapp.space", "https://www.joapp.space", "http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
