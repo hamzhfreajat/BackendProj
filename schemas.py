@@ -109,7 +109,7 @@ class UserPrivateProfile(BaseModel):
     total_ads_count: Optional[int] = 0
     
     class Config:
-        from_attributes = Truebool] = False
+        from_attributes = True
     
     # KYC
     full_name: Optional[str] = None
