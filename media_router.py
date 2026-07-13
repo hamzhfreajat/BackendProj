@@ -142,7 +142,7 @@ async def upload_media(
                         if duration > 610:  # 10 minutes + 10s buffer
                             log_file_upload_blocked(get_real_ip(request), request.url.path, "Audio exceeds 10 minutes", str(current_user.id))
                             raise HTTPException(status_code=400, detail="Voice message exceeds the maximum allowed duration of 10 minutes.")
-                                except HTTPException:
+                except HTTPException:
                     raise
                 except Exception as e:
                     logger.error(f"Failed to check audio duration: {e}")
@@ -154,7 +154,7 @@ async def upload_media(
         file_ext = os.path.splitext(file.filename)[1] if file.filename else ""
         unique_filename = f"{uuid.uuid4().hex}{file_ext}"
         
-                r2_client = get_r2_client()
+        r2_client = get_r2_client()
         bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
         public_url = os.getenv("R2_PUBLIC_URL")
         if not public_url:
@@ -181,7 +181,7 @@ async def upload_media(
 
         if r2_client:
             # Upload to Cloudflare R2
-                        try:
+            try:
                 logger.info(f"Uploading {unique_filename} to Cloudflare R2...")
                 file_obj_to_upload.seek(0)
                 r2_client.upload_fileobj(
@@ -197,7 +197,7 @@ async def upload_media(
                 uploaded_urls.append(file_url)
                 logger.info(f"R2 Upload successful: {file_url}")
                 
-                        except Exception as e:
+            except Exception as e:
                 logger.error(f"R2 Upload Exception: {e}")
                 raise HTTPException(status_code=500, detail="Failed to upload image to Cloudflare R2")
         else:
