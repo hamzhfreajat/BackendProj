@@ -338,14 +338,14 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
 #             user_phone=user.mobile_number
 #         )
 # 
-response.set_cookie(
-    key="access_token",
-    value=access_token,
-    httponly=True,
-    secure=True,
-    samesite="lax",
-    max_age=30 * 60
-)
+# response.set_cookie(
+#     key="access_token",
+#     value=access_token,
+#     httponly=True,
+#     secure=True,
+#     samesite="lax",
+#     max_age=30 * 60
+# )
 #     return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/google", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
