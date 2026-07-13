@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from database import get_db
 from models import User, Ad, SupportMessage, Category
 from schemas import UserPublicProfile
+import auth
+from auth import get_current_admin
+import models
 
 router = APIRouter(prefix="/api/admin/users", tags=["admin_users"])
 
@@ -48,7 +51,7 @@ class UserAdResponse(BaseModel):
     category_name: Optional[str] = None
 
 @router.get("", response_model=List[UserAdminResponse])
-def search_users(q: Optional[str] = None, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+def search_users(q: Optional[str] = None, skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     query = db.query(User)
     
     if q:
@@ -80,7 +83,7 @@ def search_users(q: Optional[str] = None, skip: int = 0, limit: int = 50, db: Se
     return result
 
 @router.put("/{user_id}/status")
-def update_user_status(user_id: int, status: UserStatusUpdate, db: Session = Depends(get_db)):
+def update_user_status(user_id: int, status: UserStatusUpdate, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -90,7 +93,7 @@ def update_user_status(user_id: int, status: UserStatusUpdate, db: Session = Dep
     return {"message": "User status updated successfully"}
 
 @router.put("/{user_id}/ban")
-def update_user_ban(user_id: int, ban_status: UserBanUpdate, db: Session = Depends(get_db)):
+def update_user_ban(user_id: int, ban_status: UserBanUpdate, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -100,7 +103,7 @@ def update_user_ban(user_id: int, ban_status: UserBanUpdate, db: Session = Depen
     return {"message": "User ban status updated successfully"}
 
 @router.get("/{user_id}/ads", response_model=List[UserAdResponse])
-def get_user_ads(user_id: int, db: Session = Depends(get_db)):
+def get_user_ads(user_id: int, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     ads = db.query(Ad).filter(Ad.user_id == user_id).order_by(Ad.created_at.desc()).all()
     
     result = []
@@ -122,7 +125,7 @@ def get_user_ads(user_id: int, db: Session = Depends(get_db)):
     return result
 
 @router.get("/{user_id}/chats", response_model=List[SupportMessageResponse])
-def get_user_chats(user_id: int, db: Session = Depends(get_db)):
+def get_user_chats(user_id: int, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     messages = db.query(SupportMessage).filter(SupportMessage.user_id == user_id).order_by(SupportMessage.created_at.asc()).all()
     
     # Mark user messages as read when admin opens chat
@@ -144,7 +147,7 @@ def get_user_chats(user_id: int, db: Session = Depends(get_db)):
     return result
 
 @router.post("/{user_id}/chats")
-def send_support_message(user_id: int, req: SupportMessageRequest, db: Session = Depends(get_db)):
+def send_support_message(user_id: int, req: SupportMessageRequest, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -7,10 +7,14 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Hardcoded for now based on the user's setup
-FACEBOOK_PAGE_ID = "100516965181114" # Sooqcom Page ID
-FACEBOOK_ACCESS_TOKEN = "EAAiDF1hlti8BR1oJkqUyhE6ttOE2XY3uapArobbgQoxeu156oqbkjLPbp4C99pNczbkXe99KpY2DEkHEZAw6vypJelGurZC6jSnskNOLA6Kk58qeRRNyJeLD1NE32XG5tHZCecK2wcWZBYHXGFiY3Vq1mmgCvYnZCU9shBRC2K295HKbRAZAxhs9WVLFNnc2z7qOpOwBcZD"
+# Read Facebook credentials from environment variables
+FACEBOOK_PAGE_ID = os.environ.get("FACEBOOK_PAGE_ID")
+FACEBOOK_ACCESS_TOKEN = os.environ.get("FACEBOOK_ACCESS_TOKEN")
 
+if not FACEBOOK_PAGE_ID or not FACEBOOK_ACCESS_TOKEN:
+    logger.warning("FACEBOOK_PAGE_ID or FACEBOOK_ACCESS_TOKEN not set. Facebook publishing will be unavailable.")
+    FACEBOOK_PAGE_ID = FACEBOOK_PAGE_ID or ""
+    FACEBOOK_ACCESS_TOKEN = FACEBOOK_ACCESS_TOKEN or ""
 async def upload_unpublished_photo(session: aiohttp.ClientSession, image_url: str) -> str:
     """Uploads a photo without publishing it to get its media ID for a carousel post."""
     url = f"https://graph.facebook.com/v20.0/{FACEBOOK_PAGE_ID}/photos"
@@ -73,3 +77,4 @@ async def publish_facebook_post(message: str, link: str = None, image_urls: list
     except Exception as e:
         logger.error(f"Exception while publishing to Facebook: {e}")
         return False
+

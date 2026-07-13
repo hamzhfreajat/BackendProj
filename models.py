@@ -530,3 +530,21 @@ class FacebookAutoPostRule(Base):
     region_name = Column(Text, unique=True, index=True)
     threshold = Column(Integer, default=100)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(255), nullable=False)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    user = relationship("User")
+
+class GeminiUsageLog(Base):
+    __tablename__ = "gemini_usage_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)

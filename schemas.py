@@ -39,6 +39,79 @@ class User(UserBase):
     is_banned: Optional[bool] = False
     
     # KYC
+    national_id: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    id_expiry_date: Optional[str] = None
+    identity_document_url: Optional[str] = None
+    liveness_passed: Optional[bool] = False
+    face_similarity_score: Optional[float] = None
+    verification_status: Optional[str] = "pending"
+    
+    # Advanced Profile Ext.
+    bio: Optional[str] = None
+    preferred_contact: Optional[str] = None
+    languages_spoken: Optional[List[str]] = None
+    deals_completed: Optional[int] = 0
+    cancellation_rate: Optional[int] = 0
+    buyer_satisfaction: Optional[int] = 0
+    
+    shop_name: Optional[str] = None
+    business_policy: Optional[str] = None
+    shop_location: Optional[str] = None
+    shop_hours: Optional[str] = None
+    
+    # Dynamic Ads Counts
+    active_ads_count: Optional[int] = 0
+    sold_ads_count: Optional[int] = 0
+    total_ads_count: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+class UserPrivateProfile(BaseModel):
+    """
+    Safe self-profile response for /me endpoint - excludes sensitive KYC fields.
+    """
+    id: int
+    created_at: datetime
+    user_type: Optional[str] = "private"
+    cover_image_url: Optional[str] = None
+    overall_rating: Optional[float] = 0.0
+    response_rate: Optional[int] = 100
+    average_response_time: Optional[str] = "Typically replies within 1 hour"
+    trust_score: Optional[int] = 50
+    followers_count: Optional[int] = 0
+    following_count: Optional[int] = 0
+    is_email_verified: Optional[bool] = False
+    is_phone_verified: Optional[bool] = False
+    is_identity_verified: Optional[bool] = False
+    mobile_number: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    avatar_url: Optional[str] = None
+    full_name: Optional[str] = None
+    location: Optional[str] = ""
+    is_active: Optional[bool] = True
+    is_banned: Optional[bool] = False
+    bio: Optional[str] = None
+    preferred_contact: Optional[str] = None
+    languages_spoken: Optional[List[str]] = None
+    deals_completed: Optional[int] = 0
+    cancellation_rate: Optional[int] = 0
+    buyer_satisfaction: Optional[int] = 0
+    shop_name: Optional[str] = None
+    business_policy: Optional[str] = None
+    shop_location: Optional[str] = None
+    shop_hours: Optional[str] = None
+    active_ads_count: Optional[int] = 0
+    sold_ads_count: Optional[int] = 0
+    total_ads_count: Optional[int] = 0
+    
+    class Config:
+        from_attributes = Truebool] = False
+    
+    # KYC
     full_name: Optional[str] = None
     national_id: Optional[str] = None
     date_of_birth: Optional[str] = None

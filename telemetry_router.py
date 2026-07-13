@@ -5,6 +5,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db
+import models
+import auth
+from auth import get_current_admin
 
 router = APIRouter(prefix="/api/telemetry", tags=["telemetry"])
 
@@ -46,7 +49,7 @@ async def ingest_telemetry_batch(payload: TelemetryBatchPayload, request: Reques
     return {"status": "accepted"}
 
 @router.get("/errors")
-def get_errors(db: Session = Depends(get_db)):
+def get_errors(current_admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     """
     Get recent error logs for the admin dashboard.
     """
@@ -83,7 +86,7 @@ def get_errors(db: Session = Depends(get_db)):
     return errors
 
 @router.get("/analytics")
-def get_analytics(db: Session = Depends(get_db)):
+def get_analytics(current_admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     """
     Get analytics for the admin dashboard.
     Includes DAU, top screens, and user journey funnel.
@@ -269,7 +272,7 @@ def get_analytics(db: Session = Depends(get_db)):
     }
 
 @router.get("/advanced-analytics")
-def get_advanced_analytics(db: Session = Depends(get_db)):
+def get_advanced_analytics(current_admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     """
     Get 100% real advanced SaaS and Category analytics from the database.
     """
@@ -439,7 +442,7 @@ def get_advanced_analytics(db: Session = Depends(get_db)):
 
 
 @router.get("/user-sankey")
-def get_user_sankey(email: str, db: Session = Depends(get_db)):
+def get_user_sankey(email: str, current_admin: models.User = Depends(get_current_admin), db: Session = Depends(get_db)):
     # 1. Lookup user by email
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user:

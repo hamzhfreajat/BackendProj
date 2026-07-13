@@ -1,5 +1,6 @@
 import os
 import io
+import logging
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Request
 from typing import List
 import uuid
@@ -13,6 +14,8 @@ from security_events import log_file_upload_blocked
 import auth
 import models
 
+logger = logging.getLogger(__name__)
+
 # Define a simple media router
 router = APIRouter(prefix="/api/media", tags=["media"])
 
@@ -24,7 +27,7 @@ def get_r2_client():
     sk = os.getenv("R2_SECRET_ACCESS_KEY")
     eu = os.getenv("R2_ENDPOINT_URL")
     
-    print(f"DEBUG R2 Setup -> AK: {bool(ak)}, EU: {bool(eu)}")
+    logger.debug(f"R2 Setup -> AK configured: {bool(ak)}, EU configured: {bool(eu)}")
     
     if not ak or not eu:
         return None
@@ -124,7 +127,7 @@ async def upload_media(
                     log_file_upload_blocked(get_real_ip(request), request.url.path, "Decompression Bomb Detected", str(current_user.id))
                     raise HTTPException(status_code=400, detail="Image pixel limit exceeded. File is too large.")
                 except Exception as e:
-                    print(f"Failed to apply watermark: {e}")
+                    logger.error(f"Failed to apply watermark: {e}")
             # -----------------------
             
             file_obj_to_upload = io.BytesIO(content)
@@ -139,10 +142,10 @@ async def upload_media(
                         if duration > 610:  # 10 minutes + 10s buffer
                             log_file_upload_blocked(get_real_ip(request), request.url.path, "Audio exceeds 10 minutes", str(current_user.id))
                             raise HTTPException(status_code=400, detail="Voice message exceeds the maximum allowed duration of 10 minutes.")
-                except HTTPException:
+                                except HTTPException:
                     raise
                 except Exception as e:
-                    print(f"Failed to check audio duration: {e}")
+                    logger.error(f"Failed to check audio duration: {e}")
                     
             file_obj_to_upload = file.file
             file_obj_to_upload.seek(0)
@@ -151,9 +154,12 @@ async def upload_media(
         file_ext = os.path.splitext(file.filename)[1] if file.filename else ""
         unique_filename = f"{uuid.uuid4().hex}{file_ext}"
         
-        r2_client = get_r2_client()
+                r2_client = get_r2_client()
         bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
-        public_url = os.getenv("R2_PUBLIC_URL", "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev")
+        public_url = os.getenv("R2_PUBLIC_URL")
+        if not public_url:
+            logger.warning("R2_PUBLIC_URL not set. Using default fallback.")
+            public_url = "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev"
 
         # Determine strict MIME type from extension
         mime_types = {
@@ -175,8 +181,8 @@ async def upload_media(
 
         if r2_client:
             # Upload to Cloudflare R2
-            try:
-                print(f"Uploading {unique_filename} to Cloudflare R2 bucket: {bucket_name}...")
+                        try:
+                logger.info(f"Uploading {unique_filename} to Cloudflare R2...")
                 file_obj_to_upload.seek(0)
                 r2_client.upload_fileobj(
                     file_obj_to_upload, 
@@ -189,10 +195,10 @@ async def upload_media(
                 public_url_base = public_url.rstrip('/')
                 file_url = f"{public_url_base}/{unique_filename}"
                 uploaded_urls.append(file_url)
-                print(f"R2 Upload SUCCESS! -> {file_url}")
+                logger.info(f"R2 Upload successful: {file_url}")
                 
-            except Exception as e:
-                print(f"R2 Upload Exception: {e}")
+                        except Exception as e:
+                logger.error(f"R2 Upload Exception: {e}")
                 raise HTTPException(status_code=500, detail="Failed to upload image to Cloudflare R2")
         else:
             # Fallback to Local Upload

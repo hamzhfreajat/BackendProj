@@ -19,3 +19,8 @@ seed_*.py
 clean_seed.py
 dedup_seed.py
 rebuild_seed.py
+
+# Security - Ignored sensitive files
+gen-lang-client-*.json
+.env.backup
+fb_cookies.json

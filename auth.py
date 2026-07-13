@@ -4,7 +4,7 @@ import secrets
 from typing import List
 import jwt
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -278,7 +278,7 @@ def request_otp(data: schemas.RequestOTP, request: Request, db: Session = Depend
 #     return {"status": "success", "message": f"OTP sent successfully via {data.method or 'whatsapp'}"}
 
 @router.post("/admin-login", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
-def admin_login(data: schemas.AdminLogin, request: Request, db: Session = Depends(get_db)):
+def admin_login(data: schemas.AdminLogin, request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Standard Username & Password login specifically designed for strictly Admin Dashboard access.
     """
@@ -305,10 +305,18 @@ def admin_login(data: schemas.AdminLogin, request: Request, db: Session = Depend
     log_auth_success(ip_address, "/admin-login", user.username, str(user.id))
     access_token = create_access_token(data={"sub": str(user.id), "username": user.username, "type": "admin"})
 
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=30 * 60
+    )
     return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/verify-otp", response_model=schemas.AuthResponse)
-def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db)):
     raise HTTPException(status_code=404, detail="OTP authentication is currently disabled.")
 #     ip_address = get_real_ip(request)
 #     mobile_number = normalize_jo_phone(data.mobile_number)
@@ -330,10 +338,18 @@ def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: Back
 #             user_phone=user.mobile_number
 #         )
 # 
+response.set_cookie(
+    key="access_token",
+    value=access_token,
+    httponly=True,
+    secure=True,
+    samesite="lax",
+    max_age=30 * 60
+)
 #     return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/google", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
-def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), request: Request = None):
+def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db), request: Request = None):
     try:
         google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
         google_client_id_web = os.environ.get("GOOGLE_CLIENT_ID_WEB")
@@ -391,6 +407,14 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
                 user_phone=user.email
             )
             
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=30 * 60
+        )
         return schemas.AuthResponse(token=access_token, user=user)
         
     except ValueError as e:
@@ -398,7 +422,7 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
         raise HTTPException(status_code=401, detail="Invalid Google authentication token.")
 
 @router.post("/facebook", response_model=schemas.AuthResponse)
-def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), request: Request = None):
+def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db), request: Request = None):
     try:
         # Verify Facebook token via Graph API
         fb_url = f"https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token={data.access_token}"
@@ -461,6 +485,14 @@ def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: Backgroun
                 user_phone=user.email
             )
             
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=30 * 60
+        )
         return schemas.AuthResponse(token=access_token, user=user)
         
     except ValueError as e:
@@ -501,7 +533,7 @@ def apple_callback(
     return RedirectResponse(url=intent_url, status_code=307)
 
 @router.post("/apple", response_model=schemas.AuthResponse)
-def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), request: Request = None):
+def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db), request: Request = None):
     try:
         # Fetch Apple's public keys
         jwks_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
@@ -569,6 +601,14 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
                 user_phone=user.email or ""
             )
             
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=30 * 60
+        )
         return schemas.AuthResponse(token=access_token, user=user)
         
     except Exception as e:
@@ -578,11 +618,14 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
 
 # Common dependency for protected routes to easily get current user via JWT
 def get_current_user(request: Request, db: Session = Depends(get_db)):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    
-    token = auth_header.split(" ")[1]
     if is_token_revoked(token):
         log_token_revocation(get_real_ip(request), request.url.path)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
@@ -609,20 +652,29 @@ def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 @router.post("/logout")
-def logout(request: Request, current_user: models.User = Depends(get_current_user)):
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
+def logout(request: Request, response: Response, current_user: models.User = Depends(get_current_user)):
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if token:
         revoke_token(token)
         log_user_logout(str(current_user.id), get_real_ip(request), "/logout")
+    response.delete_cookie("access_token")
     return {"status": "success", "message": "Logged out successfully"}
 
 @router.delete("/account")
-def delete_account(request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_account(request: Request, response: Response, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Safely log the user out
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if token:
         revoke_token(token)
         log_user_logout(str(current_user.id), get_real_ip(request), "/delete_account")
         
@@ -631,6 +683,7 @@ def delete_account(request: Request, db: Session = Depends(get_db), current_user
     db.delete(current_user)
     db.commit()
     
+    response.delete_cookie("access_token")
     return {"status": "success", "message": "Account and all associated data have been permanently deleted"}
 
 # Admin Dependency

@@ -86,11 +86,16 @@ models.Base.metadata.create_all(bind=engine)
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+if _raw_origins and _raw_origins != "*":
+    ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+else:
+    # Default to the specific frontend domain if not set
+    ALLOWED_ORIGINS = ["https://joapp.space", "https://www.joapp.space", "http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )

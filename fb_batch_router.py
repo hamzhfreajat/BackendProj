@@ -41,7 +41,7 @@ from models import SourceType
 import schemas
 router = APIRouter(prefix="/api", tags=["fb-batch"])
 
-print(f"[fb_batch_router] LOADED — will use source_type = {SourceType.SCRAPER_BOT}")
+logger.info(f"fb_batch_router loaded — using source_type = {SourceType.SCRAPER_BOT}")
 
 
 # -- Pydantic models --------------------------------------------------------
@@ -223,29 +223,59 @@ from datetime import datetime
 _GEMINI_LOCK = threading.Lock()
 _LAST_GEMINI_CALL = 0.0
 
-def _check_and_update_gemini_daily_limit() -> bool:
-    """Returns True if under limits, False if 999 daily limit reached."""
-    usage_file = "gemini_usage.json"
+# Thread-safe Gemini usage tracking using database
+def _check_and_update_gemini_daily_limit(db: Session = None) -> bool:
+    """
+    Thread-safe daily limit check using database.
+    Returns True if under limits, False if 999 daily limit reached.
+    Uses DB for persistence across workers.
+    """
+    from sqlalchemy import func
+    from models import GeminiUsageLog
+    
     today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    # If no db session provided, count using file-based approach (legacy fallback)
+    if db is None:
+        usage_file = "gemini_usage.json"
+        try:
+            if os.path.exists(usage_file):
+                with open(usage_file, "r") as f:
+                    usage = json.load(f)
+            else:
+                usage = {"date": today_str, "count": 0}
+                
+            if usage.get("date") != today_str:
+                usage = {"date": today_str, "count": 0}
+                
+            if usage["count"] >= 999:
+                return False
+                
+            usage["count"] += 1
+            with open(usage_file, "w") as f:
+                json.dump(usage, f)
+            return True
+        except Exception:
+            return True
+    
     try:
-        if os.path.exists(usage_file):
-            with open(usage_file, "r") as f:
-                usage = json.load(f)
-        else:
-            usage = {"date": today_str, "count": 0}
-            
-        if usage.get("date") != today_str:
-            usage = {"date": today_str, "count": 0}
-            
-        if usage["count"] >= 999:
+        today_start = datetime.strptime(today_str, "%Y-%m-%d")
+        today_end = today_start + timedelta(days=1)
+        
+        count = db.query(func.count(GeminiUsageLog.id)).filter(
+            GeminiUsageLog.created_at >= today_start,
+            GeminiUsageLog.created_at < today_end
+        ).scalar() or 0
+        
+        if count >= 999:
             return False
             
-        usage["count"] += 1
-        with open(usage_file, "w") as f:
-            json.dump(usage, f)
+        db.add(GeminiUsageLog())
+        db.commit()
         return True
     except Exception:
-        return True # Fail open safely if disk write fails
+        db.rollback() if db else None
+        return True  # Fail open safely
 
 
 def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api_key: str) -> Optional[List[dict]]:
@@ -624,8 +654,11 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
     if not r2_client:
         return image_urls
     
-    bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
-    public_url = os.getenv("R2_PUBLIC_URL", "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev")
+        bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
+    public_url = os.getenv("R2_PUBLIC_URL")
+    if not public_url:
+        logger.warning("R2_PUBLIC_URL not set in environment. R2 uploads may not work correctly.")
+        public_url = "https://pub-158212dafa5344d4bbf078a74da2305a.r2.dev"
     public_url_base = public_url.rstrip('/')
     
     def process_url(url):
