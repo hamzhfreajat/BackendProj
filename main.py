@@ -235,15 +235,26 @@ def read_user_metrics(request: Request, db: Session = Depends(get_db)):
         models.Ad.is_published == True
     ).count()
 
+    saved_items_count = db.query(models.SavedAd).filter(
+        models.SavedAd.user_id == user.id
+    ).count()
+
     metrics = db.query(models.UserMetric).filter(models.UserMetric.user_id == user.id).first()
     if not metrics:
-        metrics = models.UserMetric(user_id=user.id, saved_items=0, recently_viewed=0, active_ads=active_ads_count)
+        metrics = models.UserMetric(user_id=user.id, saved_items=saved_items_count, recently_viewed=0, active_ads=active_ads_count)
         db.add(metrics)
         db.commit()
         db.refresh(metrics)
     else:
+        needs_commit = False
         if metrics.active_ads != active_ads_count:
             metrics.active_ads = active_ads_count
+            needs_commit = True
+        if metrics.saved_items != saved_items_count:
+            metrics.saved_items = saved_items_count
+            needs_commit = True
+            
+        if needs_commit:
             db.commit()
             db.refresh(metrics)
             
