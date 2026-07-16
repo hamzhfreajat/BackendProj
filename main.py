@@ -8,6 +8,22 @@ from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Query, Req
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func, or_
+import redis
+import json
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import Response
+
+try:
+    redis_client = redis.Redis(
+        host=os.getenv("REDIS_HOST", "redis"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        password=os.getenv("REDIS_PASSWORD", None),
+        decode_responses=True
+    )
+except Exception:
+    redis_client = None
+
+import models
 from sqlalchemy import text
 from typing import List
 from pydantic import BaseModel
@@ -2586,22 +2602,6 @@ async def facebook_autopost_worker():
             from facebook_publisher import publish_facebook_post
             from sqlalchemy import func
             
-import redis
-import json
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import Response
-
-try:
-    redis_client = redis.Redis(
-        host=os.getenv("REDIS_HOST", "redis"),
-        port=int(os.getenv("REDIS_PORT", 6379)),
-        password=os.getenv("REDIS_PASSWORD", None),
-        decode_responses=True
-    )
-except Exception:
-    redis_client = None
-
-import models
             
             db = SessionLocal()
             
