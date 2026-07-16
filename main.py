@@ -259,6 +259,7 @@ def get_neighborhoods(basin_id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/categories")
 def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = False, parent_id: str = None, location: List[str] = Query(None), db: Session = Depends(get_db)):
+    skip = min(skip, 10000) # Security cap on deep pagination
     cache_key = f"categories_{skip}_{limit}_{with_ads_only}_{parent_id}_{','.join(location) if location else 'all'}"
     if redis_client:
         try:
@@ -1012,9 +1013,17 @@ def read_ads(
     only_others: bool = False,
     location_search: str = None,
     current_user: models.User = Depends(get_optional_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = None
 ):
     limit = min(limit, 100) # Security cap on pagination
+    skip = min(skip, 10000) # Security cap on deep pagination
+    
+    if location and len(location) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 locations allowed per search.")
+    if tags and len(tags) > 15:
+        raise HTTPException(status_code=400, detail="Maximum 15 tags allowed per search.")
+        
     query = db.query(models.Ad)
     
     if location_search:
@@ -1037,19 +1046,10 @@ def read_ads(
     if search:
         ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
         
-        # Log the search query and results count
-        try:
-            from models import SearchQueryLog
-            log_entry = SearchQueryLog(
-                query_text=search.strip(),
-                results_count=len(ranked_ad_ids),
-                user_id=current_user.id if hasattr(current_user, 'id') else None
-            )
-            db.add(log_entry)
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            print(f"Error logging search: {e}")
+        # Log the search query and results count in background
+        if background_tasks:
+            user_id_val = current_user.id if hasattr(current_user, 'id') else None
+            background_tasks.add_task(log_search_query_task, search, len(ranked_ad_ids), user_id_val)
 
         if not ranked_ad_ids:
             return []
@@ -2701,6 +2701,24 @@ async def startup_event():
     except Exception as e:
         print(f"Migration error: {e}")
         db.rollback()
+    finally:
+        db.close()
+
+async def log_search_query_task(search: str, results_count: int, user_id: int):
+    from database import SessionLocal
+    from models import SearchQueryLog
+    db = SessionLocal()
+    try:
+        log_entry = SearchQueryLog(
+            query_text=search.strip(),
+            results_count=results_count,
+            user_id=user_id
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error logging search in background: {e}")
     finally:
         db.close()
 

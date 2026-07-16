@@ -187,20 +187,29 @@ class QueryParserService:
             elif f in ['اخير', 'أخير']: parsed.floor_number = 99
 
         # 7. Extract Location
-        for loc in sorted(cls.LOCATIONS, key=len, reverse=True):
-            norm_loc = cls.normalize_arabic(loc)
-            
-            if norm_loc.startswith("ال"):
-                rest = norm_loc[2:]
-                # Matches: الجاردنز, بالجاردنز, لالجاردنز, للجاردنز
-                pattern = r'(?:^|\s)(?:(?:ب|ل)?' + re.escape(norm_loc) + r'|لل' + re.escape(rest) + r')(?:\s|$)'
-            else:
-                # Matches: عمان, بعمان, لعمان
-                pattern = r'(?:^|\s)(?:ب|ل)?' + re.escape(norm_loc) + r'(?:\s|$)'
-                
-            if re.search(pattern, norm):
-                parsed.location = loc
-                break
+        if getattr(cls, '_LOCATION_REGEX', None) is None:
+            patterns = []
+            cls._LOCATION_MAP = {}
+            for loc in sorted(cls.LOCATIONS, key=len, reverse=True):
+                norm_loc = cls.normalize_arabic(loc)
+                cls._LOCATION_MAP[norm_loc] = loc
+                if norm_loc.startswith("ال"):
+                    rest = norm_loc[2:]
+                    patterns.append(r'(?:(?:ب|ل)?' + re.escape(norm_loc) + r'|لل' + re.escape(rest) + r')')
+                else:
+                    patterns.append(r'(?:ب|ل)?' + re.escape(norm_loc))
+            cls._LOCATION_REGEX = re.compile(r'(?:^|\s)(' + '|'.join(patterns) + r')(?:\s|$)')
+
+        match = cls._LOCATION_REGEX.search(norm)
+        if match:
+            matched_str = match.group(1).strip()
+            for norm_loc, orig_loc in cls._LOCATION_MAP.items():
+                if matched_str.endswith(norm_loc):
+                    parsed.location = orig_loc
+                    break
+                elif norm_loc.startswith("ال") and matched_str.endswith(norm_loc[2:]):
+                    parsed.location = orig_loc
+                    break
 
         # 7. Extract Features, Intent, Legal
         skip_next = False

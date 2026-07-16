@@ -56,6 +56,9 @@ async def upload_media(
     """
     uploaded_urls = []
     
+    if len(files) > 20:
+        raise HTTPException(status_code=400, detail="A maximum of 20 files is allowed per request.")
+        
     ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.mp4', '.mov', '.pdf', '.m4a', '.mp3', '.aac', '.wav', '.ogg'}
     
     r2_client = get_r2_client()

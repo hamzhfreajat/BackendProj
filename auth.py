@@ -290,6 +290,8 @@ def admin_login(data: schemas.AdminLogin, request: Request, response: Response, 
     ).first()
     
     if not user:
+        # Dummy verification to prevent timing attack enumeration
+        verify_password(data.password, "$5$rounds=535000$dummyhash...")
         log_auth_failure(ip_address, "/admin-login", "User not found")
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
@@ -557,7 +559,10 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
         is_new_user = False
         # Try to find by email first, or by a unique apple_id (sub) if we added it to the schema.
         # Since we use email as the primary key for OAuth users in our current schema:
-        user = db.query(models.User).filter(models.User.email == email).first()
+        if not email:
+            user = None
+        else:
+            user = db.query(models.User).filter(models.User.email == email).first()
         
         if not user:
             is_new_user = True
