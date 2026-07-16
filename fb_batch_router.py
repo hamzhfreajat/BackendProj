@@ -670,15 +670,22 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
-            resp = requests.get(url, headers=headers, timeout=15)
+            resp = requests.get(url, headers=headers, timeout=15, stream=True)
             if resp.status_code == 200:
+                content_length = int(resp.headers.get('Content-Length', 0))
+                if content_length > 15 * 1024 * 1024:
+                    logger.warning(f"File too large to download: {url}")
+                    return url
+
                 content_type = resp.headers.get('Content-Type', 'image/jpeg')
                 file_ext = ".png" if "png" in content_type else ".jpg"
                 unique_filename = f"{uuid.uuid4().hex}{file_ext}"
-                file_obj = io.BytesIO(resp.content)
+                
+                # Use resp.raw which is a file-like object directly
+                resp.raw.decode_content = True
                 
                 r2_client.upload_fileobj(
-                    file_obj, 
+                    resp.raw, 
                     bucket_name, 
                     unique_filename,
                     ExtraArgs={'ContentType': content_type}
@@ -740,12 +747,19 @@ def _has_watermark_local(image_urls: List[str]) -> bool:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
-            resp = requests.get(url, headers=headers, timeout=15)
+            resp = requests.get(url, headers=headers, timeout=15, stream=True)
             if resp.status_code != 200:
                 import logging
                 logging.getLogger(__name__).warning(f"Watermark check failed to download {url}: Status {resp.status_code}")
                 return False
-            return check_image_bytes_for_watermark(resp.content)
+                
+            content = bytearray()
+            for chunk in resp.iter_content(chunk_size=1024*1024):
+                if chunk:
+                    content.extend(chunk)
+                    if len(content) > 15 * 1024 * 1024:
+                        return False
+            return check_image_bytes_for_watermark(bytes(content))
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(f"Local OCR check failed for {url}: {e}")
@@ -780,9 +794,15 @@ def _compute_image_hash(url: str) -> Optional[str]:
         from PIL import Image
         from io import BytesIO
         import imagehash
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(url, timeout=5, stream=True)
         if resp.status_code == 200:
-            img = Image.open(BytesIO(resp.content))
+            content = bytearray()
+            for chunk in resp.iter_content(chunk_size=1024*1024):
+                if chunk:
+                    content.extend(chunk)
+                    if len(content) > 15 * 1024 * 1024:
+                        return None
+            img = Image.open(BytesIO(bytes(content)))
             return str(imagehash.dhash(img))
     except Exception as e:
         import logging

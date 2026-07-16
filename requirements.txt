@@ -19,3 +19,7 @@ google-auth>=2.23.0
 redis>=5.0.1
 slowapi>=0.1.9
 arq>=0.25.0
+elasticsearch[async]>=8.11.0
+
+prometheus-fastapi-instrumentator
+alembic

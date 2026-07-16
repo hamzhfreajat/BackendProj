@@ -98,7 +98,8 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Ensure all database tables exist (creates newly added tables like saved_ads)
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine) # Handled by Alembic
+
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
@@ -116,6 +117,9 @@ app.add_middleware(
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
 
 @app.middleware("http")
 async def security_context_middleware(request: Request, call_next):
@@ -601,6 +605,9 @@ def perform_bulk_action(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    if len(req.ad_ids) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 items allowed per bulk action.")
+
     ads = db.query(models.Ad).filter(models.Ad.id.in_(req.ad_ids), models.Ad.user_id == current_user.id).all()
     
     for ad in ads:
@@ -1654,6 +1661,7 @@ def create_ad_draft(
 @app.put("/api/ads/{ad_id}/draft", response_model=schemas.Ad)
 def update_ad_draft(
     ad_id: int,
+    request: Request,
     ad_draft: schemas.AdDraftUpdate,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
@@ -1921,6 +1929,7 @@ def create_ad(
 @app.put("/api/ads/{ad_id}", response_model=schemas.Ad)
 def update_ad(
     ad_id: int,
+    request: Request,
     ad_update: schemas.AdUpdate,
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
@@ -2564,9 +2573,10 @@ async def republish_notifier_worker():
                 for ad in u_ads:
                     ad.republish_notification_sent = True
                 db.commit()
-            db.close()
         except Exception as e:
             print(f"Error in republish_notifier_worker: {e}")
+        finally:
+            if 'db' in locals(): db.close()
         await asyncio.sleep(600)
 
 async def facebook_autopost_worker():
@@ -2628,10 +2638,10 @@ import models
                             models.Ad.location == location
                         ).update({"is_facebook_posted": True}, synchronize_session=False)
                         db.commit()
-            
-            db.close()
         except Exception as e:
             print(f"Error in facebook_autopost_worker: {e}")
+        finally:
+            if 'db' in locals(): db.close()
         await asyncio.sleep(1800) # Check every 30 minutes
 
 from arq import create_pool
@@ -2704,7 +2714,7 @@ async def startup_event():
     finally:
         db.close()
 
-async def log_search_query_task(search: str, results_count: int, user_id: int):
+def log_search_query_task(search: str, results_count: int, user_id: int):
     from database import SessionLocal
     from models import SearchQueryLog
     db = SessionLocal()
@@ -2722,7 +2732,7 @@ async def log_search_query_task(search: str, results_count: int, user_id: int):
     finally:
         db.close()
 
-async def check_category_milestone_task(category_id: int):
+def check_category_milestone_task(category_id: int):
     # This task opens its own DB session
     db = SessionLocal()
     try:
