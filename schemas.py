@@ -391,6 +391,7 @@ class Ad(AdBase):
     image_urls: Optional[List[str]] = []
     
     real_estate_detail: Optional[AdRealEstateDetail] = None
+    message: Optional[str] = None
 
     created_at: datetime
     updated_at: datetime

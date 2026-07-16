@@ -32,6 +32,22 @@ def norm_col(col):
     c = func.replace(c, 'ى', 'ي')
     return c
 
+
+import redis
+import json
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import Response
+
+try:
+    redis_client = redis.Redis(
+        host=os.getenv("REDIS_HOST", "redis"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        password=os.getenv("REDIS_PASSWORD", None),
+        decode_responses=True
+    )
+except Exception:
+    redis_client = None
+
 import models
 import schemas
 import auth
@@ -241,8 +257,17 @@ def get_neighborhoods(basin_id: int, db: Session = Depends(get_db)):
     result = db.query(models.NeighborhoodSector).filter(models.NeighborhoodSector.basin_id == basin_id).all()
     return [{"id": n.id, "name_ar": n.name_ar} for n in result]
 
-@app.get("/api/categories", response_model=List[schemas.Category])
+@app.get("/api/categories")
 def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = False, parent_id: str = None, location: List[str] = Query(None), db: Session = Depends(get_db)):
+    cache_key = f"categories_{skip}_{limit}_{with_ads_only}_{parent_id}_{','.join(location) if location else 'all'}"
+    if redis_client:
+        try:
+            cached = redis_client.get(cache_key)
+            if cached:
+                return Response(content=cached, media_type="application/json")
+        except Exception:
+            pass
+
     query = db.query(models.Category).options(selectinload(models.Category.linked_tags)).order_by(models.Category.order_index.asc(), models.Category.id.asc())
     
     if parent_id is not None:
@@ -361,11 +386,23 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
                 "linked_tags": [t for t in getattr(cat, 'linked_tags', []) if t.id in active_tag_ids]
             }
             filtered.append(cat_dict)
+        
+        if redis_client:
+            try:
+                redis_client.setex(cache_key, 300, json.dumps(jsonable_encoder(filtered)))
+            except Exception:
+                pass
         return filtered
         
     for cat in categories:
         cat.ads_count = counts_map.get(cat.id, 0)
         
+    if redis_client:
+        try:
+            redis_client.setex(cache_key, 300, json.dumps(jsonable_encoder(categories)))
+        except Exception:
+            pass
+            
     return categories
 
 @app.post("/api/categories", response_model=schemas.Category)
@@ -1877,6 +1914,8 @@ def create_ad(
     # Check Category Milestones for notifications
     background_tasks.add_task(check_category_milestone_task, db_ad.category_id)
 
+    db_ad.message = "تم نشر إعلانك بنجاح! قد يستغرق ظهوره في نتائج البحث بضع دقائق."
+
     return db_ad
 
 @app.put("/api/ads/{ad_id}", response_model=schemas.Ad)
@@ -2536,7 +2575,23 @@ async def facebook_autopost_worker():
             from database import SessionLocal
             from facebook_publisher import publish_facebook_post
             from sqlalchemy import func
-            import models
+            
+import redis
+import json
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import Response
+
+try:
+    redis_client = redis.Redis(
+        host=os.getenv("REDIS_HOST", "redis"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        password=os.getenv("REDIS_PASSWORD", None),
+        decode_responses=True
+    )
+except Exception:
+    redis_client = None
+
+import models
             
             db = SessionLocal()
             
