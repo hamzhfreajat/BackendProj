@@ -2732,7 +2732,7 @@ def log_search_query_task(search: str, results_count: int, user_id: int):
     finally:
         db.close()
 
-def check_category_milestone_task(category_id: int):
+async def check_category_milestone_task(category_id: int):
     # This task opens its own DB session
     db = SessionLocal()
     try:
