@@ -54,7 +54,7 @@ def delete_rule(region_name: str, db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 @router.post("/manual-publish")
-def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db)):
+async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db)):
     # Try to resolve region_id from the given region_name
     region = db.query(models.Region).filter(models.Region.name_ar == req.region_name).first()
     
