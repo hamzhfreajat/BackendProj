@@ -8,7 +8,8 @@ PROPERTY_MAP = {
     "مخزن": "WAREHOUSE", "مستودع": "WAREHOUSE", "مستودعات": "WAREHOUSE", "هنجر": "WAREHOUSE", 
     "هناجر": "WAREHOUSE", "مكتب": "OFFICE", "مكاتب": "OFFICE", "عيادة": "OFFICE", 
     "عيادات": "OFFICE", "مساحة مكتبية": "OFFICE", "استوديو": "STUDIO", "استديو": "STUDIO", 
-    "ستوديو": "STUDIO", "ستديو": "STUDIO", "رووف": "ROOF", "روف": "ROOF", "روفات": "ROOF", 
+    "ستوديو": "STUDIO", "ستديو": "STUDIO", "ستوديوهات": "STUDIO", "استوديوهات": "STUDIO", 
+    "استديوهات": "STUDIO", "ستديوهات": "STUDIO", "رووف": "ROOF", "روف": "ROOF", "روفات": "ROOF", 
     "عمارة": "BUILDING", "بناية": "BUILDING", "مبنى": "BUILDING", "مجمع": "BUILDING", 
     "مجمع تجاري": "BUILDING", "شاليه": "FARM", "شاليهات": "FARM", "مزرعة": "FARM", "مزارع": "FARM"
 }
