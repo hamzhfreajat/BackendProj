@@ -261,7 +261,7 @@ async def process_face_match(request: FaceMatchRequest, current_user: models.Use
         return FaceMatchResponse(match_score=98.5, liveness_passed=True)
 
 @router.post("/submit")
-async def submit_verification(request: SubmitVerificationRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+def submit_verification(request: SubmitVerificationRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     """
     Finalizes the KYC submission into the DB.
     """

@@ -35,7 +35,13 @@ async def analyze_image(request: Request, file: UploadFile = File(...), current_
     api_key = _get_api_key()
     
     try:
-        content = await file.read()
+        content = bytearray()
+        while chunk := await file.read(1024 * 1024): # 1MB chunks
+            content.extend(chunk)
+            if len(content) > 15 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail="File too large. Maximum size is 15MB.")
+        content = bytes(content)
+
         mime_type = file.content_type or "image/jpeg"
         if mime_type == "application/octet-stream":
             mime_type = "image/jpeg"

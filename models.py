@@ -244,9 +244,9 @@ class Ad(Base):
     
     # Scraper Support Fields
     source_type = Column(Enum(SourceType), default=SourceType.ORGANIC_USER)
-    source_url = Column(Text, nullable=True)
+    source_url = Column(Text, nullable=True, index=True)
     is_facebook_posted = Column(Boolean, default=False)
-    primary_image_hash = Column(String(64), nullable=True)
+    primary_image_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     ip_address = Column(String(50), nullable=True)

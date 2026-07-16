@@ -58,7 +58,7 @@ async def get_og_html(request: Request, path: str = Query("")):
     return HTMLResponse(content=html_content)
 
 @router.get("/image")
-async def get_og_image(path: str = Query(""), db: Session = Depends(get_db)):
+def get_og_image(path: str = Query(""), db: Session = Depends(get_db)):
     """
     Generates a 2x2 collage of ads matching the category in the path.
     """

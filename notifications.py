@@ -7,6 +7,7 @@ User-Specific Notification System
 
 import json
 import os
+import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -146,7 +147,7 @@ def send_welcome_chat_message(user_id: int, user_name: str, user_phone: str):
 # Reusable Notification Sender (DB + FCM + WebSocket)
 # ============================================================
 
-async def send_personal_notification(
+def _send_personal_notification_sync(
     target_user_id: int,
     title: str,
     body: str,
@@ -154,12 +155,6 @@ async def send_personal_notification(
     reference_id: int = None,
     extra_data: dict = None
 ):
-    """
-    Core function to send a user-specific notification:
-    1. Saves to the database
-    2. Sends FCM push to the user's registered device tokens
-    3. Broadcasts via WebSocket if user is currently connected
-    """
     db = SessionLocal()
     try:
         # 1. Save notification to the database
@@ -236,13 +231,41 @@ async def send_personal_notification(
             except ImportError:
                 print("[FCM] firebase-admin not installed. Skipping push notification.", flush=True)
 
-        # 3. Broadcast via WebSocket to the specific user ONLY
-        await manager.send_personal_message(target_user_id, notification_payload)
-
-        print(f"[NOTIFY] Sent to user {target_user_id}: {title}", flush=True)
+        return notification_payload
 
     finally:
         db.close()
+
+
+async def send_personal_notification(
+    target_user_id: int,
+    title: str,
+    body: str,
+    notification_type: str = None,
+    reference_id: int = None,
+    extra_data: dict = None
+):
+    """
+    Core function to send a user-specific notification:
+    1. Saves to the database (sync in thread)
+    2. Sends FCM push to the user's registered device tokens (sync in thread)
+    3. Broadcasts via WebSocket if user is currently connected (async)
+    """
+    # Run synchronous DB writes and blocking FCM network calls in a background thread
+    notification_payload = await asyncio.to_thread(
+        _send_personal_notification_sync,
+        target_user_id,
+        title,
+        body,
+        notification_type,
+        reference_id,
+        extra_data
+    )
+
+    # 3. Broadcast via WebSocket to the specific user ONLY
+    await manager.send_personal_message(target_user_id, notification_payload)
+
+    print(f"[NOTIFY] Sent to user {target_user_id}: {title}", flush=True)
 
 
 # ============================================================
@@ -393,18 +416,33 @@ def send_admin_notification(
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Admin access required")
     
     if data.target_user_id.lower() == "all":
-        # Send to all users
-        users = db.query(models.User.id).all()
-        for u in users:
-            background_tasks.add_task(
-                send_personal_notification,
-                target_user_id=u[0],
-                title=data.title,
-                body=data.body,
-                notification_type=data.type,
-                reference_id=None
-            )
-        return {"status": "success", "message": f"Global notification initiated for {len(users)} users."}
+        # Send a single broadcast to the global 'all_users' FCM topic
+        def _send_global_fcm():
+            try:
+                import firebase_admin
+                from firebase_admin import messaging
+                if not init_firebase_admin(): return
+                if not firebase_admin._apps: return
+                
+                message = messaging.Message(
+                    notification=messaging.Notification(title=data.title, body=data.body),
+                    android=messaging.AndroidConfig(
+                        priority="high",
+                        notification=messaging.AndroidNotification(
+                            channel_id="high_importance_channel",
+                            sound="default"
+                        )
+                    ),
+                    data={"type": data.type or ""},
+                    topic="all_users",
+                )
+                messaging.send(message)
+                print(f"[FCM] Global push sent to topic 'all_users'", flush=True)
+            except Exception as e:
+                print(f"[FCM] Global push failed: {e}", flush=True)
+
+        background_tasks.add_task(_send_global_fcm)
+        return {"status": "success", "message": "Global push notification initiated via FCM topics."}
     else:
         # Send to specific user by ID
         try:

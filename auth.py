@@ -172,6 +172,9 @@ def get_rate_limiter(requests: int, window: int):
                 raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
         else:
             # Memory fallback (not distributed)
+            if len(IP_RATE_LIMITS) > 10000:
+                # Naive but safe memory leak prevention
+                IP_RATE_LIMITS.clear()
             if ip not in IP_RATE_LIMITS:
                 IP_RATE_LIMITS[ip] = []
             IP_RATE_LIMITS[ip] = [t for t in IP_RATE_LIMITS[ip] if current_time - t < window]
