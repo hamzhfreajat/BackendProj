@@ -1022,6 +1022,8 @@ def get_search_logs(
         "id": l.id, 
         "query_text": l.query_text, 
         "results_count": l.results_count, 
+        "category_name": l.category_name,
+        "extracted_tags": l.extracted_tags,
         "created_at": l.created_at.isoformat(),
         "user": {"id": l.user.id, "name": l.user.full_name or l.user.username or "Unknown", "email": l.user.email} if l.user else None
     } for l in logs]
@@ -1085,7 +1087,7 @@ def read_ads(
         # Log the search query and results count in background
         if background_tasks and log_query and log_query.strip():
             user_id_val = current_user.id if hasattr(current_user, 'id') else None
-            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val)
+            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val, category_id, tags)
 
         if not ranked_ad_ids:
             return []
@@ -1100,7 +1102,8 @@ def read_ads(
             query = query.order_by(case(*whens))
     elif background_tasks and log_query and log_query.strip():
         user_id_val = current_user.id if hasattr(current_user, 'id') else None
-        background_tasks.add_task(log_search_query_task, log_query, 1, user_id_val)
+        total_results = query.count()
+        background_tasks.add_task(log_search_query_task, log_query, total_results, user_id_val, category_id, tags)
         
     if location and not ignore_location:
         parent_loc = None
@@ -2782,17 +2785,27 @@ async def startup_event():
     finally:
         db.close()
 
-def log_search_query_task(search: str, results_count: int, user_id: int):
+def log_search_query_task(search: str, results_count: int, user_id: int, category_id: int = None, tags: list = None):
     if not search or not search.strip():
         return
     from database import SessionLocal
-    from models import SearchQueryLog
+    from models import SearchQueryLog, Category
     db = SessionLocal()
     try:
+        category_name = None
+        if category_id:
+            category = db.query(Category).filter(Category.id == category_id).first()
+            if category:
+                category_name = category.name_ar
+                
+        tags_str = ", ".join(tags) if tags else None
+        
         log_entry = SearchQueryLog(
             query_text=search.strip(),
             results_count=results_count,
-            user_id=user_id
+            user_id=user_id,
+            category_name=category_name,
+            extracted_tags=tags_str
         )
         db.add(log_entry)
         db.commit()

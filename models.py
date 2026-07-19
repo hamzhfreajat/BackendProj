@@ -519,6 +519,8 @@ class SearchQueryLog(Base):
     query_text = Column(String(255), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     results_count = Column(Integer, default=0)
+    category_name = Column(String(255), nullable=True)
+    extracted_tags = Column(String(500), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
     
     user = relationship("User")
