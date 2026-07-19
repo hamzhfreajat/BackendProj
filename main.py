@@ -1033,6 +1033,7 @@ def read_ads(
     category_id: int = None, 
     section: str = None, 
     search: str = None,
+    original_search: str = None,
     location: List[str] = Query(None),
     min_price: float = None,
     max_price: float = None,
@@ -1083,7 +1084,8 @@ def read_ads(
         # Log the search query and results count in background
         if background_tasks:
             user_id_val = current_user.id if hasattr(current_user, 'id') else None
-            background_tasks.add_task(log_search_query_task, search, len(ranked_ad_ids), user_id_val)
+            log_query = original_search if original_search else search
+            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val)
 
         if not ranked_ad_ids:
             return []
@@ -2346,6 +2348,58 @@ def _enrich_user_profile(user: models.User, db: Session) -> models.User:
     user.sold_ads_count = random.randint(3, 12) if total_ads > 0 else 0
     
     return user
+
+class RecentSearchRequest(BaseModel):
+    query: str
+
+@app.get("/api/users/me/recent-searches", response_model=List[str])
+def get_recent_searches(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    searches = db.query(models.UserRecentSearch).filter(
+        models.UserRecentSearch.user_id == current_user.id
+    ).order_by(models.UserRecentSearch.created_at.desc()).limit(10).all()
+    return [s.query_text for s in searches]
+
+@app.post("/api/users/me/recent-searches")
+def save_recent_search(request: RecentSearchRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    query_text = request.query.strip()
+    if not query_text:
+        return {"status": "ignored"}
+    
+    existing = db.query(models.UserRecentSearch).filter(
+        models.UserRecentSearch.user_id == current_user.id,
+        models.UserRecentSearch.query_text == query_text
+    ).first()
+    
+    if existing:
+        existing.created_at = func.now()
+    else:
+        new_search = models.UserRecentSearch(user_id=current_user.id, query_text=query_text)
+        db.add(new_search)
+        
+    # Optional: cleanup if > 10
+    total = db.query(models.UserRecentSearch).filter(models.UserRecentSearch.user_id == current_user.id).count()
+    if total > 10:
+        oldest = db.query(models.UserRecentSearch).filter(models.UserRecentSearch.user_id == current_user.id).order_by(models.UserRecentSearch.created_at.asc()).first()
+        if oldest:
+            db.delete(oldest)
+            
+    db.commit()
+    return {"status": "success"}
+
+@app.delete("/api/users/me/recent-searches")
+def clear_recent_searches(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    db.query(models.UserRecentSearch).filter(models.UserRecentSearch.user_id == current_user.id).delete()
+    db.commit()
+    return {"status": "success"}
+
+@app.delete("/api/users/me/recent-searches/{query_text}")
+def delete_recent_search(query_text: str, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    db.query(models.UserRecentSearch).filter(
+        models.UserRecentSearch.user_id == current_user.id,
+        models.UserRecentSearch.query_text == query_text
+    ).delete()
+    db.commit()
+    return {"status": "success"}
 
 @app.get("/api/users/me/profile", response_model=schemas.User)
 def get_my_profile(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):

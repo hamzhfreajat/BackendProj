@@ -626,11 +626,13 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
 
 # Common dependency for protected routes to easily get current user via JWT
 def get_current_user(request: Request, db: Session = Depends(get_db)):
-    token = request.cookies.get("access_token")
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        
     if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
+        token = request.cookies.get("access_token")
             
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -661,11 +663,13 @@ def get_me(current_user: models.User = Depends(get_current_user)):
 
 @router.post("/logout")
 def logout(request: Request, response: Response, current_user: models.User = Depends(get_current_user)):
-    token = request.cookies.get("access_token")
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        
     if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
+        token = request.cookies.get("access_token")
             
     if token:
         revoke_token(token)
@@ -676,11 +680,13 @@ def logout(request: Request, response: Response, current_user: models.User = Dep
 @router.delete("/account")
 def delete_account(request: Request, response: Response, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Safely log the user out
-    token = request.cookies.get("access_token")
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        
     if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
+        token = request.cookies.get("access_token")
             
     if token:
         revoke_token(token)
