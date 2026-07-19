@@ -164,10 +164,7 @@ async def cloudflare_edge_caching(request: Request, call_next):
             
         # Standard feed lists (ads, ticker) - Cache for 60 seconds to squash identical concurrent requests
         elif (path.startswith("/api/ads") and "/count" not in path) or path.startswith("/api/ticker"):
-            if request.headers.get("Authorization"):
-                response.headers["Cache-Control"] = "private, max-age=0, no-cache"
-            else:
-                response.headers["Cache-Control"] = "public, max-age=60, s-maxage=60"
+            response.headers["Cache-Control"] = "public, max-age=60, s-maxage=60"
             
     return response
 
