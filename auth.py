@@ -630,9 +630,13 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
+        if token in ("null", "undefined", ""):
+            token = None
         
     if not token:
         token = request.cookies.get("access_token")
+        if token in ("null", "undefined", ""):
+            token = None
             
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -667,9 +671,13 @@ def logout(request: Request, response: Response, current_user: models.User = Dep
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
+        if token in ("null", "undefined", ""):
+            token = None
         
     if not token:
         token = request.cookies.get("access_token")
+        if token in ("null", "undefined", ""):
+            token = None
             
     if token:
         revoke_token(token)
@@ -684,9 +692,13 @@ def delete_account(request: Request, response: Response, db: Session = Depends(g
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
+        if token in ("null", "undefined", ""):
+            token = None
         
     if not token:
         token = request.cookies.get("access_token")
+        if token in ("null", "undefined", ""):
+            token = None
             
     if token:
         revoke_token(token)
