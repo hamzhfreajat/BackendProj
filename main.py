@@ -1078,13 +1078,13 @@ def read_ads(
                 ignore_location = True
         except:
             pass
+    log_query = original_search if original_search else search
     if search:
         ranked_ad_ids = SearchService.search_properties(db, search, limit=1000)
         
         # Log the search query and results count in background
-        if background_tasks:
+        if background_tasks and log_query and log_query.strip():
             user_id_val = current_user.id if hasattr(current_user, 'id') else None
-            log_query = original_search if original_search else search
             background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val)
 
         if not ranked_ad_ids:
@@ -1098,6 +1098,9 @@ def read_ads(
         
         if whens:
             query = query.order_by(case(*whens))
+    elif background_tasks and log_query and log_query.strip():
+        user_id_val = current_user.id if hasattr(current_user, 'id') else None
+        background_tasks.add_task(log_search_query_task, log_query, 1, user_id_val)
         
     if location and not ignore_location:
         parent_loc = None
@@ -2780,6 +2783,8 @@ async def startup_event():
         db.close()
 
 def log_search_query_task(search: str, results_count: int, user_id: int):
+    if not search or not search.strip():
+        return
     from database import SessionLocal
     from models import SearchQueryLog
     db = SessionLocal()
