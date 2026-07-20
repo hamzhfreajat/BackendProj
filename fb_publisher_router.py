@@ -94,12 +94,12 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
         # Truncate title if too long
         title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
-        msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://sooq-com.com/ad/{ad.id}\n\n"
+        msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
     # We will use the first ad's link as the main link preview, but only if we don't have images
-    main_link = "https://sooq-com.com/"
+    main_link = "https://share.sooq-com.com/"
     
     import json
     
@@ -126,7 +126,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
             title = ad.title[:30] + "..." if ad.title and len(ad.title) > 30 else (ad.title or "عقار")
             
             child_attachments.append({
-                "link": f"https://sooq-com.com/ad/{ad.id}",
+                "link": f"https://share.sooq-com.com/ad/{ad.id}",
                 "name": title,
                 "description": price_str,
                 "picture": main_image

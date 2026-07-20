@@ -47,7 +47,7 @@ async def publish_facebook_post(message: str, link: str = None, image_urls: list
         async with aiohttp.ClientSession(timeout=timeout) as session:
             # If child_attachments is provided, it creates a true link carousel!
             if child_attachments and len(child_attachments) > 0:
-                payload["link"] = link if link else "https://sooq-com.com"
+                payload["link"] = link if link else "https://share.sooq-com.com"
                 payload["child_attachments"] = json.dumps(child_attachments[:10])
             # Otherwise fallback to basic photo attachments if we have image_urls
             elif image_urls and len(image_urls) > 0:

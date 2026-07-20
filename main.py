@@ -2700,7 +2700,7 @@ async def facebook_autopost_worker():
                 if threshold is not None and count >= threshold:
                     # Publish to facebook
                     msg = f"أكثر من {count} عقار جديد تمت إضافته للتو في منطقة ({location})! 🏡✨\nتصفح أحدث العروض الآن على تطبيق سوقكم."
-                    success = await publish_facebook_post(msg, "https://sooq-com.com/")
+                    success = await publish_facebook_post(msg, "https://share.sooq-com.com/")
                     if success:
                         # Update all ads in this location as posted
                         db.query(models.Ad).filter(
