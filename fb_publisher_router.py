@@ -25,6 +25,7 @@ class ManualPublishRequest(BaseModel):
     region_name: str
     count: int
     custom_text: Optional[str] = None
+    category_id: Optional[int] = None
 
 @router.get("-rules", response_model=List[RuleResponse])
 def get_rules(db: Session = Depends(get_db)):
@@ -61,9 +62,11 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     ads = []
     if region:
         # Use AdSearchIndex to find ads by region_id
-        ad_ids_query = db.query(models.AdSearchIndex.ad_id).filter(
-            models.AdSearchIndex.region_id == region.id
-        ).order_by(models.AdSearchIndex.created_at.desc()).limit(req.count).all()
+        query = db.query(models.AdSearchIndex.ad_id).filter(models.AdSearchIndex.region_id == region.id)
+        if req.category_id:
+            query = query.filter(models.AdSearchIndex.category_id == req.category_id)
+            
+        ad_ids_query = query.order_by(models.AdSearchIndex.created_at.desc()).limit(req.count).all()
         
         ad_ids = [r[0] for r in ad_ids_query]
         if ad_ids:
@@ -72,9 +75,11 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
             ads.sort(key=lambda x: ad_ids.index(x.id))
     else:
         # Fallback to text matching
-        ads = db.query(models.Ad).filter(
-            models.Ad.location.ilike(f"%{req.region_name}%")
-        ).order_by(models.Ad.created_at.desc()).limit(req.count).all()
+        query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
+        if req.category_id:
+            query = query.filter(models.Ad.category_id == req.category_id)
+            
+        ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
         
     if not ads:
         raise HTTPException(status_code=404, detail="No ads found in this region.")
