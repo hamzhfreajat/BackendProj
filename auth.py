@@ -630,13 +630,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        if token in ("null", "undefined", ""):
-            token = None
         
     if not token:
         token = request.cookies.get("access_token")
-        if token in ("null", "undefined", ""):
-            token = None
             
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -656,19 +652,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         return user
     except jwt.ExpiredSignatureError:
         log_expired_token(get_real_ip(request), request.url.path)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Token has expired",
-            headers={"Set-Cookie": 'access_token=""; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}
-        )
-    except jwt.PyJWTError as e:
-        print(f"PyJWTError in get_current_user: {e} | Token: {token}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
+    except jwt.PyJWTError:
         log_jwt_forgery_attempt(get_real_ip(request), request.url.path)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Could not validate credentials",
-            headers={"Set-Cookie": 'access_token=""; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax'}
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
 @router.get("/me", response_model=schemas.User)
 def get_me(current_user: models.User = Depends(get_current_user)):
@@ -680,13 +667,9 @@ def logout(request: Request, response: Response, current_user: models.User = Dep
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        if token in ("null", "undefined", ""):
-            token = None
         
     if not token:
         token = request.cookies.get("access_token")
-        if token in ("null", "undefined", ""):
-            token = None
             
     if token:
         revoke_token(token)
@@ -701,13 +684,9 @@ def delete_account(request: Request, response: Response, db: Session = Depends(g
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        if token in ("null", "undefined", ""):
-            token = None
         
     if not token:
         token = request.cookies.get("access_token")
-        if token in ("null", "undefined", ""):
-            token = None
             
     if token:
         revoke_token(token)
