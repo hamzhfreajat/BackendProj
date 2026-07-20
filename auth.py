@@ -112,7 +112,8 @@ SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("CRITICAL: JWT_SECRET_KEY environment variable is not set. Refusing to start.")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 Days
+ACCESS_TOKEN_EXPIRE_MINUTES = 30 # 30 Minutes
+REFRESH_TOKEN_EXPIRE_DAYS = 365 # 1 Year
 
 # Disable testing mode in production to re-enable rate limits
 TESTING_MODE = os.environ.get("ENV", "development") != "production"
@@ -123,6 +124,23 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def create_refresh_token(db: Session, user_id: int) -> str:
+    token_str = secrets.token_urlsafe(64)
+    hashed_token = get_password_hash(token_str)
+    
+    expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    db_refresh_token = models.RefreshToken(
+        user_id=user_id,
+        token_hash=hashed_token,
+        expires_at=expires_at,
+        is_active=True
+    )
+    db.add(db_refresh_token)
+    db.commit()
+    db.refresh(db_refresh_token)
+    
+    return token_str
 
 def check_rate_limit(db: Session, ip_address: str, mobile_number: str, endpoint: str):
     """
@@ -318,7 +336,7 @@ def admin_login(data: schemas.AdminLogin, request: Request, response: Response, 
         samesite="lax",
         max_age=30 * 60
     )
-    return schemas.AuthResponse(token=access_token, user=user)
+    return schemas.AuthResponse(token=access_token, refresh_token=refresh_token, user=user)
 
 @router.post("/verify-otp", response_model=schemas.AuthResponse)
 def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db)):
@@ -394,6 +412,7 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
             db.commit()
             
         access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        refresh_token = create_refresh_token(db, user.id)
         
         if is_new_user:
             from notifications import send_personal_notification, send_welcome_chat_message
@@ -420,7 +439,7 @@ def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTas
             samesite="lax",
             max_age=30 * 60
         )
-        return schemas.AuthResponse(token=access_token, user=user)
+        return schemas.AuthResponse(token=access_token, refresh_token=refresh_token, user=user)
         
     except ValueError as e:
         print(f"Google Token Verification Failed: {e}")
@@ -472,6 +491,7 @@ def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: Backgroun
             db.commit()
             
         access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        refresh_token = create_refresh_token(db, user.id)
         
         if is_new_user:
             from notifications import send_personal_notification, send_welcome_chat_message
@@ -498,7 +518,7 @@ def facebook_auth(data: schemas.FacebookAuthRequest, background_tasks: Backgroun
             samesite="lax",
             max_age=30 * 60
         )
-        return schemas.AuthResponse(token=access_token, user=user)
+        return schemas.AuthResponse(token=access_token, refresh_token=refresh_token, user=user)
         
     except ValueError as e:
         print(f"Facebook Token Verification Failed: {e}")
@@ -591,6 +611,7 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
             db.commit()
             
         access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        refresh_token = create_refresh_token(db, user.id)
         
         if is_new_user:
             from notifications import send_personal_notification, send_welcome_chat_message
@@ -617,7 +638,7 @@ def apple_auth(data: schemas.AppleAuthRequest, background_tasks: BackgroundTasks
             samesite="lax",
             max_age=30 * 60
         )
-        return schemas.AuthResponse(token=access_token, user=user)
+        return schemas.AuthResponse(token=access_token, refresh_token=refresh_token, user=user)
         
     except Exception as e:
         log_auth_failure(get_real_ip(request), "/google", f"OAuth verification failed: {str(e)}")
@@ -710,3 +731,46 @@ def get_current_admin(current_user: models.User = Depends(get_current_user)):
 def get_all_otps(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
     otps = db.query(models.OtpCode).order_by(models.OtpCode.created_at.desc()).limit(100).all()
     return otps
+
+
+
+class RefreshRequest(schemas.BaseModel):
+    refresh_token: str
+
+@router.post("/refresh", response_model=schemas.AuthResponse)
+def refresh_token_endpoint(data: RefreshRequest, response: Response, db: Session = Depends(get_db)):
+    hashed_token = hashlib.sha256(data.refresh_token.encode()).hexdigest()
+    
+    db_token = db.query(models.RefreshToken).filter(
+        models.RefreshToken.token_hash == hashed_token,
+        models.RefreshToken.is_active == True
+    ).first()
+    
+    if not db_token:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        
+    if db_token.expires_at < datetime.utcnow():
+        db_token.is_active = False
+        db.commit()
+        raise HTTPException(status_code=401, detail="Refresh token expired")
+        
+    user = db.query(models.User).filter(models.User.id == db_token.user_id).first()
+    if not user or not user.is_active or user.is_banned:
+        raise HTTPException(status_code=401, detail="User is inactive or banned")
+        
+    # Generate new access token
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email, "username": user.username})
+    
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=30 * 60
+    )
+    
+    return schemas.AuthResponse(token=access_token, refresh_token=data.refresh_token, user=user)
+
+class LogoutRequest(schemas.BaseModel):
+    refresh_token: str = None

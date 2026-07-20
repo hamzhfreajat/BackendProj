@@ -228,6 +228,7 @@ class OtpCodeOut(BaseModel):
 
 class AuthResponse(BaseModel):
     token: str
+    refresh_token: Optional[str] = None
     user: User
 
 class UserMetricsBase(BaseModel):
