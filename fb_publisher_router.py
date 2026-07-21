@@ -98,8 +98,14 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
-    # We will use the first ad's link as the main link preview, but only if we don't have images
-    main_link = "https://share.sooq-com.com/"
+    import urllib.parse
+    
+    # We will use the category link as the main link preview, so the final 'See more' card links to it
+    if req.category_id:
+        encoded_region = urllib.parse.quote(req.region_name)
+        main_link = f"https://share.sooq-com.com/category/{req.category_id}?locations={encoded_region}"
+    else:
+        main_link = "https://share.sooq-com.com/"
     
     import json
     
