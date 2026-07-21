@@ -218,6 +218,20 @@ def _send_personal_notification_sync(
                                         sound="default"
                                     )
                                 ),
+                                apns=messaging.APNSConfig(
+                                    headers={"apns-priority": "10"},
+                                    payload=messaging.APNSPayload(
+                                        aps=messaging.Aps(
+                                            alert=messaging.ApsAlert(
+                                                title=title,
+                                                body=body
+                                            ),
+                                            sound="default",
+                                            badge=1,
+                                            mutable_content=True
+                                        )
+                                    )
+                                ),
                                 data=data_payload,
                                 token=device.fcm_token,
                             )
