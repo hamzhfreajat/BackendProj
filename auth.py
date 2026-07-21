@@ -327,6 +327,7 @@ def admin_login(data: schemas.AdminLogin, request: Request, response: Response, 
     # Valid login credentials verified! Mint a new Dashboard JWT token.
     log_auth_success(ip_address, "/admin-login", user.username, str(user.id))
     access_token = create_access_token(data={"sub": str(user.id), "username": user.username, "type": "admin"})
+    refresh_token = create_refresh_token(db, user.id)
 
     response.set_cookie(
         key="access_token",
@@ -337,39 +338,6 @@ def admin_login(data: schemas.AdminLogin, request: Request, response: Response, 
         max_age=30 * 60
     )
     return schemas.AuthResponse(token=access_token, refresh_token=refresh_token, user=user)
-
-@router.post("/verify-otp", response_model=schemas.AuthResponse)
-def verify_otp(data: schemas.VerifyOTP, request: Request, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db)):
-    raise HTTPException(status_code=404, detail="OTP authentication is currently disabled.")
-#     ip_address = get_real_ip(request)
-#     mobile_number = normalize_jo_phone(data.mobile_number)
-#         # Send in-app notification
-#         background_tasks.add_task(
-#             send_personal_notification,
-#             target_user_id=user.id,
-#             title="مرحباً بك في سوقكم! 🎉",
-#             body="حسابك جاهز. ابدأ بتصفح الإعلانات أو أضف إعلانك الأول.",
-#             notification_type="welcome",
-#             reference_id=None
-#         )
-#         
-#         # Send chat message from admin
-#         background_tasks.add_task(
-#             send_welcome_chat_message,
-#             user_id=user.id,
-#             user_name=user.username or user.mobile_number,
-#             user_phone=user.mobile_number
-#         )
-# 
-# response.set_cookie(
-#     key="access_token",
-#     value=access_token,
-#     httponly=True,
-#     secure=True,
-#     samesite="lax",
-#     max_age=30 * 60
-# )
-#     return schemas.AuthResponse(token=access_token, user=user)
 
 @router.post("/google", response_model=schemas.AuthResponse, dependencies=[Depends(get_rate_limiter(5, 60))])
 def google_auth(data: schemas.GoogleAuthRequest, background_tasks: BackgroundTasks, response: Response, db: Session = Depends(get_db), request: Request = None):

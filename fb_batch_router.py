@@ -1463,3 +1463,12 @@ def get_scraping_logs(
     } for l in logs]
     
     return {"total": total, "items": items}
+
+
+# HOTFIX: Replace the literal string {get_dynamic_location_rules()} in global prompts
+# so that .format() doesn't fail with KeyError
+if '{get_dynamic_location_rules()}' in _GEMINI_BATCH_PROMPT:
+    _GEMINI_BATCH_PROMPT = _GEMINI_BATCH_PROMPT.replace('{get_dynamic_location_rules()}', get_dynamic_location_rules())
+
+if '{get_dynamic_location_rules()}' in _GEMMA_SINGLE_PROMPT:
+    _GEMMA_SINGLE_PROMPT = _GEMMA_SINGLE_PROMPT.replace('{get_dynamic_location_rules()}', get_dynamic_location_rules())
