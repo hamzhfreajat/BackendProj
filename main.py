@@ -2685,30 +2685,86 @@ async def facebook_autopost_worker():
                 await asyncio.sleep(1800)
                 continue
                 
-            # Find regions with >= threshold unsent scraper ads
+            # Find combinations of location and category with >= 50 unsent ads
             region_counts = db.query(
                 models.Ad.location, 
+                models.Ad.category_id,
                 func.count(models.Ad.id).label('ad_count')
             ).filter(
-                models.Ad.source_type == models.SourceType.SCRAPER_BOT,
                 models.Ad.is_facebook_posted == False,
-                models.Ad.location != None
-            ).group_by(models.Ad.location).all()
+                models.Ad.location != None,
+                models.Ad.category_id != None
+            ).group_by(models.Ad.location, models.Ad.category_id).having(func.count(models.Ad.id) >= 50).all()
             
-            for location, count in region_counts:
-                threshold = rules_dict.get(location)
-                if threshold is not None and count >= threshold:
-                    # Publish to facebook
-                    msg = f"أكثر من {count} عقار جديد تمت إضافته للتو في منطقة ({location})! 🏡✨\nتصفح أحدث العروض الآن على تطبيق سوقكم."
-                    success = await publish_facebook_post(msg, "https://share.sooq-com.com/")
-                    if success:
-                        # Update all ads in this location as posted
-                        db.query(models.Ad).filter(
-                            models.Ad.source_type == models.SourceType.SCRAPER_BOT,
-                            models.Ad.is_facebook_posted == False,
-                            models.Ad.location == location
-                        ).update({"is_facebook_posted": True}, synchronize_session=False)
-                        db.commit()
+            import json
+            import urllib.parse
+            
+            for location, category_id, count in region_counts:
+                # Get the latest 15 ads for this combination
+                ads = db.query(models.Ad).filter(
+                    models.Ad.is_facebook_posted == False,
+                    models.Ad.location == location,
+                    models.Ad.category_id == category_id
+                ).order_by(models.Ad.created_at.desc()).limit(15).all()
+                
+                if not ads:
+                    continue
+                    
+                category = db.query(models.Category).filter(models.Category.id == category_id).first()
+                category_name = category.name if category else "عقار"
+                
+                categoryHashtag = category_name.replace(" ", "_")
+                regionHashtag = location.replace(" ", "_") if location else "الاردن"
+                hashtags = f"#{categoryHashtag} #{regionHashtag} #عقارات #عقارات_الاردن #سوقكم"
+                
+                msg = f"تبحث عن {category_name} في {location}؟ 🏡✨\nاكتشف أحدث وأفضل {category_name} المعروضة لدينا في هذه المجموعة المميزة! 🌟\n\n"
+                
+                for i, ad in enumerate(ads, 1):
+                    price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
+                    title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
+                    msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n\n"
+                
+                msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n\n"
+                msg += hashtags
+                
+                main_link = f"https://share.sooq-com.com/ad/{ads[0].id}"
+                
+                child_attachments = []
+                for ad in ads:
+                    main_image = None
+                    if hasattr(ad, 'image_urls') and ad.image_urls:
+                        main_image = ad.image_urls[0] if ad.image_urls else None
+                    elif hasattr(ad, 'image_url') and ad.image_url:
+                        try:
+                            parsed = json.loads(ad.image_url)
+                            if isinstance(parsed, list) and parsed:
+                                main_image = parsed[0]
+                            else:
+                                main_image = ad.image_url
+                        except:
+                            main_image = ad.image_url
+                            
+                    if main_image and isinstance(main_image, str):
+                        price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
+                        title = ad.title[:30] + "..." if ad.title and len(ad.title) > 30 else (ad.title or "عقار")
+                        child_attachments.append({
+                            "link": f"https://share.sooq-com.com/ad/{ad.id}",
+                            "name": title,
+                            "description": price_str,
+                            "picture": main_image
+                        })
+                        
+                child_attachments = child_attachments[:10]
+                
+                success = await publish_facebook_post(msg, main_link, child_attachments=child_attachments)
+                if success:
+                    # Update all unsent ads in this location and category as posted
+                    db.query(models.Ad).filter(
+                        models.Ad.is_facebook_posted == False,
+                        models.Ad.location == location,
+                        models.Ad.category_id == category_id
+                    ).update({"is_facebook_posted": True}, synchronize_session=False)
+                    db.commit()
         except Exception as e:
             print(f"Error in facebook_autopost_worker: {e}")
         finally:
