@@ -100,10 +100,10 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     
     import urllib.parse
     
-    # We will use the category link as the main link preview, so the final 'See more' card links to it
-    if req.category_id:
-        encoded_region = urllib.parse.quote(req.region_name)
-        main_link = f"https://share.sooq-com.com/category/{req.category_id}?locations={encoded_region}"
+    # The user requested the main link (which is used for the final 'See more' card) 
+    # to be the same as the link for the latest ad in the list.
+    if ads and len(ads) > 0:
+        main_link = f"https://share.sooq-com.com/ad/{ads[0].id}"
     else:
         main_link = "https://share.sooq-com.com/"
     
