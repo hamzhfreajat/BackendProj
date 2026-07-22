@@ -26,6 +26,7 @@ class ManualPublishRequest(BaseModel):
     count: int
     custom_text: Optional[str] = None
     category_id: Optional[int] = None
+    format: Optional[str] = "catalog"
 
 @router.get("-rules", response_model=List[RuleResponse])
 def get_rules(db: Session = Depends(get_db)):
@@ -111,6 +112,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     
     # Extract images and build child attachments for carousel
     child_attachments = []
+    all_images = []
     
     for ad in ads:
         # Determine main image for the ad
@@ -128,6 +130,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
                 main_image = ad.image_url
                 
         if main_image and isinstance(main_image, str):
+            all_images.append(main_image)
             price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
             title = ad.title[:30] + "..." if ad.title and len(ad.title) > 30 else (ad.title or "عقار")
             
@@ -138,10 +141,41 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
                 "picture": main_image
             })
             
-    # Max 10 items for a carousel
+    # Max 10 items for a carousel or album
     child_attachments = child_attachments[:10]
+    all_images = all_images[:10]
     
-    success = await publish_facebook_post(msg, main_link, child_attachments=child_attachments)
+    # Format handling
+    fmt = req.format if hasattr(req, 'format') and req.format else "catalog"
+    final_msg = msg
+    final_link = None
+    final_images = None
+    final_child = None
+    
+    # Append link to text if requested
+    if fmt in ["text_link_catalog", "text_link_images"]:
+        final_msg += f"\nالرابط الأساسي: {main_link}"
+        
+    if fmt in ["catalog", "text_link_catalog"]:
+        final_link = main_link
+        final_child = child_attachments
+    elif fmt in ["images", "text_link_images"]:
+        final_images = all_images
+    elif fmt == "link":
+        final_link = main_link
+    elif fmt == "text_only":
+        pass
+    else:
+        # fallback
+        final_link = main_link
+        final_child = child_attachments
+    
+    success = await publish_facebook_post(
+        final_msg, 
+        link=final_link, 
+        image_urls=final_images, 
+        child_attachments=final_child
+    )
     if success:
         # Mark these ads as posted so auto-publisher doesn't republish them
         for ad in ads:
