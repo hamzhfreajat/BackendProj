@@ -99,13 +99,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         # Truncate title if too long
         title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
         
-        msg += f"{i}. {title}\n💰 السعر: {price_str}\n"
-        
-        # Only add individual links if the format explicitly expects multiple links in the text
-        if fmt not in ["text_only", "images", "link"]:
-            msg += f"🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n"
-            
-        msg += "\n"
+        msg += f"{i}. {title}\n💰 السعر: {price_str}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
