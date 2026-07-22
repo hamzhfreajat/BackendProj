@@ -39,6 +39,13 @@ def norm_str(s):
         s = s.replace(a, b)
     return s
 
+def normalize_region_name(name):
+    if not name: return name
+    n = norm_str(name).strip()
+    if n.startswith('ال'):
+        n = n[2:].strip()
+    return n
+
 def norm_col(col):
     from sqlalchemy.sql import func
     c = func.replace(col, 'أ', 'ا')
@@ -47,6 +54,11 @@ def norm_col(col):
     c = func.replace(c, 'ة', 'ه')
     c = func.replace(c, 'ى', 'ي')
     return c
+
+def norm_region_col(col):
+    from sqlalchemy.sql import func
+    c = norm_col(col)
+    return func.regexp_replace(c, '^ال', '')
 
 
 import redis
@@ -2045,19 +2057,17 @@ def update_ad(
                 
                 city = db.query(models.City).filter(norm_col(models.City.name_ar) == c_norm).first()
                 if city:
-                    r_norm = norm_str(region_name)
+                    r_norm = normalize_region_name(region_name)
                     region = db.query(models.Region).filter(
                         models.Region.city_id == city.id,
-                        norm_col(models.Region.name_ar) == r_norm
+                        norm_region_col(models.Region.name_ar) == r_norm
                     ).first()
                     
                     if not region:
-                        new_region = models.Region(
-                            city_id=city.id,
-                            name_ar=region_name,
-                            name_en=region_name
-                        )
-                        db.add(new_region)
+                        # Fallback to other if region doesn't exist to prevent duplicates
+                        update_dict["location"] = f"{city_name}, أخرى"
+                    else:
+                        update_dict["location"] = f"{city.name_ar}, {region.name_ar}"
 
     was_unpublished = not db_ad.is_published
     

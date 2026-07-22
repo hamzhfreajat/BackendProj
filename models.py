@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DECIMAL, ForeignKey, TIMESTAMP, Boolean, Enum, Table
+from sqlalchemy import Column, Integer, String, Text, DECIMAL, ForeignKey, TIMESTAMP, Boolean, Enum, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
@@ -44,6 +44,8 @@ class Region(Base):
     name_en = Column(String(100), nullable=False)
     latitude = Column(DECIMAL(10, 8), nullable=True)
     longitude = Column(DECIMAL(11, 8), nullable=True)
+    
+    __table_args__ = (UniqueConstraint('city_id', 'name_ar', name='uq_region_city_name_ar'),)
     
     city = relationship("City", back_populates="regions")
 
