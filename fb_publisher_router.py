@@ -87,6 +87,9 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         
     actual_count = len(ads)
     
+    # Format handling
+    fmt = req.format if hasattr(req, 'format') and req.format else "catalog"
+    
     # Build catalog-like text
     msg = req.custom_text if req.custom_text else f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n"
     msg += "\n\n"
@@ -95,7 +98,14 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
         # Truncate title if too long
         title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
-        msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n\n"
+        
+        msg += f"{i}. {title}\n💰 السعر: {price_str}\n"
+        
+        # Only add individual links if the format explicitly expects multiple links in the text
+        if fmt not in ["text_only", "images", "link"]:
+            msg += f"🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n"
+            
+        msg += "\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
@@ -153,7 +163,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     final_child = None
     
     # Append link to text if requested
-    if fmt in ["text_link_catalog", "text_link_images"]:
+    if fmt in ["link", "text_link_catalog", "text_link_images"]:
         final_msg += f"\nالرابط الأساسي: {main_link}"
         
     if fmt in ["catalog", "text_link_catalog"]:
