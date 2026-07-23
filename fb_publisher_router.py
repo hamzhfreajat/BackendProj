@@ -60,27 +60,11 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     # Try to resolve region_id from the given region_name
     region = db.query(models.Region).filter(models.Region.name_ar == req.region_name).first()
     
-    ads = []
-    if region:
-        # Use AdSearchIndex to find ads by region_id
-        query = db.query(models.AdSearchIndex.ad_id).filter(models.AdSearchIndex.region_id == region.id)
-        if req.category_id:
-            query = query.filter(models.AdSearchIndex.category_id == req.category_id)
-            
-        ad_ids_query = query.order_by(models.AdSearchIndex.created_at.desc()).limit(req.count).all()
+    query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
+    if req.category_id:
+        query = query.filter(models.Ad.category_id == req.category_id)
         
-        ad_ids = [r[0] for r in ad_ids_query]
-        if ad_ids:
-            ads = db.query(models.Ad).filter(models.Ad.id.in_(ad_ids)).all()
-            # Sort them back in descending order as returned by AdSearchIndex
-            ads.sort(key=lambda x: ad_ids.index(x.id))
-    else:
-        # Fallback to text matching
-        query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
-        if req.category_id:
-            query = query.filter(models.Ad.category_id == req.category_id)
-            
-        ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
+    ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
         
     if not ads:
         raise HTTPException(status_code=404, detail="No ads found in this region.")
@@ -193,27 +177,11 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
 
 @router.post("/generate-text")
 async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)):
-    # Try to resolve region_id from the given region_name
-    region = db.query(models.Region).filter(models.Region.name_ar == req.region_name).first()
-    
-    ads = []
-    if region:
-        query = db.query(models.AdSearchIndex.ad_id).filter(models.AdSearchIndex.region_id == region.id)
-        if req.category_id:
-            query = query.filter(models.AdSearchIndex.category_id == req.category_id)
-            
-        ad_ids_query = query.order_by(models.AdSearchIndex.created_at.desc()).limit(req.count).all()
+    query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
+    if req.category_id:
+        query = query.filter(models.Ad.category_id == req.category_id)
         
-        ad_ids = [r[0] for r in ad_ids_query]
-        if ad_ids:
-            ads = db.query(models.Ad).filter(models.Ad.id.in_(ad_ids)).all()
-            ads.sort(key=lambda x: ad_ids.index(x.id))
-    else:
-        query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
-        if req.category_id:
-            query = query.filter(models.Ad.category_id == req.category_id)
-            
-        ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
+    ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
         
     if not ads:
         raise HTTPException(status_code=404, detail="No ads found in this region.")
@@ -254,6 +222,7 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
 @router.get("/ready-combinations")
 def get_ready_combinations(db: Session = Depends(get_db)):
     from sqlalchemy import func
+    import datetime
     
     # Find leaf categories
     parent_ids = db.query(models.Category.parent_id).filter(models.Category.parent_id.isnot(None)).distinct()
@@ -261,40 +230,39 @@ def get_ready_combinations(db: Session = Depends(get_db)):
     leaf_cat_ids = [c.id for c in leaf_categories]
     leaf_cat_map = {c.id: c.name for c in leaf_categories}
     
-    # Group ads in AdSearchIndex by region_id and category_id
-    results = db.query(
-        models.AdSearchIndex.region_id,
-        models.AdSearchIndex.category_id,
-        func.count(models.AdSearchIndex.ad_id).label('post_count')
-    ).filter(
-        models.AdSearchIndex.category_id.in_(leaf_cat_ids),
-        models.AdSearchIndex.region_id.isnot(None)
-    ).group_by(
-        models.AdSearchIndex.region_id,
-        models.AdSearchIndex.category_id
-    ).having(
-        func.count(models.AdSearchIndex.ad_id) >= 50
-    ).all()
+    now = datetime.datetime.utcnow()
     
-    region_ids = [r.region_id for r in results if r.region_id]
-    regions = db.query(models.Region).filter(models.Region.id.in_(region_ids)).all()
-    region_map = {r.id: r.name_ar for r in regions}
+    # Group ads in Ad by region_name ILIKE and category_id
+    results = db.query(
+        models.Region.id.label('region_id'),
+        models.Region.name_ar.label('region_name'),
+        models.Ad.category_id,
+        func.count(models.Ad.id).label('post_count')
+    ).join(
+        models.Ad, models.Ad.location.ilike(func.concat('%', models.Region.name_ar, '%'))
+    ).filter(
+        models.Ad.category_id.in_(leaf_cat_ids),
+        models.Ad.is_published == True,
+        models.Ad.is_paused == False,
+        models.Ad.is_sold == False,
+        models.Ad.is_rejected == False,
+        (models.Ad.expires_at == None) | (models.Ad.expires_at > now)
+    ).group_by(
+        models.Region.id,
+        models.Region.name_ar,
+        models.Ad.category_id
+    ).having(
+        func.count(models.Ad.id) >= 50
+    ).all()
     
     output = []
     for r in results:
-        if not r.region_id:
-            continue
-        region_name = region_map.get(r.region_id)
-        if not region_name:
-            continue
-            
-        cat_name = leaf_cat_map.get(r.category_id, "Unknown")
+        cat_name = leaf_cat_map.get(r.category_id, "قسم غير معروف")
         
         output.append({
-            "region_name": region_name,
-            "category_name": cat_name,
+            "region_name": r.region_name,
             "category_id": r.category_id,
-            "count": min(r.post_count, 20),
+            "category_name": cat_name,
             "actual_count": r.post_count
         })
         
