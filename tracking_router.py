@@ -325,21 +325,30 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
     roots = {3: "للإيجار", 2: "للبيع", 10313: "الأراضي"}
     
     # 1. Fetch category hierarchy map
-    cats = db.query(models.Category.id, models.Category.parent_id).all()
+    cats = db.query(models.Category.id, models.Category.name, models.Category.parent_id).all()
     parent_map = {c.id: c.parent_id for c in cats}
+    name_map = {c.id: c.name for c in cats}
     
-    def get_root(cat_id):
+    def get_group_and_sub(cat_id):
         curr = cat_id
+        path = []
         while curr is not None:
+            path.append(curr)
             if curr in roots:
-                return curr
+                if len(path) > 1:
+                    sub_id = path[-2]
+                    sub_name = name_map.get(sub_id, "غير معروف")
+                else:
+                    sub_name = name_map.get(curr, "غير معروف")
+                return roots[curr], sub_name
             curr = parent_map.get(curr)
-        return None
+        return None, None
 
     # 2. Query all ads
     ads = db.query(models.Ad.location, models.Ad.category_id).all()
     
     region_stats = {}
+    unique_subs = {} # mapping from sub_name -> group_name
     
     for ad in ads:
         if not ad.location:
@@ -349,17 +358,19 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
             continue
         region_name = parts[1]
         
-        root_id = get_root(ad.category_id)
-        if not root_id:
+        group_name, sub_name = get_group_and_sub(ad.category_id)
+        if not group_name:
             continue
             
-        root_name = roots[root_id]
+        unique_subs[sub_name] = group_name
         
         if region_name not in region_stats:
-            region_stats[region_name] = {r: 0 for r in roots.values()}
-            region_stats[region_name]["total"] = 0
+            region_stats[region_name] = {"total": 0, "subs": {}}
             
-        region_stats[region_name][root_name] += 1
+        if sub_name not in region_stats[region_name]["subs"]:
+            region_stats[region_name]["subs"][sub_name] = 0
+            
+        region_stats[region_name]["subs"][sub_name] += 1
         region_stats[region_name]["total"] += 1
         
     # Convert to list and sort by total
@@ -367,9 +378,15 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
     for region, data in region_stats.items():
         if data["total"] > 0:
             item = {"region": region, "total": data["total"]}
-            for k in roots.values():
-                item[k] = data[k]
+            for sub_name in unique_subs.keys():
+                item[sub_name] = data["subs"].get(sub_name, 0)
             result.append(item)
             
     result.sort(key=lambda x: x["total"], reverse=True)
-    return result[:50]  # Return top 50 regions for the chart
+    
+    series_meta = [{"name": sub, "group": group} for sub, group in unique_subs.items()]
+    
+    return {
+        "data": result[:50],
+        "series_meta": series_meta
+    }
