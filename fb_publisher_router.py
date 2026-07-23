@@ -221,12 +221,18 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
     msg = req.custom_text if req.custom_text else f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n"
     msg += "\n\n"
     
+    fmt = req.format if hasattr(req, 'format') and req.format else "catalog"
+
     for i, ad in enumerate(ads, 1):
         price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
         title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
         
-        # We explicitly WANT individual links here since the user wants to copy/paste it
-        msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n\n"
+        if fmt in ["images", "text_only", "link"]:
+            # no individual links
+            msg += f"{i}. {title}\n💰 السعر: {price_str}\n\n"
+        else:
+            # We explicitly WANT individual links here since the user wants to copy/paste it
+            msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
@@ -234,5 +240,57 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
         main_link = f"https://share.sooq-com.com/ad/{ads[0].id}"
     else:
         main_link = "https://share.sooq-com.com/"
+        
+    if fmt in ["link", "text_link_catalog", "text_link_images"]:
+        msg += f"\nالرابط الأساسي: {main_link}"
 
     return {"text": msg, "main_link": main_link, "count": actual_count}
+
+@router.get("/ready-combinations")
+def get_ready_combinations(db: Session = Depends(get_db)):
+    from sqlalchemy import func
+    
+    # Find leaf categories
+    parent_ids = db.query(models.Category.parent_id).filter(models.Category.parent_id.isnot(None)).distinct()
+    leaf_categories = db.query(models.Category).filter(~models.Category.id.in_(parent_ids)).all()
+    leaf_cat_ids = [c.id for c in leaf_categories]
+    leaf_cat_map = {c.id: c.name for c in leaf_categories}
+    
+    # Group ads in AdSearchIndex by region_id and category_id
+    results = db.query(
+        models.AdSearchIndex.region_id,
+        models.AdSearchIndex.category_id,
+        func.count(models.AdSearchIndex.ad_id).label('post_count')
+    ).filter(
+        models.AdSearchIndex.category_id.in_(leaf_cat_ids),
+        models.AdSearchIndex.region_id.isnot(None)
+    ).group_by(
+        models.AdSearchIndex.region_id,
+        models.AdSearchIndex.category_id
+    ).having(
+        func.count(models.AdSearchIndex.ad_id) >= 50
+    ).all()
+    
+    region_ids = [r.region_id for r in results if r.region_id]
+    regions = db.query(models.Region).filter(models.Region.id.in_(region_ids)).all()
+    region_map = {r.id: r.name_ar for r in regions}
+    
+    output = []
+    for r in results:
+        if not r.region_id:
+            continue
+        region_name = region_map.get(r.region_id)
+        if not region_name:
+            continue
+            
+        cat_name = leaf_cat_map.get(r.category_id, "Unknown")
+        
+        output.append({
+            "region_name": region_name,
+            "category_name": cat_name,
+            "category_id": r.category_id,
+            "count": min(r.post_count, 20),
+            "actual_count": r.post_count
+        })
+        
+    return output
