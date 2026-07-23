@@ -318,3 +318,58 @@ def get_personalized_ads(db: Session = Depends(get_db), current_user: Optional[m
                 break
 
     return lanes
+
+@router.get("/regional-category-stats")
+def get_regional_category_stats(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
+    # Roots we care about
+    roots = {3: "للإيجار", 2: "للبيع", 10313: "الأراضي"}
+    
+    # 1. Fetch category hierarchy map
+    cats = db.query(models.Category.id, models.Category.parent_id).all()
+    parent_map = {c.id: c.parent_id for c in cats}
+    
+    def get_root(cat_id):
+        curr = cat_id
+        while curr is not None:
+            if curr in roots:
+                return curr
+            curr = parent_map.get(curr)
+        return None
+
+    # 2. Query all ads
+    ads = db.query(models.Ad.location, models.Ad.category_id).all()
+    
+    region_stats = {}
+    
+    for ad in ads:
+        if not ad.location:
+            continue
+        parts = [p.strip() for p in ad.location.split(',')]
+        if len(parts) < 2:
+            continue
+        region_name = parts[1]
+        
+        root_id = get_root(ad.category_id)
+        if not root_id:
+            continue
+            
+        root_name = roots[root_id]
+        
+        if region_name not in region_stats:
+            region_stats[region_name] = {r: 0 for r in roots.values()}
+            region_stats[region_name]["total"] = 0
+            
+        region_stats[region_name][root_name] += 1
+        region_stats[region_name]["total"] += 1
+        
+    # Convert to list and sort by total
+    result = []
+    for region, data in region_stats.items():
+        if data["total"] > 0:
+            item = {"region": region, "total": data["total"]}
+            for k in roots.values():
+                item[k] = data[k]
+            result.append(item)
+            
+    result.sort(key=lambda x: x["total"], reverse=True)
+    return result[:50]  # Return top 50 regions for the chart
