@@ -94,12 +94,14 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     msg = req.custom_text if req.custom_text else f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n"
     msg += "\n\n"
     
+    emojis = ["🏡", "🌟", "✨", "💎"]
     for i, ad in enumerate(ads, 1):
         price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
         # Truncate title if too long
         title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
+        emoji = emojis[(i-1) % len(emojis)]
         
-        msg += f"{i}. {title}\n💰 السعر: {price_str}\n\n"
+        msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
@@ -223,16 +225,19 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
     
     fmt = req.format if hasattr(req, 'format') and req.format else "catalog"
 
+    emojis = ["🏡", "🌟", "✨", "💎"]
+
     for i, ad in enumerate(ads, 1):
         price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
         title = ad.title[:50] + "..." if ad.title and len(ad.title) > 50 else (ad.title or "عقار")
+        emoji = emojis[(i-1) % len(emojis)]
         
         if fmt in ["images", "text_only", "link"]:
             # no individual links
-            msg += f"{i}. {title}\n💰 السعر: {price_str}\n\n"
+            msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n\n"
         else:
             # We explicitly WANT individual links here since the user wants to copy/paste it
-            msg += f"{i}. {title}\n💰 السعر: {price_str}\n🔗 التفاصيل: https://share.sooq-com.com/ad/{ad.id}\n\n"
+            msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n🔗 التفاصيل:\nhttps://share.sooq-com.com/ad/{ad.id}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
     
