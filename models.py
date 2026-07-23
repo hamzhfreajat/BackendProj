@@ -48,6 +48,15 @@ class Region(Base):
     __table_args__ = (UniqueConstraint('city_id', 'name_ar', name='uq_region_city_name_ar'),)
     
     city = relationship("City", back_populates="regions")
+    aliases = relationship("RegionAlias", back_populates="region", cascade="all, delete-orphan")
+
+class RegionAlias(Base):
+    __tablename__ = "region_aliases"
+    id = Column(Integer, primary_key=True, index=True)
+    region_id = Column(Integer, ForeignKey("regions.id", ondelete="CASCADE"), nullable=False)
+    alias_name = Column(String(100), nullable=False, unique=True)
+    
+    region = relationship("Region", back_populates="aliases")
 
 class Directorate(Base):
     __tablename__ = "directorates"

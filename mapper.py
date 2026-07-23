@@ -33,26 +33,22 @@ def get_category_map():
             categories[cat_name] = cat_id
     return categories
 
-import json
-import os
-
-def load_overrides():
-    overrides_path = os.path.join(os.path.dirname(__file__), 'location_overrides.json')
+def get_dynamic_location_rules(db):
     try:
-        with open(overrides_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return {}
-
-LOCATION_OVERRIDES = load_overrides()
-
-def get_dynamic_location_rules():
-    if not LOCATION_OVERRIDES:
+        from models import RegionAlias
+        aliases = db.query(RegionAlias).all()
+        if not aliases:
+            return ""
+        rules = []
+        for a in aliases:
+            if a.region and a.region.city:
+                city_name = a.region.city.name_ar
+                region_name = a.region.name_ar
+                rules.append(f"    - If the text mentions '{a.alias_name}', map city to '{city_name}' and region to '{region_name}'.")
+        return "\n".join(rules)
+    except Exception as e:
+        print(f"Error loading aliases: {e}")
         return ""
-    rules = []
-    for i, (k, v) in enumerate(LOCATION_OVERRIDES.items(), 1):
-        rules.append(f"    - If the text mentions '{k}', you MUST map it strictly to '{v}'.")
-    return "\n".join(rules)
 
 def map_location(ai_location_str, city_regions_map):
     if not ai_location_str:
@@ -60,10 +56,7 @@ def map_location(ai_location_str, city_regions_map):
         
     ai_loc = ai_location_str.strip()
     
-    # Check overrides first
-    for key, value in LOCATION_OVERRIDES.items():
-        if key in ai_loc:
-            return value
+
 
     ai_loc_norm = normalize_arabic(ai_loc).replace(" ", "")
     

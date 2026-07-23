@@ -339,7 +339,7 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     return json.loads(raw.strip())
 
 
-def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[dict]:
+def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_rules_str: str) -> List[dict]:
     """Send a chunk of posts to an AI model with fallback logic."""
     global _LAST_GEMINI_CALL
     api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -351,7 +351,8 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
     prompt = _GEMINI_BATCH_PROMPT.format(
         categories_block=categories_block,
-        posts_block=_build_posts_block(chunk_posts)
+        posts_block=_build_posts_block(chunk_posts),
+        dynamic_location_rules=dynamic_rules_str
     )
 
     errors = []
@@ -611,6 +612,8 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str) -> List[
 
 
 def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
+    from mapper import get_dynamic_location_rules
+    dynamic_rules_str = get_dynamic_location_rules(db)
     """Process all posts in chunks to avoid token limits, running concurrently."""
     from extraction_constants import REAL_ESTATE_CATEGORIES
     # Supply exactly the categories list the user's prompt needs (includes mapping IDs)
@@ -624,7 +627,7 @@ def _ai_process_all(posts: List[FbPost], db: Session) -> List[dict]:
     def process_single_chunk(chunk):
         try:
             logger.info(f"Sending chunk of {len(chunk)} posts to AI...")
-            res = _ai_process_chunk(chunk, categories_block)
+            res = _ai_process_chunk(chunk, categories_block, dynamic_rules_str)
             if len(res) < len(chunk):
                 # If AI returned fewer results, pad with an explicit error to avoid silent blanks
                 res.extend([{"ai_chunk_error": "AI returned fewer items than requested (possible truncation)"}] * (len(chunk) - len(res)))
