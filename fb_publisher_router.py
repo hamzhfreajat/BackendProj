@@ -87,7 +87,10 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         
         msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n\n"
         
-    msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
+    msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
+    msg += "حمل التطبيق الآن:\n"
+    msg += "App Store: https://apps.apple.com/app/sooqcom-%D8%B3%D9%88%D9%82%D9%83%D9%85/id6785620545\n"
+    msg += "Play Store: https://play.google.com/store/apps/details?id=com.sooqcom.app\n"
     
     import urllib.parse
     
@@ -207,7 +210,10 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
             # We explicitly WANT individual links here since the user wants to copy/paste it
             msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n🔗 التفاصيل:\nhttps://share.sooq-com.com/ad/{ad.id}\n\n"
         
-    msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨"
+    msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
+    msg += "حمل التطبيق الآن:\n"
+    msg += "App Store: https://apps.apple.com/app/sooqcom-%D8%B3%D9%88%D9%82%D9%83%D9%85/id6785620545\n"
+    msg += "Play Store: https://play.google.com/store/apps/details?id=com.sooqcom.app\n"
     
     if ads and len(ads) > 0:
         main_link = f"https://share.sooq-com.com/ad/{ads[0].id}"
