@@ -100,7 +100,7 @@ CRITICAL LOCATION RULES:
 4. If an ad mentions being near or at a specific university (e.g., "قرب الجامعة الأردنية", "بجانب الجامعة الألمانية"), map the location directly to that university's region (e.g., "عمان, الجامعة الأردنية", "مادبا, الجامعة الألمانية الأردنية").
     5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
     6. DYNAMIC OVERRIDES:
-{get_dynamic_location_rules()}
+{dynamic_location_rules}
 
     6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
 - phone_number (string or null) -- phone number if mentioned
@@ -187,7 +187,7 @@ Extract:
   4. If the ad is near a university, map the location directly to that university (e.g. "مادبا, الجامعة الألمانية الأردنية").
 
   5. DYNAMIC OVERRIDES:
-{get_dynamic_location_rules()}
+{dynamic_location_rules}
 - phone_number: (string or null) Look closely for 10-digit numbers.
 - category_name: (string) Extract the exact real estate category (e.g. 'شقق للبيع', 'أراضي للإيجار', 'ستوديوهات'). CRITICAL RULE: NEVER output a parent category like 'سكني' or 'عقارات للإيجار' if a more specific leaf category like 'شقق للإيجار' applies. ALWAYS output the deepest, most specific subcategory. Use empty string if author is SEEKING or if not offering real estate.
 - rejection_reason: (string) If not offering real estate, provide exact reason why here.
@@ -294,11 +294,11 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     4. If an ad mentions being near or at a specific university, map the location directly to that university's region (e.g. "مادبا, الجامعة الألمانية الأردنية").
     5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
     6. DYNAMIC OVERRIDES:
-{get_dynamic_location_rules()}
+{dynamic_location_rules}
 
     6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
     7. DYNAMIC OVERRIDES:
-{get_dynamic_location_rules()}
+{dynamic_location_rules}
 
     
     Valid Regions List:
@@ -428,7 +428,8 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
         all_parsed = []
         for post in chunk_posts:
             single_prompt = _GEMMA_SINGLE_PROMPT.format(
-                post_text=post.text
+                post_text=post.text,
+                dynamic_location_rules=dynamic_rules_str
             )
             
             post_parsed = {"ai_chunk_error": "Gemma failed"}
@@ -1468,10 +1469,5 @@ def get_scraping_logs(
     return {"total": total, "items": items}
 
 
-# HOTFIX: Replace the literal string {get_dynamic_location_rules()} in global prompts
+# HOTFIX: Replace the literal string {dynamic_location_rules} in global prompts
 # so that .format() doesn't fail with KeyError
-if '{get_dynamic_location_rules()}' in _GEMINI_BATCH_PROMPT:
-    _GEMINI_BATCH_PROMPT = _GEMINI_BATCH_PROMPT.replace('{get_dynamic_location_rules()}', get_dynamic_location_rules())
-
-if '{get_dynamic_location_rules()}' in _GEMMA_SINGLE_PROMPT:
-    _GEMMA_SINGLE_PROMPT = _GEMMA_SINGLE_PROMPT.replace('{get_dynamic_location_rules()}', get_dynamic_location_rules())
