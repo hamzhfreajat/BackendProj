@@ -338,8 +338,12 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
             curr = parent_map.get(curr)
         return None, None
 
-    # 2. Query all ads
-    ads = db.query(models.Ad.location, models.Ad.category_id).all()
+    # 2. Query all active ads
+    ads = db.query(models.Ad.location, models.Ad.category_id).filter(
+        models.Ad.is_published == True,
+        models.Ad.is_sold == False,
+        models.Ad.is_rejected == False
+    ).all()
     
     region_stats = {}
     unique_subs = {} # mapping from sub_name -> group_name
