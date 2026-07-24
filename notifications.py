@@ -219,7 +219,10 @@ def _send_personal_notification_sync(
                                     )
                                 ),
                                 apns=messaging.APNSConfig(
-                                    headers={"apns-priority": "10"},
+                                    headers={
+                                        "apns-priority": "10",
+                                        "apns-push-type": "alert"
+                                    },
                                     payload=messaging.APNSPayload(
                                         aps=messaging.Aps(
                                             alert=messaging.ApsAlert(
@@ -228,7 +231,8 @@ def _send_personal_notification_sync(
                                             ),
                                             sound="default",
                                             badge=1,
-                                            mutable_content=True
+                                            mutable_content=True,
+                                            content_available=True
                                         )
                                     )
                                 ),
