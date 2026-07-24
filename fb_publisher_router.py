@@ -7,6 +7,21 @@ from database import get_db
 from facebook_publisher import publish_facebook_post
 import asyncio
 
+def _norm_str(s):
+    if not s: return s
+    for a, b in [('أ', 'ا'), ('إ', 'ا'), ('آ', 'ا'), ('ة', 'ه'), ('ى', 'ي')]:
+        s = s.replace(a, b)
+    return s
+
+def _norm_col(col):
+    from sqlalchemy.sql import func
+    c = func.replace(col, 'أ', 'ا')
+    c = func.replace(c, 'إ', 'ا')
+    c = func.replace(c, 'آ', 'ا')
+    c = func.replace(c, 'ة', 'ه')
+    c = func.replace(c, 'ى', 'ي')
+    return c
+
 router = APIRouter(prefix="/api/facebook", tags=["facebook"])
 
 class RuleCreate(BaseModel):
@@ -58,9 +73,9 @@ def delete_rule(region_name: str, db: Session = Depends(get_db)):
 @router.post("/manual-publish")
 async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db)):
     # Try to resolve region_id from the given region_name
-    region = db.query(models.Region).filter(models.Region.name_ar == req.region_name).first()
+    region = db.query(models.Region).filter(_norm_col(models.Region.name_ar) == _norm_str(req.region_name)).first()
     
-    query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
+    query = db.query(models.Ad).filter(_norm_col(models.Ad.location).ilike(f"%{_norm_str(req.region_name)}%"))
     if req.category_id:
         query = query.filter(models.Ad.category_id == req.category_id)
         
@@ -88,9 +103,6 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
-    msg += "حمل التطبيق الآن:\n"
-    msg += "App Store: https://apps.apple.com/app/sooqcom-%D8%B3%D9%88%D9%82%D9%83%D9%85/id6785620545\n"
-    msg += "Play Store: https://play.google.com/store/apps/details?id=com.sooqcom.app\n"
     
     import urllib.parse
     
@@ -180,7 +192,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
 
 @router.post("/generate-text")
 async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)):
-    query = db.query(models.Ad).filter(models.Ad.location.ilike(f"%{req.region_name}%"))
+    query = db.query(models.Ad).filter(_norm_col(models.Ad.location).ilike(f"%{_norm_str(req.region_name)}%"))
     if req.category_id:
         query = query.filter(models.Ad.category_id == req.category_id)
         
@@ -211,9 +223,6 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
             msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n🔗 التفاصيل:\nhttps://share.sooq-com.com/ad/{ad.id}\n\n"
         
     msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
-    msg += "حمل التطبيق الآن:\n"
-    msg += "App Store: https://apps.apple.com/app/sooqcom-%D8%B3%D9%88%D9%82%D9%83%D9%85/id6785620545\n"
-    msg += "Play Store: https://play.google.com/store/apps/details?id=com.sooqcom.app\n"
     
     if ads and len(ads) > 0:
         main_link = f"https://share.sooq-com.com/ad/{ads[0].id}"
@@ -245,7 +254,7 @@ def get_ready_combinations(db: Session = Depends(get_db)):
         models.Ad.category_id,
         func.count(models.Ad.id).label('post_count')
     ).join(
-        models.Ad, models.Ad.location.ilike(func.concat('%', models.Region.name_ar, '%'))
+        models.Ad, _norm_col(models.Ad.location).ilike(func.concat('%', _norm_col(models.Region.name_ar), '%'))
     ).filter(
         models.Ad.category_id.in_(leaf_cat_ids),
         models.Ad.is_published == True,
