@@ -331,15 +331,9 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
     
     def get_group_and_sub(cat_id):
         curr = cat_id
-        path = []
         while curr is not None:
-            path.append(curr)
             if curr in roots:
-                if len(path) > 1:
-                    sub_id = path[-2]
-                    sub_name = name_map.get(sub_id, "غير معروف")
-                else:
-                    sub_name = name_map.get(curr, "غير معروف")
+                sub_name = name_map.get(cat_id, "غير معروف")
                 return roots[curr], sub_name
             curr = parent_map.get(curr)
         return None, None
