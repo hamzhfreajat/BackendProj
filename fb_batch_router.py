@@ -503,7 +503,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                     time.sleep(sleep_time)
 
                 logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key_gemini}"
                 headers = {"Content-Type": "application/json"}
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
@@ -517,7 +517,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                 res.raise_for_status()
                 data = res.json()
                 raw = data["candidates"][0]["content"]["parts"][0]["text"]
-                ai_model_used = "gemini-2.5-flash-lite"
+                ai_model_used = "gemini-1.5-flash"
 
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
@@ -562,7 +562,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                         if sleep_time > 0:
                             time.sleep(sleep_time)
 
-                        g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key_gemini}"
+                        g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key_gemini}"
                         g_headers = {"Content-Type": "application/json"}
                         g_payload = {
                             "contents": [{"parts": [{"text": gemini_prompt}]}],
@@ -591,19 +591,32 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                                     parsed[p_i] = gem_item
                                     break
                     except Exception as e:
-                        logger.error(f"Gemini fallback failed: {e}")
+                        error_details = str(e)
+                        if hasattr(e, 'response') and e.response is not None:
+                            try:
+                                error_details += f" - Response: {e.response.text}"
+                            except:
+                                pass
+                        logger.error(f"Gemini fallback failed: {error_details}")
             # --- END NEW CASCADING LOGIC ---
             
             return parsed
 
         except Exception as e:
+            error_details = str(e)
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_details += f" - Response: {e.response.text}"
+                except:
+                    pass
+
             # If the exception is Daily Limit, break out immediately
             if "Gemini Daily Limit Reached" in str(e):
-                errors.append(str(e))
+                errors.append(error_details)
                 break
 
             wait_sec = (attempt + 1) * 5
-            logger.warning(f"Gemini failed (Attempt {attempt+1}/{max_retries}): {e}. Retrying in {wait_sec}s...")
+            logger.warning(f"Gemini failed (Attempt {attempt+1}/{max_retries}): {error_details}. Retrying in {wait_sec}s...")
             time.sleep(wait_sec)
             
     errors.append("Gemini failed after maximum retries.")
