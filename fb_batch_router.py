@@ -610,16 +610,19 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                 except:
                     pass
 
+            model_name = "DeepSeek" if api_key_deepseek else "Gemini"
+
             # If the exception is Daily Limit, break out immediately
             if "Gemini Daily Limit Reached" in str(e):
                 errors.append(error_details)
                 break
 
             wait_sec = (attempt + 1) * 5
-            logger.warning(f"Gemini failed (Attempt {attempt+1}/{max_retries}): {error_details}. Retrying in {wait_sec}s...")
+            logger.warning(f"{model_name} failed (Attempt {attempt+1}/{max_retries}): {error_details}. Retrying in {wait_sec}s...")
             time.sleep(wait_sec)
             
-    errors.append("Gemini failed after maximum retries.")
+    model_name_failed = "DeepSeek" if api_key_deepseek else "Gemini"
+    errors.append(f"{model_name_failed} failed after maximum retries.")
 
     logger.error("AI processing failed entirely.")
     raise RuntimeError(f"AI processing failed: {errors}")
