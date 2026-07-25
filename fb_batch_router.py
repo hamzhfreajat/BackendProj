@@ -475,7 +475,11 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key_deepseek}"}
                 payload = {
                     "model": "deepseek-chat",
-                    "messages": [{"role": "system", "content": prompt}]
+                    "messages": [
+                        {"role": "system", "content": "You are an AI assistant that extracts classified ad data and strictly outputs valid JSON."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"}
                 }
                 res = requests.post(url, json=payload, headers=headers, timeout=90)
                 res.raise_for_status()
@@ -611,10 +615,10 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                     pass
 
             model_name = "DeepSeek" if api_key_deepseek else "Gemini"
+            errors.append(error_details) # <-- MUST append here to capture it for final output!
 
             # If the exception is Daily Limit, break out immediately
             if "Gemini Daily Limit Reached" in str(e):
-                errors.append(error_details)
                 break
 
             wait_sec = (attempt + 1) * 5
@@ -622,7 +626,13 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
             time.sleep(wait_sec)
             
     model_name_failed = "DeepSeek" if api_key_deepseek else "Gemini"
-    errors.append(f"{model_name_failed} failed after maximum retries.")
+    
+    # Extract the last known error if we have one
+    last_error = ""
+    if len(errors) > 0:
+        last_error = f" | Last Error: {errors[-1]}"
+        
+    errors.append(f"{model_name_failed} failed after maximum retries.{last_error}")
 
     logger.error("AI processing failed entirely.")
     raise RuntimeError(f"AI processing failed: {errors}")
