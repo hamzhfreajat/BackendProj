@@ -152,7 +152,7 @@ def location_intelligence(request: Request, data: dict, current_user: models.Use
                 raise Exception("DEEPSEEK_API_KEY not set")
             client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 messages=[{"role": "user", "content": prompt}]
             )
             raw = response.choices[0].message.content.strip()
@@ -263,7 +263,7 @@ def evaluate_ad(request: Request, data: dict, current_user: models.User = Depend
                 raise Exception("DEEPSEEK_API_KEY not set")
             client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
@@ -336,7 +336,7 @@ def generate_ad_suggestions(request: Request, data: dict, current_user: models.U
                 raise Exception("DEEPSEEK_API_KEY not set in environment.")
             client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
