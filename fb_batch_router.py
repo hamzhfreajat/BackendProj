@@ -548,7 +548,8 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                     missing_posts = [p for _, p in posts_missing_loc]
                     gemini_prompt = _GEMINI_BATCH_PROMPT.format(
                         categories_block=categories_block,
-                        posts_block=_build_posts_block(missing_posts)
+                        posts_block=_build_posts_block(missing_posts),
+                        dynamic_location_rules=dynamic_rules_str
                     )
                     
                     try:
@@ -684,7 +685,7 @@ def _upload_imgs_to_r2(image_urls: List[str]) -> List[str]:
     if not r2_client:
         return image_urls
     
-        bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
+    bucket_name = os.getenv("R2_BUCKET_NAME", "joapp-ads")
     public_url = os.getenv("R2_PUBLIC_URL")
     if not public_url:
         logger.warning("R2_PUBLIC_URL not set in environment. R2 uploads may not work correctly.")
