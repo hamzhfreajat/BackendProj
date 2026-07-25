@@ -474,7 +474,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                 url = "https://api.deepseek.com/chat/completions"
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key_deepseek}"}
                 payload = {
-                    "model": "deepseek-chat",
+                    "model": "deepseek-v4-flash",
                     "messages": [
                         {"role": "system", "content": "You are an AI assistant that extracts classified ad data and strictly outputs valid JSON."},
                         {"role": "user", "content": prompt}
@@ -485,7 +485,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                 res.raise_for_status()
                 data = res.json()
                 raw = data["choices"][0]["message"]["content"]
-                ai_model_used = "deepseek-chat"
+                ai_model_used = "deepseek-v4-flash"
             else:
                 sleep_time = 0.0
                 with _GEMINI_LOCK:
@@ -530,7 +530,7 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                     item["raw_unparsed_chunk_layer"] = raw.strip()
 
             # --- BEGIN NEW CASCADING LOGIC ---
-            if api_key_deepseek and api_key_gemini and ai_model_used == "deepseek-chat":
+            if api_key_deepseek and api_key_gemini and ai_model_used == "deepseek-v4-flash":
                 posts_missing_loc = []
                 posts_by_index = {p.index: p for p in chunk_posts if p.index is not None}
                 
