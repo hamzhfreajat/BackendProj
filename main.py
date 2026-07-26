@@ -1353,6 +1353,34 @@ def read_ads(
     has_image  = case((models.Ad.image_url != None, 1), else_=0)
     has_price  = case((models.Ad.price > 0, 1), else_=0)
 
+    from sqlalchemy import case, func, text
+
+    is_recent_organic = case(
+        (
+            (models.Ad.source_type == 'ORGANIC_USER') & 
+            (models.Ad.created_at >= text("NOW() - INTERVAL '3 hours'")),
+            0
+        ),
+        else_=1
+    )
+
+    row_num = func.row_number().over(
+        partition_by=models.Ad.source_type,
+        order_by=models.Ad.created_at.desc()
+    )
+
+    batch_size = case(
+        (models.Ad.source_type == 'SCRAPER_BOT', 7.0),
+        else_=3.0
+    )
+
+    batch_id = func.floor((row_num - 1) / batch_size)
+
+    is_ai = case(
+        (models.Ad.source_type == 'SCRAPER_BOT', 0),
+        else_=1
+    )
+
     if sort_by == 'price_asc':
         query = query.order_by(models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
@@ -1372,15 +1400,15 @@ def read_ads(
         )
         query = query.order_by(distance.asc().nulls_last(), models.Ad.id.desc())
     elif sort_by == 'newest':
-        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(has_image.desc(), has_price.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'strict_newest':
-        query = query.order_by(models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
-        query = query.order_by(models.Ad.is_hot.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'recommended' or sort_by is None:
-        query = query.order_by(models.Ad.is_hot.desc(), has_image.desc(), has_price.desc(), models.Ad.views.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     else:
-        query = query.order_by(has_image.desc(), has_price.desc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
         
     ads = query.offset(skip).limit(limit).all()
     
