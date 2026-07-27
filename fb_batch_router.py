@@ -948,7 +948,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
                         logger.warning(f"AI region '{region_name}' not found. Falling back to '{mapped_location}'")
 
     if not mapped_location:
-        mapped_location = default_location or ""
+        mapped_location = default_location or "غير محدد"
 
     # Generate smarter fallback title if AI extraction failed
     ad_title = ai_data.get("title")
