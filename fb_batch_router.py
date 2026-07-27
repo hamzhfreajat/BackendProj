@@ -938,20 +938,14 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
                     if fuzzy_matched_region:
                         mapped_location = f"{city_name}, {fuzzy_matched_region.name_ar}"
                     else:
-                        # Proceed with dynamic region addition since it doesn't match anything
-                        try:
-                            new_region = Region(
-                                city_id=city_obj.id,
-                                name_ar=region_name,
-                                name_en=region_name
-                            )
-                            db.add(new_region)
-                            db.commit()
-                            logger.info(f"Dynamically added new region '{region_name}' to city '{city_name}'")
-                            mapped_location = f"{city_name}, {region_name}"
-                        except Exception as e:
-                            db.rollback()
-                            logger.error(f"Failed to add dynamic region: {e}")
+                        # CRITICAL FIX: Do NOT dynamically create regions from AI output!
+                        # Fallback to "أخرى" if it exists, otherwise just use the city name.
+                        other_region = next((r for r in all_regions_in_city if r.name_ar == "أخرى"), None)
+                        if other_region:
+                            mapped_location = f"{city_name}, أخرى"
+                        else:
+                            mapped_location = f"{city_name}"
+                        logger.warning(f"AI region '{region_name}' not found. Falling back to '{mapped_location}'")
 
     if not mapped_location:
         mapped_location = default_location or ""
