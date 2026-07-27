@@ -2660,44 +2660,59 @@ async def republish_notifier_worker():
             from database import SessionLocal
             from notifications import send_personal_notification
             db = SessionLocal()
-            from sqlalchemy import or_
-            now_minus_24h = datetime.utcnow() - timedelta(hours=24)
-            ads = db.query(models.Ad).filter(
-                models.Ad.is_sold == False,
-                models.Ad.is_published == True,
-                models.Ad.republish_notification_sent == False,
-                or_(
-                    models.Ad.last_republished_at <= now_minus_24h,
-                    (models.Ad.last_republished_at == None) & (models.Ad.created_at <= now_minus_24h)
-                )
-            ).all()
+            from sqlalchemy import or_, update
             
-            user_ads = {}
-            for ad in ads:
-                user_ads.setdefault(ad.user_id, []).append(ad)
-                
-            for user_id, u_ads in user_ads.items():
-                if len(u_ads) == 1:
-                    ad = u_ads[0]
-                    await send_personal_notification(
-                        target_user_id=user_id,
-                        title="إحصائيات إعلانك 📊",
-                        body=f"حصل إعلانك '{ad.title}' على {ad.views} مشاهدة و {ad.chats_count} محادثة! يمكنك إعادة نشره الآن ليظهر في الأعلى.",
-                        notification_type="republish_available",
-                        reference_id=ad.id
+            now_minus_24h = datetime.utcnow() - timedelta(hours=24)
+            
+            # Use an atomic UPDATE with RETURNING to claim the ads exclusively for this worker
+            stmt = (
+                update(models.Ad)
+                .where(
+                    models.Ad.is_sold == False,
+                    models.Ad.is_published == True,
+                    models.Ad.republish_notification_sent == False,
+                    or_(
+                        models.Ad.last_republished_at <= now_minus_24h,
+                        (models.Ad.last_republished_at == None) & (models.Ad.created_at <= now_minus_24h)
                     )
-                else:
-                    await send_personal_notification(
-                        target_user_id=user_id,
-                        title="إعلانات جاهزة لإعادة النشر 🚀",
-                        body=f"لديك {len(u_ads)} إعلانات جاهزة لإعادة النشر الآن لترتفع إلى أعلى القائمة! اضغط هنا لإعادة نشرها.",
-                        notification_type="republish_available",
-                        reference_id=None
-                    )
+                )
+                .values(republish_notification_sent=True)
+                .returning(
+                    models.Ad.id, 
+                    models.Ad.user_id, 
+                    models.Ad.title, 
+                    models.Ad.views, 
+                    models.Ad.chats_count
+                )
+            )
+            
+            # fetchall() executes the statement and retrieves the rows updated by THIS specific worker
+            updated_ads = db.execute(stmt).fetchall()
+            db.commit()
+            
+            if updated_ads:
+                user_ads = {}
+                for ad in updated_ads:
+                    user_ads.setdefault(ad.user_id, []).append(ad)
                     
-                for ad in u_ads:
-                    ad.republish_notification_sent = True
-                db.commit()
+                for user_id, u_ads in user_ads.items():
+                    if len(u_ads) == 1:
+                        ad = u_ads[0]
+                        await send_personal_notification(
+                            target_user_id=user_id,
+                            title="إحصائيات إعلانك 📊",
+                            body=f"حصل إعلانك '{ad.title}' على {ad.views} مشاهدة و {ad.chats_count} محادثة! يمكنك إعادة نشره الآن ليظهر في الأعلى.",
+                            notification_type="republish_available",
+                            reference_id=ad.id
+                        )
+                    else:
+                        await send_personal_notification(
+                            target_user_id=user_id,
+                            title="إعلانات جاهزة لإعادة النشر 🚀",
+                            body=f"لديك {len(u_ads)} إعلانات جاهزة لإعادة النشر الآن لترتفع إلى أعلى القائمة! اضغط هنا لإعادة نشرها.",
+                            notification_type="republish_available",
+                            reference_id=None
+                        )
         except Exception as e:
             print(f"Error in republish_notifier_worker: {e}")
         finally:
@@ -2748,6 +2763,20 @@ async def facebook_autopost_worker():
                 if not ads:
                     continue
                     
+                # Atomically claim these ads to prevent duplicate posting by other workers
+                from sqlalchemy import update
+                ad_ids = [a.id for a in ads]
+                stmt = (
+                    update(models.Ad)
+                    .where(models.Ad.id.in_(ad_ids), models.Ad.is_facebook_posted == False)
+                    .values(is_facebook_posted=True)
+                )
+                res = db.execute(stmt)
+                db.commit()
+                
+                if res.rowcount == 0:
+                    continue # Another worker already claimed and processed these
+                    
                 category = db.query(models.Category).filter(models.Category.id == category_id).first()
                 category_name = category.name if category else "عقار"
                 
@@ -2795,13 +2824,9 @@ async def facebook_autopost_worker():
                 child_attachments = child_attachments[:10]
                 
                 success = await publish_facebook_post(msg, main_link, child_attachments=child_attachments)
-                if success:
-                    # Update all unsent ads in this location and category as posted
-                    db.query(models.Ad).filter(
-                        models.Ad.is_facebook_posted == False,
-                        models.Ad.location == location,
-                        models.Ad.category_id == category_id
-                    ).update({"is_facebook_posted": True}, synchronize_session=False)
+                if not success:
+                    # Revert the claim if FB posting failed
+                    db.execute(update(models.Ad).where(models.Ad.id.in_(ad_ids)).values(is_facebook_posted=False))
                     db.commit()
         except Exception as e:
             print(f"Error in facebook_autopost_worker: {e}")
