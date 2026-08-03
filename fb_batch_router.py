@@ -992,13 +992,23 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         except ValueError:
             pass
 
+    # --- IMAGE FIX ---
+    # Download images from FB and upload to R2 to prevent expiration
+    processed_images = []
+    if post.images and len(post.images) > 0:
+        import concurrent.futures
+        from image_downloader import download_and_upload_image
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = list(executor.map(download_and_upload_image, post.images))
+            processed_images = [r for r in results if r is not None]
+    
     ad = models.Ad(
         user_id=ai_user_id,
         title=ad_title,
         description=ai_data.get("description") or post.text or "",
         price=final_price,
         location=mapped_location,
-        image_url=json.dumps(post.images) if post.images and len(post.images) > 0 else None,
+        image_url=json.dumps(processed_images) if processed_images else None,
         category_id=final_category_id,
         source_type=SourceType.SCRAPER_BOT,
         source_url=post.postUrl or None,
@@ -1010,15 +1020,18 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
             "reactions": post.reactions,
             "scraped_at": post.scrapedAt,
             "phone_number": ai_data.get("phone_number"),
-            "images": post.images or [],
+            "images": processed_images,
             "videos": post.videos or [],
         },
         is_published=True,
     )
     
     # Store the computed image hash to prevent future duplicates!
-    if post.images and len(post.images) > 0:
-        ad.primary_image_hash = _compute_image_hash(post.images[0])
+    if processed_images and len(processed_images) > 0:
+        # compute hash on the first original image URL (or the content if needed? No, hash is perceptual)
+        # We still compute hash on the FIRST original URL for duplicate detection?
+        # Actually _compute_image_hash downloads the image anyway.
+        ad.primary_image_hash = _compute_image_hash(processed_images[0])
     
     if ad_created_at:
         ad.created_at = ad_created_at

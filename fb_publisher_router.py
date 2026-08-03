@@ -37,7 +37,7 @@ class RuleResponse(BaseModel):
         orm_mode = True
 
 class ManualPublishRequest(BaseModel):
-    region_name: str
+    region_name: Optional[str] = None
     count: int
     custom_text: Optional[str] = None
     category_id: Optional[int] = None
@@ -72,17 +72,33 @@ def delete_rule(region_name: str, db: Session = Depends(get_db)):
 
 @router.post("/manual-publish")
 async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db)):
-    # Try to resolve region_id from the given region_name
-    region = db.query(models.Region).filter(_norm_col(models.Region.name_ar) == _norm_str(req.region_name)).first()
+    query = db.query(models.Ad)
     
-    query = db.query(models.Ad).filter(_norm_col(models.Ad.location).ilike(f"%{_norm_str(req.region_name)}%"))
+    if req.region_name and req.region_name != "all":
+        # Try to resolve region_id from the given region_name
+        region = db.query(models.Region).filter(_norm_col(models.Region.name_ar) == _norm_str(req.region_name)).first()
+        query = query.filter(_norm_col(models.Ad.location).ilike(f"%{_norm_str(req.region_name)}%"))
+    
     if req.category_id:
         query = query.filter(models.Ad.category_id == req.category_id)
         
-    ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
+    if req.region_name == "all":
+        # For global catalogs, prioritize ads that have images, high views, and a valid price
+        query = query.filter(
+            models.Ad.image_url != None, 
+            models.Ad.image_url != "", 
+            models.Ad.image_url != "[]",
+            models.Ad.price != None,
+            models.Ad.price > 0
+        )
+        query = query.order_by(models.Ad.views.desc(), models.Ad.created_at.desc())
+    else:
+        query = query.order_by(models.Ad.created_at.desc())
+        
+    ads = query.limit(req.count).all()
         
     if not ads:
-        raise HTTPException(status_code=404, detail="No ads found in this region.")
+        raise HTTPException(status_code=404, detail="No ads found for the specified criteria.")
         
     actual_count = len(ads)
     
@@ -90,9 +106,19 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
     fmt = req.format if hasattr(req, 'format') and req.format else "catalog"
     
     # Build catalog-like text
-    msg = req.custom_text if req.custom_text else f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n"
-    msg += "\n\n"
-    
+    if req.custom_text:
+        msg = req.custom_text
+    else:
+        if req.region_name and req.region_name != "all":
+            msg = f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n\n"
+        else:
+            msg = (
+                "جمعنا لك أفضل وأقوى العروض العقارية من مختلف المناطق بأسعار تنافسية وخيارات تناسب الجميع.\n"
+                "حمل تطبيق سوقكم الآن وتصفح المزيد من العروض المميزة! 👇\n"
+                "🔹 للاندرويد: https://play.google.com/store/apps/details?id=com.sooqcom.app\n"
+                "🔹 للايفون: https://apps.apple.com/us/app/sooqcom-سوقكم/id6785620545\n\n"
+            )
+            
     emojis = ["🏡", "🌟", "✨", "💎"]
     for i, ad in enumerate(ads, 1):
         price_str = f"{ad.price} دينار" if ad.price else "تواصل لمعرفة السعر"
@@ -102,7 +128,13 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         
         msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n\n"
         
-    msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
+    if req.region_name == "all" and not req.custom_text:
+        msg += (
+            "📲 حمل تطبيق سوقكم الآن أو قم بزيارة موقعنا لتصفح آلاف العقارات الإضافية!\n"
+            "#عقارات #عقارات_الاردن #شقق_للبيع #استثمار_عقاري #سوقكم\n"
+        )
+    else:
+        msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
     
     import urllib.parse
     
@@ -192,20 +224,47 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
 
 @router.post("/generate-text")
 async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)):
-    query = db.query(models.Ad).filter(_norm_col(models.Ad.location).ilike(f"%{_norm_str(req.region_name)}%"))
+    query = db.query(models.Ad)
+    
+    if req.region_name and req.region_name != "all":
+        query = query.filter(_norm_col(models.Ad.location).ilike(f"%{_norm_str(req.region_name)}%"))
+        
     if req.category_id:
         query = query.filter(models.Ad.category_id == req.category_id)
         
-    ads = query.order_by(models.Ad.created_at.desc()).limit(req.count).all()
+    if req.region_name == "all":
+        # For global catalogs, prioritize ads that have images, high views, and a valid price
+        query = query.filter(
+            models.Ad.image_url != None, 
+            models.Ad.image_url != "", 
+            models.Ad.image_url != "[]",
+            models.Ad.price != None,
+            models.Ad.price > 0
+        )
+        query = query.order_by(models.Ad.views.desc(), models.Ad.created_at.desc())
+    else:
+        query = query.order_by(models.Ad.created_at.desc())
+        
+    ads = query.limit(req.count).all()
         
     if not ads:
-        raise HTTPException(status_code=404, detail="No ads found in this region.")
+        raise HTTPException(status_code=404, detail="No ads found for the specified criteria.")
         
     actual_count = len(ads)
     
-    msg = req.custom_text if req.custom_text else f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n"
-    msg += "\n\n"
-    
+    if req.custom_text:
+        msg = req.custom_text
+    else:
+        if req.region_name and req.region_name != "all":
+            msg = f"أحدث {actual_count} عقارات في ({req.region_name})! 🏡\n\n"
+        else:
+            msg = (
+                "جمعنا لك أفضل وأقوى العروض العقارية من مختلف المناطق بأسعار تنافسية وخيارات تناسب الجميع.\n"
+                "حمل تطبيق سوقكم الآن وتصفح المزيد من العروض المميزة! 👇\n"
+                "🔹 للاندرويد: https://play.google.com/store/apps/details?id=com.sooqcom.app\n"
+                "🔹 للايفون: https://apps.apple.com/us/app/sooqcom-سوقكم/id6785620545\n\n"
+            )
+            
     fmt = req.format if hasattr(req, 'format') and req.format else "catalog"
 
     emojis = ["🏡", "🌟", "✨", "💎"]
@@ -222,7 +281,13 @@ async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)
             # We explicitly WANT individual links here since the user wants to copy/paste it
             msg += f"{i}. {emoji} {title}\n💰 السعر: {price_str}\n🔗 التفاصيل:\nhttps://share.sooq-com.com/ad/{ad.id}\n\n"
         
-    msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
+    if req.region_name == "all" and not req.custom_text:
+        msg += (
+            "📲 حمل تطبيق سوقكم الآن أو قم بزيارة موقعنا لتصفح آلاف العقارات الإضافية!\n"
+            "#عقارات #عقارات_الاردن #شقق_للبيع #استثمار_عقاري #سوقكم\n"
+        )
+    else:
+        msg += "تصفح المزيد على تطبيق وموقع سوقكم! ✨\n"
     
     if ads and len(ads) > 0:
         main_link = f"https://share.sooq-com.com/ad/{ads[0].id}"
