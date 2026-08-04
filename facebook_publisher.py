@@ -29,10 +29,10 @@ async def upload_unpublished_photo(session: aiohttp.ClientSession, image_url: st
             return result.get("id")
         return None
 
-async def publish_facebook_post(message: str, link: str = None, image_urls: list = None, child_attachments: list = None) -> bool:
+async def publish_facebook_post(message: str, link: str = None, image_urls: list = None, child_attachments: list = None) -> tuple[bool, str]:
     """
     Publishes a post to the configured Facebook Page.
-    Returns True if successful, False otherwise.
+    Returns (True, None) if successful, (False, error_message) otherwise.
     """
     url = f"https://graph.facebook.com/v20.0/{FACEBOOK_PAGE_ID}/feed"
     
@@ -71,11 +71,11 @@ async def publish_facebook_post(message: str, link: str = None, image_urls: list
                 result = await response.json()
                 if response.status == 200:
                     logger.info(f"Successfully published to Facebook: {result}")
-                    return True
+                    return True, None
                 else:
                     logger.error(f"Failed to publish to Facebook. Status: {response.status}, Error: {result}")
-                    return False
+                    return False, str(result.get("error", result))
     except Exception as e:
         logger.error(f"Exception while publishing to Facebook: {e}")
-        return False
+        return False, str(e)
 

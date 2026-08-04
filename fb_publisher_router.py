@@ -207,7 +207,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         final_link = main_link
         final_child = child_attachments
     
-    success = await publish_facebook_post(
+    success, err_msg = await publish_facebook_post(
         final_msg, 
         link=final_link, 
         image_urls=final_images, 
@@ -220,7 +220,7 @@ async def manual_publish(req: ManualPublishRequest, db: Session = Depends(get_db
         db.commit()
         return {"status": "success", "posted_count": actual_count}
     else:
-        raise HTTPException(status_code=500, detail="Failed to publish to Facebook.")
+        raise HTTPException(status_code=500, detail=f"Failed to publish to Facebook. Error: {err_msg}")
 
 @router.post("/generate-text")
 async def generate_text(req: ManualPublishRequest, db: Session = Depends(get_db)):
