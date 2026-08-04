@@ -2152,6 +2152,22 @@ def update_ad(
     
     return db_ad
 
+@app.delete("/api/ads/{ad_id}")
+def delete_ad(
+    ad_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if not db_ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+    if db_ad.user_id != current_user.id and current_user.user_type != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete this ad")
+    
+    db.delete(db_ad)
+    db.commit()
+    return {"message": "Ad deleted successfully"}
+
 @app.put("/api/ads/{ad_id}/toggle-publish", response_model=schemas.Ad)
 def toggle_publish_ad(
     ad_id: int,
