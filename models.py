@@ -572,3 +572,13 @@ class GeminiUsageLog(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+
+
+class AppConfig(Base):
+    __tablename__ = 'app_config'
+
+    id = Column(Integer, primary_key=True, index=True)
+    latest_version = Column(String(50), nullable=False, default='1.0.0')
+    min_required_version = Column(String(50), nullable=False, default='1.0.0')
+    store_url_android = Column(String(500), nullable=True)
+    store_url_ios = Column(String(500), nullable=True)

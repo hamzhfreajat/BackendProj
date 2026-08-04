@@ -2973,11 +2973,40 @@ async def check_category_milestone_task(category_id: int):
         db.close()
 
 
+class AppConfigUpdate(BaseModel):
+    latest_version: str
+    min_required_version: str
+    store_url_android: str
+    store_url_ios: str
+
 @app.get("/api/config/version")
-def get_version_config():
+def get_version_config(db: Session = Depends(get_db)):
+    config = db.query(models.AppConfig).first()
+    if not config:
+        return {
+            "latest_ios": "1.0.5",
+            "min_ios": "1.0.0",
+            "testflight_url": "https://testflight.apple.com/join/W73QoHhW"
+        }
     return {
-        "latest_ios": "1.0.5",
-        "min_ios": "1.0.0",
-        "testflight_url": "https://testflight.apple.com/join/W73QoHhW"
+        "latest_version": config.latest_version,
+        "min_required_version": config.min_required_version,
+        "store_url_android": config.store_url_android,
+        "store_url_ios": config.store_url_ios
     }
+
+@app.put("/api/config/version")
+def update_version_config(req: AppConfigUpdate, db: Session = Depends(get_db)):
+    config = db.query(models.AppConfig).first()
+    if not config:
+        config = models.AppConfig(**req.dict())
+        db.add(config)
+    else:
+        config.latest_version = req.latest_version
+        config.min_required_version = req.min_required_version
+        config.store_url_android = req.store_url_android
+        config.store_url_ios = req.store_url_ios
+    db.commit()
+    db.refresh(config)
+    return {"status": "success", "config": req.dict()}
 
