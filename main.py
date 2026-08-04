@@ -2969,22 +2969,55 @@ async def check_category_milestone_task(category_id: int):
             models.Ad.is_published == True
         ).count()
         
-        if total_ads >= cat.last_notified_ad_count + 1000:
+        if total_ads >= cat.last_notified_ad_count + 100:
             cat.last_notified_ad_count = total_ads
             db.commit()
             
-            users_to_notify = db.query(models.User).filter(models.User.latest_category_id == category_id).all()
-            for u in users_to_notify:
+            can_send_global = True
+            throttle_key = f"global_milestone_{category_id}"
+            try:
+                from auth import redis_client, USING_REDIS
+                import time
+                if USING_REDIS:
+                    if redis_client.exists(throttle_key):
+                        can_send_global = False
+                    else:
+                        redis_client.setex(throttle_key, 86400, "1") # 24 hours
+                else:
+                    global LAST_GLOBAL_MILESTONE
+                    if 'LAST_GLOBAL_MILESTONE' not in globals():
+                        globals()['LAST_GLOBAL_MILESTONE'] = {}
+                    
+                    last_time = globals()['LAST_GLOBAL_MILESTONE'].get(throttle_key, 0)
+                    if time.time() - last_time < 86400:
+                        can_send_global = False
+                    else:
+                        globals()['LAST_GLOBAL_MILESTONE'][throttle_key] = time.time()
+            except Exception:
+                pass
+                
+            if can_send_global:
                 try:
-                    await send_personal_notification(
-                        target_user_id=u.id,
-                        title="إعلانات جديدة تهمك 🚀",
-                        body=f"تمت إضافة 1000 إعلان جديد في قسم {cat.name}!",
-                        notification_type="category_milestone",
-                        reference_id=category_id
-                    )
+                    import firebase_admin
+                    from firebase_admin import messaging
+                    from notifications import init_firebase_admin
+                    if init_firebase_admin() and firebase_admin._apps:
+                        message = messaging.Message(
+                            notification=messaging.Notification(
+                                title="إعلانات جديدة 🚀", 
+                                body=f"أكثر من 100 إعلان جديد في قسم {cat.name}! تصفحها الآن"
+                            ),
+                            android=messaging.AndroidConfig(
+                                priority="high",
+                                notification=messaging.AndroidNotification(channel_id="high_importance_channel", sound="default")
+                            ),
+                            data={"type": "category_milestone", "category_id": str(category_id)},
+                            topic="all_users",
+                        )
+                        messaging.send(message)
+                        print(f"[FCM] Global milestone push sent for category {category_id}")
                 except Exception as e:
-                    print(f"Error notifying user {u.id}: {e}")
+                    print(f"Error sending global topic milestone notification: {e}")
     finally:
         db.close()
 
