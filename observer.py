@@ -10,9 +10,11 @@ LAST_NOTIFIED_MEM = {}
 
 def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
     """
-    Checks all active Saved Filters against the newly inserted ad.
-    If conditions match, sends a notification to the User.
+    Called whenever a new ad is successfully created or scraped.
+    Checks all saved filters in the system and triggers a push notification
+    if the new ad matches the filter criteria.
     """
+    return # TEMPORARILY DISABLED to stop notification spam
     # Do not send notifications for ads with no price or zero price (to avoid spamming users with incomplete scraped ads)
     if not ad.price or ad.price <= 0:
         return
