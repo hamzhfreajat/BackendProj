@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
 from notifications import send_personal_notification
 import json
+import time
+from auth import redis_client, USING_REDIS
+
+LAST_NOTIFIED_MEM = {}
 
 def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
     """
@@ -99,11 +103,34 @@ def trigger_saved_filter_notifications(db: Session, ad: models.Ad):
         # If it reaches here, all criteria match!
         import asyncio
         if f.alert_frequency in ['فوري', 'instant']:
-            alert_title = f"إعلان جديد يطابق اهتمامك!"
-            if f.name:
-                alert_title = f"بحثك المحفوظ: {f.name}"
+            if ad.source_type == "SCRAPER":
+                throttle_key = f"throttle_filter_{f.id}"
+                can_send = True
                 
-            alert_body = f"وجدنا: {ad.title[:40]}... بسعر {ad.price} دينار."
+                if USING_REDIS:
+                    if redis_client.exists(throttle_key):
+                        can_send = False
+                    else:
+                        redis_client.setex(throttle_key, 10800, "1") # 3 hours
+                else:
+                    last_time = LAST_NOTIFIED_MEM.get(throttle_key, 0)
+                    if time.time() - last_time < 10800:
+                        can_send = False
+                    else:
+                        LAST_NOTIFIED_MEM[throttle_key] = time.time()
+                
+                if not can_send:
+                    continue
+                    
+                alert_title = f"عقارات جديدة تطابق اهتمامك"
+                if f.name:
+                    alert_title = f"بحثك المحفوظ: {f.name}"
+                alert_body = "اكتشف أحدث الإعلانات التي تم إضافتها حديثاً وتطابق شروط بحثك!"
+            else:
+                alert_title = f"إعلان جديد يطابق اهتمامك!"
+                if f.name:
+                    alert_title = f"بحثك المحفوظ: {f.name}"
+                alert_body = f"وجدنا: {ad.title[:40]}... بسعر {ad.price} دينار."
             
             try:
                 asyncio.run(send_personal_notification(
