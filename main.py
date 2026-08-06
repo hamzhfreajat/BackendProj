@@ -1990,7 +1990,9 @@ def create_ad(
         if "extra_features" in dynamic_data: attributes["building_features"] = dynamic_data["extra_features"]
         if "nearby" in dynamic_data: attributes["nearby_places"] = dynamic_data["nearby"]
             
-    if "location" in ad_data and ad_data["location"]:
+    if "city" in attributes and "region" in attributes:
+        ad_data["location"] = f"{attributes['city']}, {attributes['region']}"
+    elif "location" in ad_data and ad_data["location"]:
         loc = ad_data["location"]
         if "،" in loc or "," in loc:
             parts = [p.strip() for p in loc.replace("،", ",").split(",")]
@@ -2085,7 +2087,9 @@ def update_ad(
     update_dict.pop("phone_number", None)
     update_dict.pop("rooms", None)
     
-    if "location" in update_dict and update_dict["location"]:
+    if "city" in attributes and "region" in attributes:
+        update_dict["location"] = f"{attributes['city']}, {attributes['region']}"
+    elif "location" in update_dict and update_dict["location"]:
         loc = update_dict["location"]
         if "،" in loc or "," in loc:
             parts = [p.strip() for p in loc.replace("،", ",").split(",")]
