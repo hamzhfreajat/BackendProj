@@ -27,8 +27,8 @@ engine = create_engine(
     connect_args={"options": "-c timezone=Asia/Amman"},
     pool_pre_ping=True,
     pool_recycle=120,
-    pool_size=20,
-    max_overflow=50,
+    pool_size=5,
+    max_overflow=10,
     pool_timeout=30
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
