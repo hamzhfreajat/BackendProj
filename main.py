@@ -1553,6 +1553,12 @@ def get_ads_count(
     else:
         query = query.filter(models.Ad.is_published == True, models.Ad.is_sold == False)
         
+    # Filter out ads without images on the home page (general feed)
+    if not search:
+        query = query.filter(models.Ad.image_url.isnot(None))
+        query = query.filter(models.Ad.image_url != '[]')
+        query = query.filter(models.Ad.image_url != '')
+        
     if source_type:
         query = query.filter(models.Ad.source_type == source_type)
         
