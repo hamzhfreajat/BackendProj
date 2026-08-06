@@ -352,11 +352,16 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                 print(f"Selector error: {e}")
                 pass
                         
-            print(f"INFO: [Scraper] Collected {len(raw_posts)} posts from Mobile UI...")
+            print(f"INFO: [Scraper] Collected {len(raw_posts)} total posts from Mobile UI...")
+            
+            # Filter out posts without images BEFORE sending to AI
+            raw_posts = [p for p in raw_posts if len(p.get('images', [])) > 0]
+            print(f"INFO: [Scraper] Kept {len(raw_posts)} posts that have images.")
+            
             await page.close()
 
         if not raw_posts:
-            print("WARNING: [Scraper] No usable posts extracted by Playwright.")
+            print("WARNING: [Scraper] No usable posts with images extracted by Playwright.")
             active_scrape_status["is_scraping"] = False
             active_scrape_status["message"] = "لم يتم العثور على أي إعلانات في الرابط."
             return

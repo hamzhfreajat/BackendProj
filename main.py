@@ -328,7 +328,10 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
     # FAST AD COUNT INJECTION (Recursive)
     ad_query = db.query(models.Ad.category_id, func.count(models.Ad.id)).filter(
         models.Ad.is_published == True,
-        models.Ad.is_sold == False
+        models.Ad.is_sold == False,
+        models.Ad.image_url.isnot(None),
+        models.Ad.image_url != '[]',
+        models.Ad.image_url != ''
     )
     
     if location:
@@ -389,7 +392,10 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
         all_ads = db.query(models.Ad).filter(
             models.Ad.category_id.in_(all_cat_ids),
             models.Ad.is_published == True,
-            models.Ad.is_sold == False
+            models.Ad.is_sold == False,
+            models.Ad.image_url.isnot(None),
+            models.Ad.image_url != '[]',
+            models.Ad.image_url != ''
         ).all()
         
         active_cat_ids = set([ad.category_id for ad in all_ads])
