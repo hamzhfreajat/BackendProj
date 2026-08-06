@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional, Any
 from datetime import datetime
 
@@ -382,6 +382,18 @@ class Ad(AdBase):
     is_published: bool = False
     linked_tags: Optional[List[Tag]] = []
     
+    @field_validator('location', mode='before')
+    @classmethod
+    def format_location(cls, v: Any) -> Any:
+        if isinstance(v, str) and "," in v:
+            parts = [p.strip() for p in v.split(",")]
+            if len(parts) == 2:
+                # The DB stores "City, Region" (e.g. "إربد, حكما"). 
+                # The frontend splits by comma and reverses. So we must send it as "Region, City" 
+                # so the frontend reverses it back to "City, Region" visually!
+                return f"{parts[1]}, {parts[0]}"
+        return v
+        
     owner: Optional[UserPublicProfile] = None
     
     source_type: str = "ORGANIC_USER"
