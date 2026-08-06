@@ -1492,36 +1492,49 @@ def get_ads_count(
         if first_loc == "محافظة العاصمة": first_loc = "عمان"
         elif first_loc.startswith("محافظة "): first_loc = first_loc.replace("محافظة ", "")
         
-        city = db.query(models.City).filter(models.City.name_ar == first_loc).first()
+        target_loc_norm = norm_str(first_loc)
+        city = db.query(models.City).filter(norm_col(models.City.name_ar) == target_loc_norm).first()
         if city:
-            parent_loc = first_loc
+            parent_loc = target_loc_norm
             target_locs = location[1:]
         else:
             target_locs = location
             
         filters = []
         if parent_loc and not target_locs:
-            filters.append(models.Ad.location.like(f"{parent_loc}%"))
+            filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}%"))
         elif parent_loc and target_locs:
             for t_loc in target_locs:
                 if t_loc == "محافظة العاصمة": t_loc = "عمان"
                 elif t_loc.startswith("محافظة "): t_loc = t_loc.replace("محافظة ", "")
+                t_loc_norm = norm_str(t_loc)
                 
-                if t_loc == "أخرى":
-                    filters.append(models.Ad.location.like(f"{parent_loc}, أخرى%"))
-                    filters.append(models.Ad.location.like(f"{parent_loc}, other%"))
+                if t_loc_norm == norm_str("أخرى"):
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, other%"))
                 else:
-                    filters.append(models.Ad.location.like(f"{parent_loc}, {t_loc}%"))
+                    if t_loc_norm.startswith("ال"):
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm[2:]}%"))
+                    else:
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, ال{t_loc_norm}%"))
         else:
             for t_loc in target_locs:
                 if t_loc == "محافظة العاصمة": t_loc = "عمان"
                 elif t_loc.startswith("محافظة "): t_loc = t_loc.replace("محافظة ", "")
+                t_loc_norm = norm_str(t_loc)
                 
-                if t_loc == "أخرى":
-                    filters.append(models.Ad.location.like(f"%أخرى%"))
-                    filters.append(models.Ad.location.like(f"%other%"))
+                if t_loc_norm == norm_str("أخرى"):
+                    filters.append(norm_col(models.Ad.location).ilike(f"%أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"%other%"))
                 else:
-                    filters.append(models.Ad.location.like(f"%{t_loc}%"))
+                    if t_loc_norm.startswith("ال"):
+                        filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm[2:]}%"))
+                    else:
+                        filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"%ال{t_loc_norm}%"))
                     
         if filters:
             query = query.filter(or_(*filters))
