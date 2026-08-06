@@ -1990,6 +1990,15 @@ def create_ad(
         if "extra_features" in dynamic_data: attributes["building_features"] = dynamic_data["extra_features"]
         if "nearby" in dynamic_data: attributes["nearby_places"] = dynamic_data["nearby"]
             
+    if "location" in ad_data and ad_data["location"]:
+        loc = ad_data["location"]
+        if "،" in loc or "," in loc:
+            parts = [p.strip() for p in loc.replace("،", ",").split(",")]
+            if len(parts) == 2:
+                city_names = {"عمان", "إربد", "اربد", "الزرقاء", "زرقاء", "المفرق", "مفرق", "جرش", "عجلون", "البلقاء", "مادبا", "الكرك", "كرك", "الطفيلة", "طفيلة", "معان", "العقبة", "عقبة", "محافظة العاصمة"}
+                if parts[1] in city_names:
+                    ad_data["location"] = f"{parts[1]}, {parts[0]}"
+
     ad_data["attributes"] = attributes
     
     db_ad = models.Ad(
@@ -2076,6 +2085,15 @@ def update_ad(
     update_dict.pop("phone_number", None)
     update_dict.pop("rooms", None)
     
+    if "location" in update_dict and update_dict["location"]:
+        loc = update_dict["location"]
+        if "،" in loc or "," in loc:
+            parts = [p.strip() for p in loc.replace("،", ",").split(",")]
+            if len(parts) == 2:
+                city_names = {"عمان", "إربد", "اربد", "الزرقاء", "زرقاء", "المفرق", "مفرق", "جرش", "عجلون", "البلقاء", "مادبا", "الكرك", "كرك", "الطفيلة", "طفيلة", "معان", "العقبة", "عقبة", "محافظة العاصمة"}
+                if parts[1] in city_names:
+                    update_dict["location"] = f"{parts[1]}, {parts[0]}"
+
     attributes = update_dict.get("attributes") or {}
     
     # Protect image_urls from being wiped by stale frontend attributes dictionary
