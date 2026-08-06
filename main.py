@@ -1082,7 +1082,7 @@ def read_ads(
     query = db.query(models.Ad)
     
     if location_search:
-        query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
+        query = query.filter(norm_col(models.Ad.location).ilike(f"%{norm_str(location_search).replace('،', ',')}%"))
     
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
