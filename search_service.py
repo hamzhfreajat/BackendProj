@@ -63,8 +63,15 @@ class SearchService:
             params["furnished"] = parsed.furnished
             
         if parsed.location:
-            base_sql += " AND search_text ILIKE :location"
-            params["location"] = f"%{QueryParserService.normalize_arabic(parsed.location)}%"
+            loc_norm = QueryParserService.normalize_arabic(parsed.location)
+            if loc_norm.startswith("ال"):
+                base_sql += " AND (search_text ILIKE :location OR search_text ILIKE :location_no_al)"
+                params["location"] = f"%{loc_norm}%"
+                params["location_no_al"] = f"%{loc_norm[2:]}%"
+            else:
+                base_sql += " AND (search_text ILIKE :location OR search_text ILIKE :location_with_al)"
+                params["location"] = f"%{loc_norm}%"
+                params["location_with_al"] = f"%ال{loc_norm}%"
             
         # Features, intents, and legal are treated as soft filters (ranking only) to prevent zero results
         return db.execute(text(base_sql), params).scalar() or 0
@@ -130,8 +137,15 @@ class SearchService:
             params["furnished"] = parsed.furnished
             
         if parsed.location:
-            base_sql += " AND search_text ILIKE :location"
-            params["location"] = f"%{QueryParserService.normalize_arabic(parsed.location)}%"
+            loc_norm = QueryParserService.normalize_arabic(parsed.location)
+            if loc_norm.startswith("ال"):
+                base_sql += " AND (search_text ILIKE :location OR search_text ILIKE :location_no_al)"
+                params["location"] = f"%{loc_norm}%"
+                params["location_no_al"] = f"%{loc_norm[2:]}%"
+            else:
+                base_sql += " AND (search_text ILIKE :location OR search_text ILIKE :location_with_al)"
+                params["location"] = f"%{loc_norm}%"
+                params["location_with_al"] = f"%ال{loc_norm}%"
             
         # Features, intents, and legal are treated as soft filters (ranking only) to prevent zero results
 

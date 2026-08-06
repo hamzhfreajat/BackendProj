@@ -1146,7 +1146,12 @@ def read_ads(
                     filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, أخرى%"))
                     filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, other%"))
                 else:
-                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm}%"))
+                    if t_loc_norm.startswith("ال"):
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm[2:]}%"))
+                    else:
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, ال{t_loc_norm}%"))
         else:
             for t_loc in target_locs:
                 if t_loc == "محافظة العاصمة": t_loc = "عمان"
@@ -1157,7 +1162,12 @@ def read_ads(
                     filters.append(norm_col(models.Ad.location).ilike(f"%أخرى%"))
                     filters.append(norm_col(models.Ad.location).ilike(f"%other%"))
                 else:
-                    filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm}%"))
+                    if t_loc_norm.startswith("ال"):
+                        filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm[2:]}%"))
+                    else:
+                        filters.append(norm_col(models.Ad.location).ilike(f"%{t_loc_norm}%"))
+                        filters.append(norm_col(models.Ad.location).ilike(f"%ال{t_loc_norm}%"))
                     
         if filters:
             query = query.filter(or_(*filters))
