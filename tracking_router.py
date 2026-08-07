@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 from typing import List, Optional
 import json
 
@@ -398,7 +398,7 @@ def get_api_hits_summary(db: Session = Depends(get_db), current_admin: models.Us
         func.count(func.distinct(models.ApiHitLog.ip_address)).label("unique_ips"),
         func.avg(models.ApiHitLog.response_time_ms).label("avg_response_time"),
         func.sum(
-            func.case(
+            case(
                 (models.ApiHitLog.status_code != 200, 1),
                 else_=0
             )
