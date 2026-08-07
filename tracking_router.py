@@ -388,3 +388,42 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
         "data": result[:50],
         "series_meta": series_meta
     }
+
+
+@router.get("/api_hits")
+def get_api_hits_summary(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
+    results = db.query(
+        models.ApiHitLog.endpoint_name,
+        func.count(models.ApiHitLog.id).label("total_hits"),
+        func.count(func.distinct(models.ApiHitLog.ip_address)).label("unique_ips"),
+        func.avg(models.ApiHitLog.response_time_ms).label("avg_response_time"),
+        func.sum(
+            func.case(
+                (models.ApiHitLog.status_code != 200, 1),
+                else_=0
+            )
+        ).label("error_count")
+    ).group_by(models.ApiHitLog.endpoint_name).all()
+
+    summary = []
+    for row in results:
+        total = row.total_hits or 0
+        errors = row.error_count or 0
+        error_rate = round((errors / total * 100), 2) if total > 0 else 0.0
+
+        summary.append({
+            "endpoint_name": row.endpoint_name,
+            "total_hits": total,
+            "unique_ips": row.unique_ips,
+            "average_response_time_ms": round(float(row.avg_response_time or 0), 2),
+            "error_rate_percent": error_rate
+        })
+    return summary
+
+@router.get("/api_hits/{endpoint_name}")
+def get_api_hits_details(endpoint_name: str, limit: int = 100, db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
+    logs = db.query(models.ApiHitLog).filter(
+        models.ApiHitLog.endpoint_name == endpoint_name
+    ).order_by(models.ApiHitLog.created_at.desc()).limit(limit).all()
+    
+    return logs

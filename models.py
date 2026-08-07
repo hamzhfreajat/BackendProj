@@ -582,3 +582,19 @@ class AppConfig(Base):
     min_required_version = Column(String(50), nullable=False, default='1.0.0')
     store_url_android = Column(String(500), nullable=True)
     store_url_ios = Column(String(500), nullable=True)
+
+
+class ApiHitLog(Base):
+    __tablename__ = 'api_hit_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint_name = Column(String(255), index=True)
+    ip_address = Column(String(50), index=True)
+    response_time_ms = Column(DECIMAL(10, 2), nullable=True)
+    status_code = Column(Integer, nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    query_params = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    user = relationship('User')

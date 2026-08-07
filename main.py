@@ -145,6 +145,78 @@ app.add_middleware(
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+import time
+from database import SessionLocal
+
+@app.middleware("http")
+async def api_hit_tracking_middleware(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time_ms = (time.time() - start_time) * 1000.0
+
+    path = request.url.path
+    
+    endpoint_name = None
+    if path == "/api/dashboard/metrics":
+        endpoint_name = "Home Page"
+    elif path == "/api/categories":
+        if "parent_id" in request.query_params:
+            endpoint_name = "Category Page"
+    elif path == "/api/ads":
+        if "categoryId" in request.query_params or "category_id" in request.query_params:
+            endpoint_name = "Category Details"
+    elif path.startswith("/api/ads/") and request.method == "GET":
+        parts = path.split("/")
+        if len(parts) == 4 and parts[3].isdigit():
+            endpoint_name = "Ad Details"
+            
+    if endpoint_name:
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            ip_address = forwarded_for.split(",")[0].strip()
+        else:
+            ip_address = request.client.host if request.client else "unknown"
+            
+        user_agent = request.headers.get("User-Agent")
+        status_code = response.status_code
+        query_params = str(request.query_params)
+        
+        user_id = None
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                import jwt
+                from auth import SECRET_KEY, ALGORITHM
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                uid = payload.get("sub")
+                if uid:
+                    user_id = int(uid)
+            except Exception:
+                pass
+                
+        def save_log():
+            try:
+                db = SessionLocal()
+                new_log = models.ApiHitLog(
+                    endpoint_name=endpoint_name,
+                    ip_address=ip_address,
+                    response_time_ms=process_time_ms,
+                    status_code=status_code,
+                    user_agent=user_agent,
+                    query_params=query_params,
+                    user_id=user_id
+                )
+                db.add(new_log)
+                db.commit()
+                db.close()
+            except Exception as e:
+                print(f"Error saving API hit log: {e}")
+                
+        from fastapi.concurrency import run_in_threadpool
+        asyncio.create_task(run_in_threadpool(save_log))
+
+    return response
 
 from prometheus_fastapi_instrumentator import Instrumentator
 Instrumentator().instrument(app).expose(app)
