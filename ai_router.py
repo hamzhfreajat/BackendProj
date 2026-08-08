@@ -152,7 +152,7 @@ def location_intelligence(request: Request, data: dict, current_user: models.Use
                 raise Exception("DEEPSEEK_API_KEY not set")
             client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
-                model="deepseek-v4-flash",
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}]
             )
             raw = response.choices[0].message.content.strip()
@@ -263,7 +263,7 @@ def evaluate_ad(request: Request, data: dict, current_user: models.User = Depend
                 raise Exception("DEEPSEEK_API_KEY not set")
             client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
-                model="deepseek-v4-flash",
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
@@ -279,8 +279,7 @@ def evaluate_ad(request: Request, data: dict, current_user: models.User = Depend
             print(f"DeepSeek fallback error: {fallback_e}")
             return {"score": 75, "tips": ["تأكد من إرفاق صور واضحة للحصول على مشاهدات أكثر"]}
 
-@router.post("/generate-suggestions")
-@limiter.limit("5/minute")
+@router.post("/generate-suggestions", dependencies=[Depends(auth.get_rate_limiter(5, 60))])
 def generate_ad_suggestions(request: Request, data: dict, current_user: models.User = Depends(auth.get_current_user)):
     """
     Generative AI: Title, Description, and Smart Tags.
@@ -336,7 +335,7 @@ def generate_ad_suggestions(request: Request, data: dict, current_user: models.U
                 raise Exception("DEEPSEEK_API_KEY not set in environment.")
             client = openai.OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com", timeout=10.0)
             response = client.chat.completions.create(
-                model="deepseek-v4-flash",
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
