@@ -156,7 +156,7 @@ def check_rate_limit(db: Session, ip_address: str, mobile_number: str, endpoint:
         models.RateLimitLog.created_at >= one_min_ago
     ).count()
     if ip_attempts >= 5:
-        raise HTTPException(status_code=429, detail="Too many requests from this IP. Try again in a minute.")
+        raise HTTPException(status_code=429, detail="عدد كبير من الطلبات من عنوان الشبكة هذا. حاول مرة أخرى بعد دقيقة.")
 
     # 2. Mobile Limit: Max 10 requests per hour per mobile number for this endpoint
     if mobile_number:
@@ -167,7 +167,7 @@ def check_rate_limit(db: Session, ip_address: str, mobile_number: str, endpoint:
             models.RateLimitLog.created_at >= one_hour_ago
         ).count()
         if mobile_attempts >= 10:
-            raise HTTPException(status_code=429, detail="Too many requests for this mobile number. Try again in an hour.")
+            raise HTTPException(status_code=429, detail="عدد كبير من الطلبات لرقم الهاتف هذا. حاول مرة أخرى بعد ساعة.")
 
     # Log the attempt
     db.add(models.RateLimitLog(ip_address=ip_address, mobile_number=mobile_number, endpoint=endpoint))
@@ -187,7 +187,7 @@ def get_rate_limiter(requests: int, window: int):
                 redis_client.expire(key, window)
             elif current > requests:
                 log_rate_limit_exceeded(ip, request.url.path)
-                raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+                raise HTTPException(status_code=429, detail="لقد تجاوزت الحد المسموح به من الطلبات. يرجى المحاولة لاحقاً.")
         else:
             # Memory fallback (not distributed)
             if len(IP_RATE_LIMITS) > 10000:
@@ -198,7 +198,7 @@ def get_rate_limiter(requests: int, window: int):
             IP_RATE_LIMITS[ip] = [t for t in IP_RATE_LIMITS[ip] if current_time - t < window]
             if len(IP_RATE_LIMITS[ip]) >= requests:
                 log_rate_limit_exceeded(ip, request.url.path)
-                raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+                raise HTTPException(status_code=429, detail="لقد تجاوزت الحد المسموح به من الطلبات. يرجى المحاولة لاحقاً.")
             IP_RATE_LIMITS[ip].append(current_time)
         return True
     return dependency
