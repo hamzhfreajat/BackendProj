@@ -2159,6 +2159,8 @@ def update_ad(
     update_dict.pop("phone_number", None)
     update_dict.pop("rooms", None)
     
+    attributes = update_dict.get("attributes", {})
+    
     if "city" in attributes and "region" in attributes:
         update_dict["location"] = f"{attributes['city']}, {attributes['region']}"
     elif "location" in update_dict and update_dict["location"]:
