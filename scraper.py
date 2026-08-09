@@ -415,7 +415,7 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
             "3. For valid ads, extract the fields exactly as required by the schema.\\n"
             f"4. If you can confidently determine the Category ID from this list, use it:\\n{categories_context}\\n"
             "If you CANNOT determine the ID, you may leave `category_id` as 0.\\n"
-            "5. Ensure prices are purely numeric (JOD). CRITICAL: If the extracted price is between 1 and 99, it is likely a hallucination (e.g. '1 month used', '99% clean'). Reject it and return 0.\\n"
+            "5. Ensure prices are purely numeric (JOD). IMPORTANT: Daily/monthly apartment rentals can legitimately have a price between 1-99 JOD. However, DO NOT confuse descriptions like 'used 1 month', '99% clean', or '3 days' with a price. Only extract a price if it is clearly a monetary value for the item/service. If no real monetary price is mentioned, return 0.\\n"
             "6. CRITICAL LOCATION RULES: Be very precise with locations. 'العاشرة' typically means 'العقبة, المنطقة العاشرة' NOT 'عمان, الدوار العاشر'. Do not confuse 'بدر' with 'بدر الجديدة'.\n7. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region.\n8. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين', 'بن العميد', 'خلف بن العميد' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, بن العميد' etc. Do not hallucinate cities. You MUST ONLY use regions that officially exist. If the neighborhood mentioned is completely unknown, not a standard region, or you are completely unsure, you MUST output the City name followed by \'أخرى\' (e.g. \'عمان, أخرى\'). NEVER invent or hallucinate a new region name.\n9. CRITICAL: If the location mentions 'عزريت' or 'قصر العوادين' (or variants like 'لواء بني كنانة, عزريت' or 'قرب قصر العوادين'), ALWAYS format the location EXACTLY as 'قصر العوادين , عزريت' without any additional words."
             f"{dynamic_rules_instruction}"
         )
@@ -510,17 +510,12 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                             if not loc:
                                 loc = city
 
-                            # Price validation
-                            final_price = float(ai_ad.get("price") or 0.0)
-                            if 0 < final_price <= 99:
-                                final_price = 0.0
-
                             # 3. Create Ad
                             new_ad = models.Ad(
                                 title=ai_ad.get("title", "")[:255],
                                 description=ai_ad.get("description", ""),
                                 raw_description=original_post['text'], # Save raw text for future duplicate checking
-                                price=final_price,
+                                price=ai_ad.get("price") or 0.0,
                                 location=loc[:255],
                                 source_url=original_post.get("post_url", url)[:255],
                                 is_published=True,
