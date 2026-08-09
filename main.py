@@ -287,6 +287,8 @@ app.include_router(whatsapp_router)
 
 from telemetry_router import router as telemetry_router
 app.include_router(telemetry_router)
+from blacklist_router import router as blacklist_router
+app.include_router(blacklist_router)
 
 
 # Mount the uploads directory to serve media files

@@ -1184,6 +1184,9 @@ def _do_ingest(req: FbBatchRequest, db: Session):
     seen_in_batch_urls = set()
     seen_in_batch_texts = set()
 
+    # Load blocklist
+    blocked_phones = {b.phone_number for b in db.query(models.BlockedPhoneNumber).all()}
+
     for i, post in enumerate(req.posts):
         idx = post.index or (i + 1)
 
@@ -1236,6 +1239,12 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if not phone_match:
             skipped += 1
             results.append(PostResult(index=idx, status="skipped", reason="No phone number found"))
+            continue
+        
+        normalized_phone = f"0{phone_match.group(1)}"
+        if normalized_phone in blocked_phones:
+            skipped += 1
+            results.append(PostResult(index=idx, status="skipped", reason="Phone number is blacklisted"))
             continue
 
         # 4. Pre-filter explicitly unrelated or seeking posts via Regex to save AI costs
@@ -1345,11 +1354,14 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                     logger.info(f"Fallback Regex recovered phone number: 0{phone_core} for Post #{idx}")
 
             has_no_phone = not ai_data.get("phone_number")
+            is_blacklisted = not has_no_phone and ai_data.get("phone_number") in blocked_phones
             
-            if is_explicit_reject or is_legacy_reject or has_no_phone:
+            if is_explicit_reject or is_legacy_reject or has_no_phone or is_blacklisted:
                 skipped += 1
                 if has_no_phone and not is_explicit_reject and not is_legacy_reject:
                     reason = "No phone number found in AI extraction"
+                elif is_blacklisted:
+                    reason = "Phone number is blacklisted (checked after AI extraction)"
                 else:
                     reason = ai_data.get("rejection_reason") or "AI determined post is not offering real estate"
                     

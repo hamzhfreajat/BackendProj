@@ -598,3 +598,8 @@ class ApiHitLog(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     user = relationship('User')
+
+class BlockedPhoneNumber(Base):
+    __tablename__ = 'blocked_phone_numbers'
+    phone_number = Column(String(20), primary_key=True, index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())

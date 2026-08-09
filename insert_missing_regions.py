@@ -1,41 +1,113 @@
-import sys, os
-sys.path.append(os.path.dirname(os.path.abspath('models.py')))
-from database import SessionLocal
-import models
-from sqlalchemy.orm import Session
+import json
+import psycopg2
+import re
 
-db: Session = SessionLocal()
+db_host = '178.104.204.148'
+db_port = '9000'
+db_name = 'cmnynjgg90003aumlerff4j9q'
+db_user = 'postgres'
+db_pass = 'p2j9ggm6cWLAhhVTsbNzYFqK'
 
-# Mapping of City Name -> List of (name_ar, name_en) to add
-new_regions_map = {
-    "عمان": [("العبدلي", "Al Abdali"), ("زهران", "Zahran"), ("خريبة السوق", "Khreibet Es-Souq")],
-    "إربد": [("الرمثا", "Ar Ramtha"), ("الطرة", "At Turra"), ("حوارة", "Hawara")],
-    "العقبة": [("الديسة", "Ad Disah"), ("وادي عربة", "Wadi Araba")],
-    "الكرك": [("غور المزرعة", "Ghor Al Mazra'a")],
-    "البلقاء": [("البحر الميت", "Dead Sea")],
-    "مادبا": [("البحر الميت", "Dead Sea")]
-}
+def normalize_arabic(text):
+    if not text: return ""
+    text = re.sub(r'[أإآ]', 'ا', text)
+    text = re.sub(r'ة', 'ه', text)
+    text = re.sub(r'ى', 'ي', text)
+    text = re.sub(r'[ًٌٍَُِّْ]', '', text)
+    text = re.sub(r'[()\[\]\{\}\.,!?"\'-]', ' ', text)
+    return text.lower().strip()
 
-for city_name, regions in new_regions_map.items():
-    # Find city
-    city = db.query(models.City).filter(models.City.name_ar == city_name).first()
-    if not city:
-        print(f"Error: City '{city_name}' not found in the database!")
-        continue
+try:
+    conn = psycopg2.connect(host=db_host, port=db_port, dbname=db_name, user=db_user, password=db_pass)
+    conn.autocommit = False
+    cur = conn.cursor()
     
-    for r_name_ar, r_name_en in regions:
-        # Check if region already exists
-        existing = db.query(models.Region).filter(
-            models.Region.city_id == city.id,
-            models.Region.name_ar == r_name_ar
-        ).first()
+    # Get city_id for Amman
+    cur.execute("SELECT id FROM cities WHERE name_ar = 'عمان' LIMIT 1")
+    amman_city_id = cur.fetchone()[0]
+    
+    with open('target_regions.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
         
-        if existing:
-            print(f"Region '{r_name_ar}' already exists in {city_name}.")
-        else:
-            new_reg = models.Region(city_id=city.id, name_ar=r_name_ar, name_en=r_name_en)
-            db.add(new_reg)
-            db.commit()
-            print(f"SUCCESS: Inserted '{r_name_ar}' into {city_name} (City ID: {city.id}, New Region ID: {new_reg.id})")
-
-print("All missing regions processed.")
+    missing_added = []
+    
+    for item in data['values']:
+        label = item['label'].strip()
+        if label == "أخرى" or label == "اخري":
+            continue
+            
+        search_field = item.get('search_field', '')
+        
+        # Check if region exists by exact name_ar OR alias
+        cur.execute("""
+            SELECT r.id 
+            FROM regions r
+            LEFT JOIN region_aliases ra ON ra.region_id = r.id
+            WHERE r.name_ar = %s OR ra.alias_name = %s
+            LIMIT 1
+        """, (label, label))
+        
+        res = cur.fetchone()
+        
+        if not res:
+            # Check normalized name just in case
+            norm_label = normalize_arabic(label)
+            cur.execute("SELECT id FROM regions WHERE name_ar = %s", (norm_label,))
+            res2 = cur.fetchone()
+            if not res2:
+                # Extract English name from search_field if possible
+                parts = search_field.split()
+                # Find the first english character
+                en_parts = [p for p in parts if re.search(r'[a-zA-Z]', p)]
+                name_en = ' '.join(en_parts) if en_parts else label
+                
+                # INSERT
+                cur.execute(
+                    "INSERT INTO regions (city_id, name_ar, name_en) VALUES (%s, %s, %s) RETURNING id",
+                    (amman_city_id, label, name_en)
+                )
+                new_id = cur.fetchone()[0]
+                
+                # Insert the normalized version as alias if different
+                if norm_label != label:
+                    cur.execute(
+                        "INSERT INTO region_aliases (region_id, alias_name) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                        (new_id, norm_label)
+                    )
+                
+                missing_added.append(label)
+                
+    conn.commit()
+    
+    # Now explicitly check the user's specific missing list just in case they are not in the JSON but requested anyway!
+    specific_missing = [
+        'دوار الداخلية', 'دوار الواحة', 'شارع المدينة المنورة'
+    ]
+    for sp in specific_missing:
+        cur.execute("""
+            SELECT r.id 
+            FROM regions r
+            LEFT JOIN region_aliases ra ON ra.region_id = r.id
+            WHERE r.name_ar = %s OR ra.alias_name = %s
+            LIMIT 1
+        """, (sp, sp))
+        if not cur.fetchone():
+            cur.execute(
+                "INSERT INTO regions (city_id, name_ar, name_en) VALUES (%s, %s, %s) RETURNING id",
+                (amman_city_id, sp, sp)
+            )
+            new_id = cur.fetchone()[0]
+            norm_sp = normalize_arabic(sp)
+            if norm_sp != sp:
+                cur.execute(
+                    "INSERT INTO region_aliases (region_id, alias_name) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (new_id, norm_sp)
+                )
+            missing_added.append(sp)
+    
+    conn.commit()
+    print("Added the following missing regions:", missing_added)
+    
+except Exception as e:
+    if 'conn' in locals(): conn.rollback()
+    print("ERROR:", e)

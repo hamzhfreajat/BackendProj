@@ -620,3 +620,14 @@ class SupportMessage(SupportMessageBase):
     class Config:
         from_attributes = True
 
+class BlockedPhoneNumberBase(BaseModel):
+    phone_number: str
+
+class BlockedPhoneNumberCreate(BlockedPhoneNumberBase):
+    pass
+
+class BlockedPhoneNumberResponse(BlockedPhoneNumberBase):
+    created_at: datetime
+    class Config:
+        from_attributes = True
+

@@ -1,0 +1,1 @@
+Regions with name حكما: [('حكما', 6)]
