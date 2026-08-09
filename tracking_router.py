@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 from typing import List, Optional
 import json
+from datetime import datetime, timedelta
 
 from database import get_db
 import models
@@ -391,8 +392,12 @@ def get_regional_category_stats(db: Session = Depends(get_db), current_admin: mo
 
 
 @router.get("/api_hits")
-def get_api_hits_summary(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
-    results = db.query(
+def get_api_hits_summary(
+    date_filter: Optional[str] = Query(None, description="Filter by date: today, yesterday, week, month"),
+    db: Session = Depends(get_db), 
+    current_admin: models.User = Depends(get_current_admin)
+):
+    query = db.query(
         models.ApiHitLog.endpoint_name,
         func.count(models.ApiHitLog.id).label("total_hits"),
         func.count(func.distinct(models.ApiHitLog.ip_address)).label("unique_ips"),
@@ -403,7 +408,25 @@ def get_api_hits_summary(db: Session = Depends(get_db), current_admin: models.Us
                 else_=0
             )
         ).label("error_count")
-    ).group_by(models.ApiHitLog.endpoint_name).all()
+    )
+
+    if date_filter:
+        now = datetime.utcnow()
+        if date_filter == "today":
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(models.ApiHitLog.created_at >= start_date)
+        elif date_filter == "yesterday":
+            start_date = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(models.ApiHitLog.created_at >= start_date, models.ApiHitLog.created_at < end_date)
+        elif date_filter == "week":
+            start_date = now - timedelta(days=7)
+            query = query.filter(models.ApiHitLog.created_at >= start_date)
+        elif date_filter == "month":
+            start_date = now - timedelta(days=30)
+            query = query.filter(models.ApiHitLog.created_at >= start_date)
+
+    results = query.group_by(models.ApiHitLog.endpoint_name).all()
 
     summary = []
     for row in results:
@@ -421,9 +444,31 @@ def get_api_hits_summary(db: Session = Depends(get_db), current_admin: models.Us
     return summary
 
 @router.get("/api_hits/{endpoint_name}")
-def get_api_hits_details(endpoint_name: str, limit: int = 100, db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin)):
-    logs = db.query(models.ApiHitLog).filter(
-        models.ApiHitLog.endpoint_name == endpoint_name
-    ).order_by(models.ApiHitLog.created_at.desc()).limit(limit).all()
+def get_api_hits_details(
+    endpoint_name: str, 
+    date_filter: Optional[str] = Query(None, description="Filter by date: today, yesterday, week, month"),
+    limit: int = 100, 
+    db: Session = Depends(get_db), 
+    current_admin: models.User = Depends(get_current_admin)
+):
+    query = db.query(models.ApiHitLog).filter(models.ApiHitLog.endpoint_name == endpoint_name)
+    
+    if date_filter:
+        now = datetime.utcnow()
+        if date_filter == "today":
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(models.ApiHitLog.created_at >= start_date)
+        elif date_filter == "yesterday":
+            start_date = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(models.ApiHitLog.created_at >= start_date, models.ApiHitLog.created_at < end_date)
+        elif date_filter == "week":
+            start_date = now - timedelta(days=7)
+            query = query.filter(models.ApiHitLog.created_at >= start_date)
+        elif date_filter == "month":
+            start_date = now - timedelta(days=30)
+            query = query.filter(models.ApiHitLog.created_at >= start_date)
+
+    logs = query.order_by(models.ApiHitLog.created_at.desc()).limit(limit).all()
     
     return logs
