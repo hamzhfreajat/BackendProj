@@ -92,7 +92,7 @@ class ExtractedAd(BaseModel):
     title: str = Field(description="A clean, concise title for the ad (max 80 chars)")
     description: str = Field(description="The full ad text cleaned up")
     price: float = Field(description="The extracted price in JOD. Return 0 if not found")
-    location: Optional[str] = Field(description="The geographic location. For real estate format as 'المدينة, المنطقة'. CRITICAL: 'التاسعة' means 'العقبة, المنطقة التاسعة' NOT Amman. 'بدر' is different from 'شفا بدران'. Do not hallucinate cities if not mentioned.")
+    location: Optional[str] = Field(description="The geographic location. For real estate format as 'المدينة, المنطقة'. CRITICAL: Any mention of Aqaba residential zones like 'التاسعة', 'المنطقة السكنية الثامنة', 'المنطقة الخامسة' MUST be standardized to 'العقبة, السكنية 9', 'العقبة, السكنية 8', 'العقبة, السكنية 5', etc. Do not hallucinate cities if not mentioned.")
     attributes: ExtractedAdAttributes = Field(description="Detailed property / vehicle attributes")
 
 def run_scraper_task(request_data: dict, db: Session):
