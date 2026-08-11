@@ -3192,7 +3192,6 @@ def update_version_config(req: AppConfigUpdate, db: Session = Depends(get_db)):
     db.refresh(config)
     return {"status": "success", "config": req.dict()}
 
-#   T r i g g e r   r e l o a d 
- 
- #   T r i g g e r   r e l o a d   2  
- 
+# Trigger reload
+
+# Trigger reload 2
