@@ -1148,10 +1148,10 @@ def read_ads(
     limit = min(limit, 100) # Security cap on pagination
     skip = min(skip, 10000) # Security cap on deep pagination
     
-    if location and len(location) > 10:
-        raise HTTPException(status_code=400, detail="Maximum 10 locations allowed per search.")
-    if tags and len(tags) > 15:
-        raise HTTPException(status_code=400, detail="Maximum 15 tags allowed per search.")
+    if location and len(location) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 locations allowed per search.")
+    if tags and len(tags) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 tags allowed per search.")
         
     query = db.query(models.Ad)
     
@@ -3192,3 +3192,7 @@ def update_version_config(req: AppConfigUpdate, db: Session = Depends(get_db)):
     db.refresh(config)
     return {"status": "success", "config": req.dict()}
 
+#   T r i g g e r   r e l o a d 
+ 
+ #   T r i g g e r   r e l o a d   2  
+ 

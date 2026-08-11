@@ -293,12 +293,7 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     3. "شفا بدران" is a distinct region in "عمان". Do NOT confuse it with "بدر". Always format as "عمان, شفا بدران".
     4. If an ad mentions being near or at a specific university, map the location directly to that university's region (e.g. "مادبا, الجامعة الألمانية الأردنية").
     5. NEVER output relative descriptions like 'قرب', 'خلف', 'بجانب', 'شرق', 'جنوب', 'مقابل'. You MUST extract ONLY the exact official name of the neighborhood/region from the Valid Regions List.
-    6. DYNAMIC OVERRIDES:
-{dynamic_location_rules}
-
     6. 'البارحة', 'مستشفى بديعة', 'دوار صحارى', 'دوار العيادات', 'دوار الثقافة', 'دوار النسيم', 'مجمع عمان', 'شارع فلسطين' are ALL strictly in 'إربد' (Irbid), NOT Amman! If you see them, format as 'إربد, البارحة' etc.
-    7. DYNAMIC OVERRIDES:
-{dynamic_location_rules}
 
     
     Valid Regions List:
