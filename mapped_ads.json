@@ -1,0 +1,4842 @@
+[
+  {
+    "ad_id": 27945,
+    "mapped_location": "مادبا, حنينا الغربيه"
+  },
+  {
+    "ad_id": 25783,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25784,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25787,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27385,
+    "mapped_location": "عمان, الزهراء"
+  },
+  {
+    "ad_id": 25789,
+    "mapped_location": "إربد, قرية حاتم"
+  },
+  {
+    "ad_id": 27946,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26870,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26877,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 27952,
+    "mapped_location": "عمان, الجميل"
+  },
+  {
+    "ad_id": 27954,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26888,
+    "mapped_location": "الزرقاء, اتوستراد"
+  },
+  {
+    "ad_id": 27958,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25656,
+    "mapped_location": "عمان, القصور"
+  },
+  {
+    "ad_id": 25796,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 25798,
+    "mapped_location": "إربد, دوار العيادات"
+  },
+  {
+    "ad_id": 24352,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 25009,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 26898,
+    "mapped_location": "العقبة, الكرامة"
+  },
+  {
+    "ad_id": 24628,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24629,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25804,
+    "mapped_location": "جرش, النسيم"
+  },
+  {
+    "ad_id": 25942,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 27972,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27973,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27977,
+    "mapped_location": "الزرقاء, جريبا"
+  },
+  {
+    "ad_id": 27982,
+    "mapped_location": "عمان, الزهراء"
+  },
+  {
+    "ad_id": 25384,
+    "mapped_location": "الزرقاء, جريبا"
+  },
+  {
+    "ad_id": 27983,
+    "mapped_location": "الزرقاء, الزرقاء الجديدة"
+  },
+  {
+    "ad_id": 25811,
+    "mapped_location": "إربد, اربد مول"
+  },
+  {
+    "ad_id": 25812,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27989,
+    "mapped_location": "الزرقاء, التطوير الحضري"
+  },
+  {
+    "ad_id": 27990,
+    "mapped_location": "الزرقاء, الرصيفة"
+  },
+  {
+    "ad_id": 24659,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24636,
+    "mapped_location": "إربد, الحي الشرقي"
+  },
+  {
+    "ad_id": 27992,
+    "mapped_location": "الزرقاء, حي الاسكان"
+  },
+  {
+    "ad_id": 27994,
+    "mapped_location": "الزرقاء, حي معصوم"
+  },
+  {
+    "ad_id": 25824,
+    "mapped_location": "عمان, أخرى"
+  },
+  {
+    "ad_id": 25820,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 26913,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 24850,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25828,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25830,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 24863,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 25839,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24865,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25835,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24353,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25837,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 28003,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 28005,
+    "mapped_location": "الزرقاء, التطوير الحضري"
+  },
+  {
+    "ad_id": 27420,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25842,
+    "mapped_location": "إربد, كتم"
+  },
+  {
+    "ad_id": 24889,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 27065,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25844,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 26934,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28006,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28007,
+    "mapped_location": "الزرقاء, مدينة الشرق"
+  },
+  {
+    "ad_id": 27032,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 28013,
+    "mapped_location": "الزرقاء, جبل طارق"
+  },
+  {
+    "ad_id": 25077,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26970,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28016,
+    "mapped_location": "المفرق, حي الضباط"
+  },
+  {
+    "ad_id": 24755,
+    "mapped_location": "جرش, سلحوب"
+  },
+  {
+    "ad_id": 25861,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26943,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 27424,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27426,
+    "mapped_location": "عمان, أخرى"
+  },
+  {
+    "ad_id": 27427,
+    "mapped_location": "إربد, ضاحية الأمير راشد"
+  },
+  {
+    "ad_id": 27428,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25868,
+    "mapped_location": "عمان, شارع مكة"
+  },
+  {
+    "ad_id": 25872,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 28028,
+    "mapped_location": "الزرقاء, حي معصوم"
+  },
+  {
+    "ad_id": 28031,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25876,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25877,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 28034,
+    "mapped_location": "المفرق, المراجم"
+  },
+  {
+    "ad_id": 25884,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24892,
+    "mapped_location": "عمان, الحمر"
+  },
+  {
+    "ad_id": 28039,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 28040,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 25892,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 25895,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27442,
+    "mapped_location": "عمان, ضاحية الامير راشد"
+  },
+  {
+    "ad_id": 24821,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25049,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 28047,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 25150,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 28048,
+    "mapped_location": "عمان, السرو"
+  },
+  {
+    "ad_id": 26627,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 25904,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25906,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28051,
+    "mapped_location": "السلط, عين الباشا"
+  },
+  {
+    "ad_id": 28052,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24827,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 28053,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25917,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24562,
+    "mapped_location": "عمان, ابو السوس"
+  },
+  {
+    "ad_id": 25921,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 28057,
+    "mapped_location": "جرش, دبين"
+  },
+  {
+    "ad_id": 28060,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26628,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 28061,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 28062,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25925,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 26630,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 25928,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 27640,
+    "mapped_location": "إربد, ابان"
+  },
+  {
+    "ad_id": 24834,
+    "mapped_location": "عمان, ام اذينة"
+  },
+  {
+    "ad_id": 25946,
+    "mapped_location": "السلط, القلعة"
+  },
+  {
+    "ad_id": 24839,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25948,
+    "mapped_location": "عمان, ضاحية الامير حسن"
+  },
+  {
+    "ad_id": 25949,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25950,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28067,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28070,
+    "mapped_location": "عمان, الفحيص"
+  },
+  {
+    "ad_id": 28068,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28069,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25952,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25953,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 25954,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 28071,
+    "mapped_location": "السلط, المغاريب"
+  },
+  {
+    "ad_id": 28073,
+    "mapped_location": "السلط, القلعة"
+  },
+  {
+    "ad_id": 28074,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25965,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24330,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 26956,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24358,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 28077,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27891,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27528,
+    "mapped_location": "عمان, تلاع العلي"
+  },
+  {
+    "ad_id": 28083,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 28084,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28089,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 28092,
+    "mapped_location": "إربد, ارحابا"
+  },
+  {
+    "ad_id": 26633,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24901,
+    "mapped_location": "عمان, المقابلين"
+  },
+  {
+    "ad_id": 24365,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 28097,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 24927,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 28103,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25975,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 26590,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 28110,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28111,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 28112,
+    "mapped_location": "عمان, الجبل الأخضر"
+  },
+  {
+    "ad_id": 28113,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 25090,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 25092,
+    "mapped_location": "إربد, المدينة الصناعية"
+  },
+  {
+    "ad_id": 28116,
+    "mapped_location": "المفرق, المراجم"
+  },
+  {
+    "ad_id": 25094,
+    "mapped_location": "عمان, العال"
+  },
+  {
+    "ad_id": 28119,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25096,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 28121,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28122,
+    "mapped_location": "إربد, الملعب البلدي"
+  },
+  {
+    "ad_id": 28124,
+    "mapped_location": "الزرقاء, عوجان"
+  },
+  {
+    "ad_id": 26995,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24844,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 24375,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24378,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24379,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 24380,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 24381,
+    "mapped_location": "عمان, ماركا الجنوبية"
+  },
+  {
+    "ad_id": 25103,
+    "mapped_location": "الطفيلة, العيص"
+  },
+  {
+    "ad_id": 24392,
+    "mapped_location": "جرش, النسيم"
+  },
+  {
+    "ad_id": 26996,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28126,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28127,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28128,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28129,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28130,
+    "mapped_location": "عمان, صويلح"
+  },
+  {
+    "ad_id": 28131,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24396,
+    "mapped_location": "إربد, حنينا"
+  },
+  {
+    "ad_id": 27565,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 28135,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 26435,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 27572,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25981,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 25201,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25107,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 24401,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24402,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24403,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25984,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28139,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25204,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 25112,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25205,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28141,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24615,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25986,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24408,
+    "mapped_location": "العقبة, الأطباء"
+  },
+  {
+    "ad_id": 28142,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24418,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 25903,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 27000,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25116,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 28147,
+    "mapped_location": "عمان, سالم"
+  },
+  {
+    "ad_id": 24964,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25113,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 24568,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25117,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24572,
+    "mapped_location": "الكرك, الثنية"
+  },
+  {
+    "ad_id": 24649,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25302,
+    "mapped_location": "عمان, الوحدات"
+  },
+  {
+    "ad_id": 24422,
+    "mapped_location": "المفرق, الخالدية"
+  },
+  {
+    "ad_id": 24423,
+    "mapped_location": "إربد, حنينا"
+  },
+  {
+    "ad_id": 24425,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 28148,
+    "mapped_location": "إربد, قرية حاتم"
+  },
+  {
+    "ad_id": 24428,
+    "mapped_location": "عمان, ياجوز"
+  },
+  {
+    "ad_id": 24431,
+    "mapped_location": "إربد, دوار القبة"
+  },
+  {
+    "ad_id": 27786,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24575,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 28149,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 28150,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25119,
+    "mapped_location": "الزرقاء, الغويرية"
+  },
+  {
+    "ad_id": 25206,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28151,
+    "mapped_location": "السلط, أم الدنانير"
+  },
+  {
+    "ad_id": 27005,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24440,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24441,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24116,
+    "mapped_location": "إربد, ابان"
+  },
+  {
+    "ad_id": 25669,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 24442,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28156,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27584,
+    "mapped_location": "عمان, أخرى"
+  },
+  {
+    "ad_id": 27586,
+    "mapped_location": "عمان, أخرى"
+  },
+  {
+    "ad_id": 27585,
+    "mapped_location": "عمان, أخرى"
+  },
+  {
+    "ad_id": 28161,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24026,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28163,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 28164,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24034,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24042,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24043,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24046,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 24050,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 28165,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 24055,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24057,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24061,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 28168,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24071,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24081,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24082,
+    "mapped_location": "الكرك, المرج"
+  },
+  {
+    "ad_id": 24083,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24084,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24085,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24087,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24088,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24092,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24093,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24094,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 24096,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 28174,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24102,
+    "mapped_location": "عمان, شارع مكة"
+  },
+  {
+    "ad_id": 24104,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24117,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24443,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26037,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24444,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 26039,
+    "mapped_location": "جرش, النسيم"
+  },
+  {
+    "ad_id": 24445,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26040,
+    "mapped_location": "جرش, النسيم"
+  },
+  {
+    "ad_id": 26041,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24447,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24449,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25692,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 26047,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28178,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 24459,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24120,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24462,
+    "mapped_location": "إربد, حنينا"
+  },
+  {
+    "ad_id": 24132,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 24129,
+    "mapped_location": "الزرقاء, الرحيل"
+  },
+  {
+    "ad_id": 24133,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 24463,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 26051,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 25128,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26054,
+    "mapped_location": "عمان, ضاحية الحسين"
+  },
+  {
+    "ad_id": 26055,
+    "mapped_location": "العقبة, الأطباء"
+  },
+  {
+    "ad_id": 24579,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 26059,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24146,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 24151,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24470,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27190,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24581,
+    "mapped_location": "عمان, خلدا"
+  },
+  {
+    "ad_id": 27549,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28184,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24634,
+    "mapped_location": "عمان, القويسمة"
+  },
+  {
+    "ad_id": 24583,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25132,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25134,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24472,
+    "mapped_location": "معان, البتراء"
+  },
+  {
+    "ad_id": 24909,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24473,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24584,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 25546,
+    "mapped_location": "عمان, العال"
+  },
+  {
+    "ad_id": 25571,
+    "mapped_location": "إربد, ارحابا"
+  },
+  {
+    "ad_id": 24161,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24911,
+    "mapped_location": "عمان, حي الصحابة"
+  },
+  {
+    "ad_id": 24165,
+    "mapped_location": "إربد, المدينة الصناعية"
+  },
+  {
+    "ad_id": 25140,
+    "mapped_location": "الزرقاء, صروت"
+  },
+  {
+    "ad_id": 25141,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 25699,
+    "mapped_location": "عمان, الجاردنز"
+  },
+  {
+    "ad_id": 24474,
+    "mapped_location": "عمان, الروابي"
+  },
+  {
+    "ad_id": 24173,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 24174,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24175,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24178,
+    "mapped_location": "السلط, الميدان"
+  },
+  {
+    "ad_id": 24193,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24194,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24478,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 24900,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26063,
+    "mapped_location": "إربد, دوار البياضة"
+  },
+  {
+    "ad_id": 24586,
+    "mapped_location": "عمان, الدوار الثامن"
+  },
+  {
+    "ad_id": 24588,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26066,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 24589,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24590,
+    "mapped_location": "العقبة, الرمال"
+  },
+  {
+    "ad_id": 25565,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24199,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24202,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 24206,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24211,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 24212,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 24217,
+    "mapped_location": "عمان, الدوار الرابع"
+  },
+  {
+    "ad_id": 26070,
+    "mapped_location": "إربد, دوار البياضة"
+  },
+  {
+    "ad_id": 25147,
+    "mapped_location": "عمان, ماركا الشمالية"
+  },
+  {
+    "ad_id": 26695,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24491,
+    "mapped_location": "إربد, شارع القدس"
+  },
+  {
+    "ad_id": 28214,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25210,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24229,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24230,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 24232,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24233,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24236,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24494,
+    "mapped_location": "عمان, حوارة"
+  },
+  {
+    "ad_id": 24495,
+    "mapped_location": "معان, البتراء"
+  },
+  {
+    "ad_id": 28217,
+    "mapped_location": "عمان, حي عدن"
+  },
+  {
+    "ad_id": 26072,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 24503,
+    "mapped_location": "إربد, زبدة"
+  },
+  {
+    "ad_id": 25704,
+    "mapped_location": "عمان, القصور"
+  },
+  {
+    "ad_id": 24239,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24506,
+    "mapped_location": "عمان, ام زويتينة"
+  },
+  {
+    "ad_id": 24507,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25211,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 24508,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24509,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24516,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25213,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 24518,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24593,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24244,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24246,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24247,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24252,
+    "mapped_location": "جرش, دبين"
+  },
+  {
+    "ad_id": 27600,
+    "mapped_location": "الزرقاء, الحاووز"
+  },
+  {
+    "ad_id": 24598,
+    "mapped_location": "عمان, الظهير"
+  },
+  {
+    "ad_id": 27606,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24520,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 28228,
+    "mapped_location": "إربد, الحي الجنوبي"
+  },
+  {
+    "ad_id": 24635,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28229,
+    "mapped_location": "المفرق, الحي الهاشمي"
+  },
+  {
+    "ad_id": 27206,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 24262,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24525,
+    "mapped_location": "المفرق, نايفه"
+  },
+  {
+    "ad_id": 24526,
+    "mapped_location": "الزرقاء, مدينة الشرق"
+  },
+  {
+    "ad_id": 24600,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 24530,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25221,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 25158,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24267,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 28246,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25222,
+    "mapped_location": "إربد, دوار اللوازم"
+  },
+  {
+    "ad_id": 24602,
+    "mapped_location": "إربد, دوار اللوازم"
+  },
+  {
+    "ad_id": 24544,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24531,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 25007,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24537,
+    "mapped_location": "معان, أيل"
+  },
+  {
+    "ad_id": 24285,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 24287,
+    "mapped_location": "عمان, سحاب"
+  },
+  {
+    "ad_id": 26748,
+    "mapped_location": "السلط, عين الباشا"
+  },
+  {
+    "ad_id": 24297,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 25243,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 28254,
+    "mapped_location": "إربد, ضاحية الأمير راشد"
+  },
+  {
+    "ad_id": 24539,
+    "mapped_location": "معان, أيل"
+  },
+  {
+    "ad_id": 24540,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24541,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24619,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24542,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 24303,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24546,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26772,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 28256,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25171,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 28257,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25173,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24306,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25232,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24620,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25377,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24309,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 26645,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24152,
+    "mapped_location": "الطفيلة, القادسية"
+  },
+  {
+    "ad_id": 27227,
+    "mapped_location": "إربد, الحي الجنوبي"
+  },
+  {
+    "ad_id": 27443,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 27229,
+    "mapped_location": "إربد, اربد مول"
+  },
+  {
+    "ad_id": 27607,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26446,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27608,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28266,
+    "mapped_location": "الزرقاء, الزرقاء الجديدة"
+  },
+  {
+    "ad_id": 24743,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25027,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 28268,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26450,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 24315,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 26453,
+    "mapped_location": "السلط, البلقاء"
+  },
+  {
+    "ad_id": 26085,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 24319,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 28275,
+    "mapped_location": "عمان, ياجوز"
+  },
+  {
+    "ad_id": 28277,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26652,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24171,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28286,
+    "mapped_location": "عمان, شارع المية"
+  },
+  {
+    "ad_id": 28291,
+    "mapped_location": "السلط, عين الباشا"
+  },
+  {
+    "ad_id": 25035,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28294,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 28295,
+    "mapped_location": "عمان, مرج الحمام"
+  },
+  {
+    "ad_id": 28296,
+    "mapped_location": "إربد, خلف السيفوي"
+  },
+  {
+    "ad_id": 25066,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 28297,
+    "mapped_location": "إربد, اربد مول"
+  },
+  {
+    "ad_id": 25234,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 28298,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26788,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26474,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28300,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26092,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 28301,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25180,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27241,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26749,
+    "mapped_location": "السلط, الخندق"
+  },
+  {
+    "ad_id": 25181,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27244,
+    "mapped_location": "عمان, ضاحية الحسين"
+  },
+  {
+    "ad_id": 26093,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 27612,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 25182,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27615,
+    "mapped_location": "عمان, وسط البلد"
+  },
+  {
+    "ad_id": 27616,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26095,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28310,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26478,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 26752,
+    "mapped_location": "السلط, السلالم"
+  },
+  {
+    "ad_id": 28316,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 28320,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26481,
+    "mapped_location": "عجلون, صخرة"
+  },
+  {
+    "ad_id": 26482,
+    "mapped_location": "المفرق, دحل"
+  },
+  {
+    "ad_id": 28322,
+    "mapped_location": "إربد, الحي الشرقي"
+  },
+  {
+    "ad_id": 26486,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28327,
+    "mapped_location": "إربد, الحي الشرقي"
+  },
+  {
+    "ad_id": 26489,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 26491,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 28329,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26495,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24323,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 28332,
+    "mapped_location": "إربد, مرو"
+  },
+  {
+    "ad_id": 27472,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28334,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24325,
+    "mapped_location": "عمان, عرجان"
+  },
+  {
+    "ad_id": 27622,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 24221,
+    "mapped_location": "عمان, ماركا"
+  },
+  {
+    "ad_id": 27212,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 27624,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25186,
+    "mapped_location": "السلط, السلالم"
+  },
+  {
+    "ad_id": 28340,
+    "mapped_location": "إربد, فوعرا"
+  },
+  {
+    "ad_id": 25188,
+    "mapped_location": "السلط, الزهور"
+  },
+  {
+    "ad_id": 26756,
+    "mapped_location": "إربد, الشجرة"
+  },
+  {
+    "ad_id": 26757,
+    "mapped_location": "السلط, شفا العامرية"
+  },
+  {
+    "ad_id": 27625,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 28348,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 28349,
+    "mapped_location": "عمان, تلاع العلي"
+  },
+  {
+    "ad_id": 26659,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26107,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26111,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28352,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27012,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 27628,
+    "mapped_location": "الزرقاء, جبل طارق"
+  },
+  {
+    "ad_id": 28353,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24240,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 28357,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 28356,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 27480,
+    "mapped_location": "السلط, أم الدنانير"
+  },
+  {
+    "ad_id": 28362,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 28361,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26131,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24328,
+    "mapped_location": "عمان, وسط البلد"
+  },
+  {
+    "ad_id": 27281,
+    "mapped_location": "عمان, ام البساتين"
+  },
+  {
+    "ad_id": 27483,
+    "mapped_location": "عمان, سالم"
+  },
+  {
+    "ad_id": 26760,
+    "mapped_location": "إربد, المنشية"
+  },
+  {
+    "ad_id": 24329,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 28377,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26667,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26669,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28376,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27633,
+    "mapped_location": "عمان, ام الرصاص"
+  },
+  {
+    "ad_id": 26135,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27634,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 26672,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26143,
+    "mapped_location": "عمان, شارع الأردن"
+  },
+  {
+    "ad_id": 26145,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 28380,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28381,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28382,
+    "mapped_location": "إربد, علعال"
+  },
+  {
+    "ad_id": 26674,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28383,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26675,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28384,
+    "mapped_location": "عمان, حوارة"
+  },
+  {
+    "ad_id": 28386,
+    "mapped_location": "إربد, الحي الجنوبي"
+  },
+  {
+    "ad_id": 26151,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26153,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 26155,
+    "mapped_location": "المفرق, الصالحية"
+  },
+  {
+    "ad_id": 24606,
+    "mapped_location": "إربد, جامعة العلوم والتكنولوجيا"
+  },
+  {
+    "ad_id": 24062,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 27488,
+    "mapped_location": "عمان, الدوار السابع"
+  },
+  {
+    "ad_id": 27490,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24076,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24552,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 26761,
+    "mapped_location": "عمان, صويلح"
+  },
+  {
+    "ad_id": 26164,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 26677,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26678,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 26680,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26348,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24108,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 26688,
+    "mapped_location": "إربد, الحي الشرقي"
+  },
+  {
+    "ad_id": 28389,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 28390,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24913,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 26911,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26185,
+    "mapped_location": "عمان, ام الرصاص"
+  },
+  {
+    "ad_id": 26191,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26918,
+    "mapped_location": "عمان, العال"
+  },
+  {
+    "ad_id": 27661,
+    "mapped_location": "إربد, شارع الثلاثين"
+  },
+  {
+    "ad_id": 28398,
+    "mapped_location": "إربد, التل"
+  },
+  {
+    "ad_id": 24180,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24183,
+    "mapped_location": "عمان, المناره"
+  },
+  {
+    "ad_id": 27636,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 28399,
+    "mapped_location": "السلط, عين الباشا"
+  },
+  {
+    "ad_id": 26506,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24203,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26691,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 24208,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24209,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 24210,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24216,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 27641,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26694,
+    "mapped_location": "الزرقاء, الزرقاء الجديدة"
+  },
+  {
+    "ad_id": 24218,
+    "mapped_location": "عمان, الدوار الرابع"
+  },
+  {
+    "ad_id": 26198,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 26199,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 24225,
+    "mapped_location": "جرش, دبين"
+  },
+  {
+    "ad_id": 26696,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 28402,
+    "mapped_location": "معان, البتراء"
+  },
+  {
+    "ad_id": 28405,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26790,
+    "mapped_location": "عجلون, عين جنا"
+  },
+  {
+    "ad_id": 24257,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24556,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24336,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24337,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24279,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 24339,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 27731,
+    "mapped_location": "إربد, حي عالية"
+  },
+  {
+    "ad_id": 24340,
+    "mapped_location": "عمان, الضياء"
+  },
+  {
+    "ad_id": 26216,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 24295,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 26220,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 26513,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24311,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24314,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 24343,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 28416,
+    "mapped_location": "إربد, ضاحية الأمير راشد"
+  },
+  {
+    "ad_id": 26702,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28419,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28420,
+    "mapped_location": "جرش, النسيم"
+  },
+  {
+    "ad_id": 28422,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 28425,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26706,
+    "mapped_location": "عمان, بدر"
+  },
+  {
+    "ad_id": 24382,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 28428,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26708,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 26709,
+    "mapped_location": "الزرقاء, جريبا"
+  },
+  {
+    "ad_id": 28436,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27646,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24406,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27345,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 24434,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24435,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 28440,
+    "mapped_location": "إربد, اربد مول"
+  },
+  {
+    "ad_id": 24350,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 24559,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24609,
+    "mapped_location": "عمان, حوارة"
+  },
+  {
+    "ad_id": 24942,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24454,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26521,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 26522,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 26982,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26241,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24561,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26525,
+    "mapped_location": "عمان, الفيصل"
+  },
+  {
+    "ad_id": 26528,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 27226,
+    "mapped_location": "العقبة, العالمية"
+  },
+  {
+    "ad_id": 24488,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26244,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24497,
+    "mapped_location": "إربد, دوار اللوازم"
+  },
+  {
+    "ad_id": 26253,
+    "mapped_location": "عمان, وادي العش"
+  },
+  {
+    "ad_id": 26256,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 26530,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26264,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26267,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25195,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 26268,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24532,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24535,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24545,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 27008,
+    "mapped_location": "إربد, بيت يافا"
+  },
+  {
+    "ad_id": 24624,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24626,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 24637,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24643,
+    "mapped_location": "إربد, حكما"
+  },
+  {
+    "ad_id": 24644,
+    "mapped_location": "المفرق, حي الضباط"
+  },
+  {
+    "ad_id": 26283,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 24652,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 26289,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24660,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24665,
+    "mapped_location": "عمان, الزهراء"
+  },
+  {
+    "ad_id": 24669,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24670,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24671,
+    "mapped_location": "العقبة, الأطباء"
+  },
+  {
+    "ad_id": 24672,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24673,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 24073,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25295,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24681,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26293,
+    "mapped_location": "عمان, المقابلين"
+  },
+  {
+    "ad_id": 24691,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24693,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24695,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24696,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24699,
+    "mapped_location": "إربد, شارع الحصن"
+  },
+  {
+    "ad_id": 24702,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 25239,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 24710,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24711,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24714,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 24716,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 25923,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24719,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26295,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 26296,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24722,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24726,
+    "mapped_location": "عمان, ضاحية الحاج حسن"
+  },
+  {
+    "ad_id": 24728,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24730,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 24731,
+    "mapped_location": "عمان, ضاحية الحسين"
+  },
+  {
+    "ad_id": 24732,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24734,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24939,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 24752,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 27652,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24758,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24760,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24761,
+    "mapped_location": "عمان, المستندة"
+  },
+  {
+    "ad_id": 24762,
+    "mapped_location": "إربد, خلف السيفوي"
+  },
+  {
+    "ad_id": 26300,
+    "mapped_location": "عمان, الدوار السادس"
+  },
+  {
+    "ad_id": 24763,
+    "mapped_location": "عمان, الدوار الخامس"
+  },
+  {
+    "ad_id": 24773,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24766,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24767,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26303,
+    "mapped_location": "إربد, شارع القدس"
+  },
+  {
+    "ad_id": 27653,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24774,
+    "mapped_location": "عمان, مرج الحمام"
+  },
+  {
+    "ad_id": 24778,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24780,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24786,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24787,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24788,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24790,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 25327,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 24794,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24795,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 24799,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 24808,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 24812,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 24815,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25331,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25332,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24823,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 26308,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 27521,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 25339,
+    "mapped_location": "العقبة, المحدود الوسط"
+  },
+  {
+    "ad_id": 25340,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26537,
+    "mapped_location": "إربد, دوار اللوازم"
+  },
+  {
+    "ad_id": 24828,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24829,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 24830,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 24835,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 24836,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24841,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24848,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 25346,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 26538,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24851,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24854,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24855,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24861,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25355,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25371,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 27524,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25375,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 27367,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28477,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25399,
+    "mapped_location": "الزرقاء, حي معصوم"
+  },
+  {
+    "ad_id": 28478,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25411,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 26544,
+    "mapped_location": "إربد, دوار اللوازم"
+  },
+  {
+    "ad_id": 25416,
+    "mapped_location": "الزرقاء, الزواهرة"
+  },
+  {
+    "ad_id": 27856,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25421,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25422,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25425,
+    "mapped_location": "الزرقاء, حي معصوم"
+  },
+  {
+    "ad_id": 27370,
+    "mapped_location": "عمان, شارع المدينة المنورة"
+  },
+  {
+    "ad_id": 28480,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 27530,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 28481,
+    "mapped_location": "الكرك, المرج"
+  },
+  {
+    "ad_id": 27863,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 25444,
+    "mapped_location": "عمان, ضاحية الامير حسن"
+  },
+  {
+    "ad_id": 25448,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25463,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 26717,
+    "mapped_location": "الزرقاء, جبل طارق"
+  },
+  {
+    "ad_id": 25469,
+    "mapped_location": "عمان, الدوار الرابع"
+  },
+  {
+    "ad_id": 26718,
+    "mapped_location": "الطفيلة, القادسية"
+  },
+  {
+    "ad_id": 25473,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 28485,
+    "mapped_location": "عمان, الدوار السابع"
+  },
+  {
+    "ad_id": 28487,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 28488,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25487,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26719,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26722,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24961,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25499,
+    "mapped_location": "عمان, الحمر"
+  },
+  {
+    "ad_id": 28492,
+    "mapped_location": "عمان, ضاحية الاقصى"
+  },
+  {
+    "ad_id": 25508,
+    "mapped_location": "عمان, صويلح"
+  },
+  {
+    "ad_id": 26341,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24868,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 26337,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24872,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 24871,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 24873,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24874,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 24875,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 24879,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24881,
+    "mapped_location": "عمان, الروابي"
+  },
+  {
+    "ad_id": 24883,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 24887,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24890,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24891,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 28496,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25523,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 28497,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 27378,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 28499,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26559,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 24902,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 24904,
+    "mapped_location": "عمان, جبل النصر"
+  },
+  {
+    "ad_id": 26562,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25547,
+    "mapped_location": "عمان, ضاحية الحاج حسن"
+  },
+  {
+    "ad_id": 28505,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 25635,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 25566,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24921,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 26569,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 27544,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24923,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25589,
+    "mapped_location": "المفرق, دحل"
+  },
+  {
+    "ad_id": 27381,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 24926,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26370,
+    "mapped_location": "عمان, الجندويل"
+  },
+  {
+    "ad_id": 24925,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24931,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24937,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24938,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25614,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 24954,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25622,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 24957,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24960,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 24962,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 24965,
+    "mapped_location": "عمان, الروابي"
+  },
+  {
+    "ad_id": 24966,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 25637,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 26384,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26578,
+    "mapped_location": "الزرقاء, صروت"
+  },
+  {
+    "ad_id": 24976,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 24981,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 24983,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 24984,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24982,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 25649,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 24994,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 24154,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 25001,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25003,
+    "mapped_location": "الزرقاء, الزرقاء الجديدة"
+  },
+  {
+    "ad_id": 25004,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25008,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 25011,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25012,
+    "mapped_location": "عمان, ضاحية الحاج حسن"
+  },
+  {
+    "ad_id": 26727,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 25016,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 25020,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25668,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25023,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25024,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24069,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25674,
+    "mapped_location": "عمان, ياجوز"
+  },
+  {
+    "ad_id": 25676,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 28528,
+    "mapped_location": "عمان, الجاردنز"
+  },
+  {
+    "ad_id": 25039,
+    "mapped_location": "المفرق, الصالحية"
+  },
+  {
+    "ad_id": 25042,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 26591,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27867,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 27874,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25056,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25061,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25062,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25691,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 28530,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25696,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25064,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 25068,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25709,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 27383,
+    "mapped_location": "الزرقاء, الهاشمية"
+  },
+  {
+    "ad_id": 25074,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 26731,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 25716,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25091,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 27665,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27387,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25724,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27390,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26734,
+    "mapped_location": "الزرقاء, جريبا"
+  },
+  {
+    "ad_id": 25127,
+    "mapped_location": "عمان, شارع الأردن"
+  },
+  {
+    "ad_id": 24782,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 28535,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 26407,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25749,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 26600,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 26603,
+    "mapped_location": "عمان, الدوار السادس"
+  },
+  {
+    "ad_id": 28538,
+    "mapped_location": "عمان, ام زويتينة"
+  },
+  {
+    "ad_id": 26605,
+    "mapped_location": "الزرقاء, صروت"
+  },
+  {
+    "ad_id": 26606,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27137,
+    "mapped_location": "إربد, ام قيس"
+  },
+  {
+    "ad_id": 25945,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25785,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25786,
+    "mapped_location": "إربد, دوار شركة الكهرباء"
+  },
+  {
+    "ad_id": 28543,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 25816,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25818,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 27164,
+    "mapped_location": "عمان, مرج الحمام"
+  },
+  {
+    "ad_id": 25829,
+    "mapped_location": "عمان, الصويفية"
+  },
+  {
+    "ad_id": 27671,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25832,
+    "mapped_location": "العقبة, الأطباء"
+  },
+  {
+    "ad_id": 25840,
+    "mapped_location": "إربد, الحي الجنوبي"
+  },
+  {
+    "ad_id": 28562,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25866,
+    "mapped_location": "عمان, ضاحية الحسين"
+  },
+  {
+    "ad_id": 25882,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25914,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 25891,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 26740,
+    "mapped_location": "الزرقاء, جبل طارق"
+  },
+  {
+    "ad_id": 28569,
+    "mapped_location": "عمان, صويلح"
+  },
+  {
+    "ad_id": 25898,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25901,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27685,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27686,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25922,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 25924,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27112,
+    "mapped_location": "عمان, البيضاء"
+  },
+  {
+    "ad_id": 24272,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25935,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 27115,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25957,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25720,
+    "mapped_location": "إربد, شارع القدس"
+  },
+  {
+    "ad_id": 28579,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 25192,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25198,
+    "mapped_location": "عمان, السرو"
+  },
+  {
+    "ad_id": 25200,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25194,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25203,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25214,
+    "mapped_location": "الزرقاء, القنية"
+  },
+  {
+    "ad_id": 25982,
+    "mapped_location": "إربد, هام"
+  },
+  {
+    "ad_id": 25231,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 26025,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25237,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 26610,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26609,
+    "mapped_location": "العقبة, المحدود الوسط"
+  },
+  {
+    "ad_id": 25251,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25252,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25257,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 26038,
+    "mapped_location": "إربد, شارع الثلاثين"
+  },
+  {
+    "ad_id": 25262,
+    "mapped_location": "عمان, ضاحية الاقصى"
+  },
+  {
+    "ad_id": 26050,
+    "mapped_location": "إربد, دوار اللوازم"
+  },
+  {
+    "ad_id": 25271,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25268,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25272,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 26057,
+    "mapped_location": "إربد, ارحابا"
+  },
+  {
+    "ad_id": 25280,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25279,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26060,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25281,
+    "mapped_location": "عمان, الدوار الرابع"
+  },
+  {
+    "ad_id": 25293,
+    "mapped_location": "عمان, الكرسي"
+  },
+  {
+    "ad_id": 27645,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26084,
+    "mapped_location": "الزرقاء, شومر"
+  },
+  {
+    "ad_id": 25299,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26077,
+    "mapped_location": "إربد, الحي الشرقي"
+  },
+  {
+    "ad_id": 25306,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 25301,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25305,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25308,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25309,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25310,
+    "mapped_location": "عمان, خلدا"
+  },
+  {
+    "ad_id": 25312,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25314,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 14076,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26089,
+    "mapped_location": "إربد, حرثا"
+  },
+  {
+    "ad_id": 25318,
+    "mapped_location": "الزرقاء, الحاووز"
+  },
+  {
+    "ad_id": 27153,
+    "mapped_location": "إربد, اربد مول"
+  },
+  {
+    "ad_id": 27406,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25325,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25326,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25341,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25330,
+    "mapped_location": "عمان, الياسمين"
+  },
+  {
+    "ad_id": 25328,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 25333,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25334,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25335,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25337,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26113,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 26121,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 26613,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 25342,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25343,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25344,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26152,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25345,
+    "mapped_location": "العقبة, ملقان الجنوبي"
+  },
+  {
+    "ad_id": 25347,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25350,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25351,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25352,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 25353,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25354,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26743,
+    "mapped_location": "الزرقاء, التطوير الحضري"
+  },
+  {
+    "ad_id": 26174,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25360,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25363,
+    "mapped_location": "مادبا, الفيصلية"
+  },
+  {
+    "ad_id": 26207,
+    "mapped_location": "مادبا, ماعين"
+  },
+  {
+    "ad_id": 26215,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26222,
+    "mapped_location": "عمان, الفيصل"
+  },
+  {
+    "ad_id": 25380,
+    "mapped_location": "عمان, بدر"
+  },
+  {
+    "ad_id": 25383,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 25388,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25385,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 25392,
+    "mapped_location": "عمان, ياجوز"
+  },
+  {
+    "ad_id": 25395,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25397,
+    "mapped_location": "الزرقاء, جبل الأمير حسن"
+  },
+  {
+    "ad_id": 25398,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25402,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25413,
+    "mapped_location": "الزرقاء, جبل طارق"
+  },
+  {
+    "ad_id": 25423,
+    "mapped_location": "الزرقاء, مدينة الشرق"
+  },
+  {
+    "ad_id": 25427,
+    "mapped_location": "الزرقاء, أبو الزيغان"
+  },
+  {
+    "ad_id": 25428,
+    "mapped_location": "الزرقاء, الزرقاء الجديدة"
+  },
+  {
+    "ad_id": 25429,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 26307,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 25439,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25432,
+    "mapped_location": "عمان, ضاحية الامير حسن"
+  },
+  {
+    "ad_id": 25434,
+    "mapped_location": "إربد, السوق"
+  },
+  {
+    "ad_id": 25441,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25443,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 24997,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25446,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25455,
+    "mapped_location": "عمان, سحاب"
+  },
+  {
+    "ad_id": 25464,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25478,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 25480,
+    "mapped_location": "الزرقاء, خو"
+  },
+  {
+    "ad_id": 25492,
+    "mapped_location": "السلط, أم الدنانير"
+  },
+  {
+    "ad_id": 25493,
+    "mapped_location": "السلط, البلقاء"
+  },
+  {
+    "ad_id": 25496,
+    "mapped_location": "عمان, الدوار السابع"
+  },
+  {
+    "ad_id": 25501,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25503,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25505,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25512,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25514,
+    "mapped_location": "عمان, العبدلي"
+  },
+  {
+    "ad_id": 25517,
+    "mapped_location": "عمان, حجار النوابلسة"
+  },
+  {
+    "ad_id": 25522,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25265,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 25533,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25531,
+    "mapped_location": "عمان, مرج الحمام"
+  },
+  {
+    "ad_id": 25532,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25538,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25541,
+    "mapped_location": "عمان, ام نوارة"
+  },
+  {
+    "ad_id": 27414,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25549,
+    "mapped_location": "عمان, البيضاء"
+  },
+  {
+    "ad_id": 25550,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 25551,
+    "mapped_location": "المفرق, الحمراء"
+  },
+  {
+    "ad_id": 25555,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25567,
+    "mapped_location": "عمان, ام السماق"
+  },
+  {
+    "ad_id": 25570,
+    "mapped_location": "الزرقاء, الزرقاء الجديدة"
+  },
+  {
+    "ad_id": 25577,
+    "mapped_location": "عمان, اليرموك"
+  },
+  {
+    "ad_id": 25585,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25591,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25602,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 26388,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26389,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25613,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 25615,
+    "mapped_location": "عمان, الدوار الخامس"
+  },
+  {
+    "ad_id": 25618,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25628,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27147,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25642,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25646,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 25647,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25651,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25655,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25653,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25658,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 26416,
+    "mapped_location": "الزرقاء, أم صليح"
+  },
+  {
+    "ad_id": 26422,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25908,
+    "mapped_location": "عمان, ابو نصير"
+  },
+  {
+    "ad_id": 25670,
+    "mapped_location": "المفرق, دحل"
+  },
+  {
+    "ad_id": 25673,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26425,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 26746,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25681,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25682,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25683,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 25685,
+    "mapped_location": "عمان, دير غبار"
+  },
+  {
+    "ad_id": 25686,
+    "mapped_location": "عمان, الدوار الرابع"
+  },
+  {
+    "ad_id": 25687,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 25693,
+    "mapped_location": "إربد, دوار النسيم"
+  },
+  {
+    "ad_id": 25694,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 26438,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25700,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 25711,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 25713,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25714,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 25719,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26439,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25727,
+    "mapped_location": "إربد, حي القصيلة"
+  },
+  {
+    "ad_id": 25729,
+    "mapped_location": "المفرق, الحي الهاشمي"
+  },
+  {
+    "ad_id": 25731,
+    "mapped_location": "الطفيلة, القادسية"
+  },
+  {
+    "ad_id": 25737,
+    "mapped_location": "الزرقاء, مدينة الشرق"
+  },
+  {
+    "ad_id": 26456,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25740,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25743,
+    "mapped_location": "عمان, البنيات"
+  },
+  {
+    "ad_id": 25744,
+    "mapped_location": "عمان, الفيصل"
+  },
+  {
+    "ad_id": 25756,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25750,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25753,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25758,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25765,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 25776,
+    "mapped_location": "عجلون, عنجرة"
+  },
+  {
+    "ad_id": 25777,
+    "mapped_location": "إربد, دوار شركة الكهرباء"
+  },
+  {
+    "ad_id": 26475,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26620,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 26767,
+    "mapped_location": "السلط, القلعة"
+  },
+  {
+    "ad_id": 26768,
+    "mapped_location": "إربد, ارحابا"
+  },
+  {
+    "ad_id": 26774,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26773,
+    "mapped_location": "عجلون, صخرة"
+  },
+  {
+    "ad_id": 26777,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24684,
+    "mapped_location": "عمان, المدينة الرياضية"
+  },
+  {
+    "ad_id": 26795,
+    "mapped_location": "عمان, الجميل"
+  },
+  {
+    "ad_id": 26797,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26806,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26814,
+    "mapped_location": "عمان, بيرين"
+  },
+  {
+    "ad_id": 26818,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 26819,
+    "mapped_location": "المفرق, دحل"
+  },
+  {
+    "ad_id": 26824,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 26829,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26833,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26832,
+    "mapped_location": "السلط, الخضر"
+  },
+  {
+    "ad_id": 26835,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26836,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26839,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26850,
+    "mapped_location": "الزرقاء, اتوستراد"
+  },
+  {
+    "ad_id": 26853,
+    "mapped_location": "جرش, تل الرمان"
+  },
+  {
+    "ad_id": 26873,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26880,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26889,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 26891,
+    "mapped_location": "الطفيلة, القادسية"
+  },
+  {
+    "ad_id": 26899,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 26906,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26912,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26926,
+    "mapped_location": "الكرك, المرج"
+  },
+  {
+    "ad_id": 27602,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26941,
+    "mapped_location": "عمان, ماركا الشمالية"
+  },
+  {
+    "ad_id": 26953,
+    "mapped_location": "عمان, العال"
+  },
+  {
+    "ad_id": 26959,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26962,
+    "mapped_location": "المفرق, المنصورة"
+  },
+  {
+    "ad_id": 26968,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26969,
+    "mapped_location": "إربد, خلف السيفوي"
+  },
+  {
+    "ad_id": 26974,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 26973,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26976,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26980,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 26987,
+    "mapped_location": "عمان, العال"
+  },
+  {
+    "ad_id": 26993,
+    "mapped_location": "إربد, الحصن"
+  },
+  {
+    "ad_id": 27003,
+    "mapped_location": "عمان, أخرى"
+  },
+  {
+    "ad_id": 27006,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27004,
+    "mapped_location": "إربد, دوار العيادات"
+  },
+  {
+    "ad_id": 27007,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 27009,
+    "mapped_location": "إربد, الحي الشرقي"
+  },
+  {
+    "ad_id": 27010,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27016,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 25912,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27028,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27033,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25916,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 25163,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27037,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 25471,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27047,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 27049,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27051,
+    "mapped_location": "عمان, الخضراء"
+  },
+  {
+    "ad_id": 24623,
+    "mapped_location": "عمان, الجبيهة"
+  },
+  {
+    "ad_id": 27663,
+    "mapped_location": "المفرق, نادرة"
+  },
+  {
+    "ad_id": 27669,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 27091,
+    "mapped_location": "الزرقاء, صروت"
+  },
+  {
+    "ad_id": 27092,
+    "mapped_location": "إربد, تقبل"
+  },
+  {
+    "ad_id": 27095,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27692,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27102,
+    "mapped_location": "عمان, الجيزة"
+  },
+  {
+    "ad_id": 27706,
+    "mapped_location": "الزرقاء, البستان"
+  },
+  {
+    "ad_id": 27711,
+    "mapped_location": "إربد, التل"
+  },
+  {
+    "ad_id": 27712,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27124,
+    "mapped_location": "الزرقاء, جريبا"
+  },
+  {
+    "ad_id": 27733,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27133,
+    "mapped_location": "المفرق, فاع"
+  },
+  {
+    "ad_id": 27741,
+    "mapped_location": "إربد, سوم"
+  },
+  {
+    "ad_id": 27149,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 27150,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27744,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27159,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27160,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27747,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27756,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27170,
+    "mapped_location": "عمان, سالم"
+  },
+  {
+    "ad_id": 27172,
+    "mapped_location": "عمان, القصبات"
+  },
+  {
+    "ad_id": 27188,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27197,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27203,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27205,
+    "mapped_location": "السلط, عين الباشا"
+  },
+  {
+    "ad_id": 27219,
+    "mapped_location": "عمان, طبربور"
+  },
+  {
+    "ad_id": 27228,
+    "mapped_location": "عمان, ضاحية الحسين"
+  },
+  {
+    "ad_id": 27815,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 27829,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25883,
+    "mapped_location": "عمان, ضاحية الرشيد"
+  },
+  {
+    "ad_id": 26648,
+    "mapped_location": "السلط, الزهور"
+  },
+  {
+    "ad_id": 25885,
+    "mapped_location": "عمان, ابو علندا"
+  },
+  {
+    "ad_id": 27259,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27857,
+    "mapped_location": "الزرقاء, خو"
+  },
+  {
+    "ad_id": 27350,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27865,
+    "mapped_location": "العقبة, المحدود الشرقي"
+  },
+  {
+    "ad_id": 27868,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27873,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 27876,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27880,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 24560,
+    "mapped_location": "عمان, شارع الجامعة"
+  },
+  {
+    "ad_id": 25099,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 25319,
+    "mapped_location": "الكرك, الثنية"
+  },
+  {
+    "ad_id": 25323,
+    "mapped_location": "الكرك, الثنية"
+  },
+  {
+    "ad_id": 25598,
+    "mapped_location": "الكرك, عي"
+  },
+  {
+    "ad_id": 25779,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 26064,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26112,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 26754,
+    "mapped_location": "السلط, الخضر"
+  },
+  {
+    "ad_id": 26673,
+    "mapped_location": "إربد, الحي الجنوبي"
+  },
+  {
+    "ad_id": 27826,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 27828,
+    "mapped_location": "جرش, سوف"
+  },
+  {
+    "ad_id": 27884,
+    "mapped_location": "السلط, علان"
+  },
+  {
+    "ad_id": 27306,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27893,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27896,
+    "mapped_location": "الزرقاء, حي معصوم"
+  },
+  {
+    "ad_id": 27898,
+    "mapped_location": "السلط, الزهور"
+  },
+  {
+    "ad_id": 27899,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27903,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27905,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27906,
+    "mapped_location": "إربد, سال"
+  },
+  {
+    "ad_id": 27907,
+    "mapped_location": "السلط, زي"
+  },
+  {
+    "ad_id": 27909,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27911,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27912,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27915,
+    "mapped_location": "عمان, طريق المطار"
+  },
+  {
+    "ad_id": 27921,
+    "mapped_location": "مادبا, لب"
+  },
+  {
+    "ad_id": 27923,
+    "mapped_location": "عمان, شفا بدران"
+  },
+  {
+    "ad_id": 27935,
+    "mapped_location": "إربد, قم"
+  },
+  {
+    "ad_id": 27936,
+    "mapped_location": "مادبا, دليله الحمايده"
+  },
+  {
+    "ad_id": 27937,
+    "mapped_location": "إربد, حنينا"
+  },
+  {
+    "ad_id": 27939,
+    "mapped_location": "إربد, البلد"
+  },
+  {
+    "ad_id": 27943,
+    "mapped_location": "مادبا, لب"
+  }
+]

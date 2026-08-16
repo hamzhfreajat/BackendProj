@@ -1,0 +1,522 @@
+{
+  "24240": {
+    "status": "mapped",
+    "location": "عمان, البنيات"
+  },
+  "28357": {
+    "status": "mapped",
+    "location": "إربد, دوار الثقافة"
+  },
+  "28356": {
+    "status": "mapped",
+    "location": "إربد, أخرى"
+  },
+  "28358": {
+    "status": "missing",
+    "location": "إربد, بيت راس"
+  },
+  "27480": {
+    "status": "mapped",
+    "location": "عمان, ام الدنانير"
+  },
+  "28362": {
+    "status": "missing",
+    "location": "إربد, مجمع عمان الجديد"
+  },
+  "28361": {
+    "status": "missing",
+    "location": "إربد, مجمع عمان الجديد"
+  },
+  "26131": {
+    "status": "missing",
+    "location": "عمان, بزنس بارك"
+  },
+  "24328": {
+    "status": "missing",
+    "location": "المفرق, السويلمة"
+  },
+  "27281": {
+    "status": "mapped",
+    "location": "عمان, ام البساتين"
+  },
+  "27483": {
+    "status": "mapped",
+    "location": "عمان, سالم"
+  },
+  "26760": {
+    "status": "mapped",
+    "location": "إربد, المنشية"
+  },
+  "24329": {
+    "status": "missing",
+    "location": "جرش, الدقمسة"
+  },
+  "28377": {
+    "status": "missing",
+    "location": "جرش, حمامة"
+  },
+  "26667": {
+    "status": "missing",
+    "location": "المفرق, روضة الأمير علي"
+  },
+  "26669": {
+    "status": "missing",
+    "location": "السلط, سوادا الجنوبي"
+  },
+  "28376": {
+    "status": "missing",
+    "location": "جرش, حمامة"
+  },
+  "27633": {
+    "status": "mapped",
+    "location": "عمان, ام الرصاص"
+  },
+  "26135": {
+    "status": "mapped",
+    "location": "عمان, ضاحية الأمير علي"
+  },
+  "27634": {
+    "status": "mapped",
+    "location": "الزرقاء, المنطقة الحرة"
+  },
+  "26672": {
+    "status": "mapped",
+    "location": "عمان, الذراع"
+  },
+  "26143": {
+    "status": "mapped",
+    "location": "عمان, ابو نصير"
+  },
+  "26145": {
+    "status": "mapped",
+    "location": "عمان, ابو علندا"
+  },
+  "28380": {
+    "status": "mapped",
+    "location": "إربد, ام الجدايل"
+  },
+  "28381": {
+    "status": "missing",
+    "location": "إربد, بيت راس"
+  },
+  "28382": {
+    "status": "mapped",
+    "location": "إربد, علعال"
+  },
+  "26674": {
+    "status": "missing",
+    "location": "عمان, دليلة الميطيرات"
+  },
+  "28383": {
+    "status": "missing",
+    "location": "إربد, الرمثا"
+  },
+  "26675": {
+    "status": "mapped",
+    "location": "مادبا, دليله الحمايده"
+  },
+  "28384": {
+    "status": "missing",
+    "location": "إربد, حوارة"
+  },
+  "28386": {
+    "status": "mapped",
+    "location": "إربد, الحي الجنوبي"
+  },
+  "26151": {
+    "status": "mapped",
+    "location": "عمان, ام السماق"
+  },
+  "26153": {
+    "status": "missing",
+    "location": "جرش, حمامة"
+  },
+  "26155": {
+    "status": "mapped",
+    "location": "الزرقاء, اسكان البتراوي"
+  },
+  "24606": {
+    "status": "mapped",
+    "location": "عجلون, عفنة"
+  },
+  "24062": {
+    "status": "mapped",
+    "location": "عمان, طبربور"
+  },
+  "27488": {
+    "status": "mapped",
+    "location": "عمان, جلول"
+  },
+  "27490": {
+    "status": "mapped",
+    "location": "عمان, صالحية العابد"
+  },
+  "24076": {
+    "status": "mapped",
+    "location": "عمان, دير غبار"
+  },
+  "24552": {
+    "status": "mapped",
+    "location": "عمان, ضاحية الامير حسن"
+  },
+  "26761": {
+    "status": "missing",
+    "location": "السلط, الديرة"
+  },
+  "26164": {
+    "status": "missing",
+    "location": "عمان, ضاحية الأميرة سلمى"
+  },
+  "26677": {
+    "status": "missing",
+    "location": "مادبا, النديم"
+  },
+  "26678": {
+    "status": "missing",
+    "location": "مادبا, النديم"
+  },
+  "26680": {
+    "status": "missing",
+    "location": "مادبا, الخطابية"
+  },
+  "26348": {
+    "status": "mapped",
+    "location": "عمان, ابو نصير"
+  },
+  "24108": {
+    "status": "mapped",
+    "location": "عمان, ابو نصير"
+  },
+  "26688": {
+    "status": "missing",
+    "location": "مادبا, الحي الشرقي"
+  },
+  "25937": {
+    "status": "mapped",
+    "location": "عمان, ام السماق"
+  },
+  "28389": {
+    "status": "mapped",
+    "location": "عمان, البنيات"
+  },
+  "28390": {
+    "status": "mapped",
+    "location": "عمان, الطنيب"
+  },
+  "26175": {
+    "status": "mapped",
+    "location": "عمان, ضاحية الاستقلال"
+  },
+  "24913": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "26911": {
+    "status": "missing",
+    "location": "عمان, ضاحية الأميرة سلمى"
+  },
+  "26185": {
+    "status": "mapped",
+    "location": "عمان, ام الرصاص"
+  },
+  "26191": {
+    "status": "missing",
+    "location": "عمان, إسكان المالية والزراعة"
+  },
+  "26918": {
+    "status": "mapped",
+    "location": "عمان, ام اذينة"
+  },
+  "27661": {
+    "status": "missing",
+    "location": "السلط, البقيع"
+  },
+  "28398": {
+    "status": "missing",
+    "location": "عمان, أم الحيران"
+  },
+  "24180": {
+    "status": "mapped",
+    "location": "الزرقاء, جبل الاميرة رحمة"
+  },
+  "24183": {
+    "status": "mapped",
+    "location": "عمان, المناره"
+  },
+  "27636": {
+    "status": "missing",
+    "location": "جرش, حمامة العليمات"
+  },
+  "28399": {
+    "status": "mapped",
+    "location": "السلط, عين الباشا"
+  },
+  "26506": {
+    "status": "missing",
+    "location": "عمان, شارع مادبا"
+  },
+  "24203": {
+    "status": "mapped",
+    "location": "عجلون, كفرنجا"
+  },
+  "26691": {
+    "status": "mapped",
+    "location": "مادبا, دليله الحمايده"
+  },
+  "24208": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "24209": {
+    "status": "mapped",
+    "location": "عمان, شارع المدينة المنورة"
+  },
+  "24210": {
+    "status": "missing",
+    "location": "عجلون, سامتا"
+  },
+  "24216": {
+    "status": "mapped",
+    "location": "عمان, شارع المدينة المنورة"
+  },
+  "27641": {
+    "status": "mapped",
+    "location": "المفرق, الدجنية"
+  },
+  "26694": {
+    "status": "mapped",
+    "location": "الزرقاء, الزرقاء الجديدة"
+  },
+  "24218": {
+    "status": "mapped",
+    "location": "عمان, الدوار الرابع"
+  },
+  "26198": {
+    "status": "mapped",
+    "location": "عمان, طريق المطار"
+  },
+  "26199": {
+    "status": "mapped",
+    "location": "عمان, طريق المطار"
+  },
+  "24225": {
+    "status": "missing",
+    "location": "عجلون, أم جوزة"
+  },
+  "26696": {
+    "status": "mapped",
+    "location": "عمان, بيرين"
+  },
+  "28402": {
+    "status": "missing",
+    "location": "إربد, شارع البتراء"
+  },
+  "28405": {
+    "status": "missing",
+    "location": "إربد, بيت راس"
+  },
+  "26790": {
+    "status": "mapped",
+    "location": "عجلون, عين جنا"
+  },
+  "24257": {
+    "status": "mapped",
+    "location": "عمان, الجبيهة"
+  },
+  "24261": {
+    "status": "mapped",
+    "location": "جرش, أخرى"
+  },
+  "24556": {
+    "status": "mapped",
+    "location": "عمان, ضاحية الرشيد"
+  },
+  "24336": {
+    "status": "mapped",
+    "location": "عمان, الجبيهة"
+  },
+  "24337": {
+    "status": "mapped",
+    "location": "عمان, ام السماق"
+  },
+  "24279": {
+    "status": "missing",
+    "location": "جرش, البركتين"
+  },
+  "24339": {
+    "status": "mapped",
+    "location": "عمان, ابو علندا"
+  },
+  "27731": {
+    "status": "mapped",
+    "location": "إربد, حي عالية"
+  },
+  "24340": {
+    "status": "mapped",
+    "location": "عمان, الضياء"
+  },
+  "26216": {
+    "status": "mapped",
+    "location": "عمان, ابو علندا"
+  },
+  "24295": {
+    "status": "mapped",
+    "location": "عمان, الجبيهة"
+  },
+  "26220": {
+    "status": "mapped",
+    "location": "عمان, ام اذينة"
+  },
+  "26513": {
+    "status": "missing",
+    "location": "عمان, ضاحية الأميرة إيمان"
+  },
+  "24311": {
+    "status": "missing",
+    "location": "المفرق, روضة الأمير علي"
+  },
+  "24314": {
+    "status": "mapped",
+    "location": "المفرق, أخرى"
+  },
+  "24343": {
+    "status": "mapped",
+    "location": "عمان, البنيات"
+  },
+  "28416": {
+    "status": "mapped",
+    "location": "عمان, ضاحية الامير راشد"
+  },
+  "26702": {
+    "status": "mapped",
+    "location": "عمان, ابو نصير"
+  },
+  "28419": {
+    "status": "missing",
+    "location": "عجلون, راسون"
+  },
+  "28420": {
+    "status": "mapped",
+    "location": "إربد, دوار النسيم"
+  },
+  "28422": {
+    "status": "missing",
+    "location": "إربد, بيت راس"
+  },
+  "28425": {
+    "status": "missing",
+    "location": "إربد, ناطفة"
+  },
+  "26706": {
+    "status": "mapped",
+    "location": "عمان, ابو علندا"
+  },
+  "24505": {
+    "status": "missing",
+    "location": "إربد, إيدون"
+  },
+  "24382": {
+    "status": "mapped",
+    "location": "عمان, البنيات"
+  },
+  "28428": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "28429": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "26708": {
+    "status": "mapped",
+    "location": "الزرقاء, التطوير الحضري"
+  },
+  "26709": {
+    "status": "mapped",
+    "location": "الزرقاء, جريبا"
+  },
+  "28436": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "27646": {
+    "status": "missing",
+    "location": "جرش, خطلة"
+  },
+  "24406": {
+    "status": "missing",
+    "location": "إربد, شارع الرشيد"
+  },
+  "27345": {
+    "status": "mapped",
+    "location": "عمان, طبربور"
+  },
+  "24434": {
+    "status": "mapped",
+    "location": "إربد, السنبلة"
+  },
+  "24435": {
+    "status": "missing",
+    "location": "إربد, شارع الجامعة"
+  },
+  "28440": {
+    "status": "mapped",
+    "location": "إربد, اربد مول"
+  },
+  "24350": {
+    "status": "mapped",
+    "location": "عمان, ابو علندا"
+  },
+  "24559": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "28441": {
+    "status": "missing",
+    "location": "إربد, مجمع عمان الجديد"
+  },
+  "24609": {
+    "status": "missing",
+    "location": "إربد, حوارة"
+  },
+  "24942": {
+    "status": "mapped",
+    "location": "عمان, الصويفية"
+  },
+  "24454": {
+    "status": "mapped",
+    "location": "عمان, زويزا"
+  },
+  "26521": {
+    "status": "missing",
+    "location": "عمان, ضاحية الأميرة سلمى"
+  },
+  "26522": {
+    "status": "missing",
+    "location": "عمان, ضاحية الأميرة سلمى"
+  },
+  "26982": {
+    "status": "missing",
+    "location": "إربد, شارع البتراء"
+  },
+  "26241": {
+    "status": "mapped",
+    "location": "عمان, شارع الجامعة"
+  },
+  "24561": {
+    "status": "missing",
+    "location": "عمان, عين غزال"
+  },
+  "26525": {
+    "status": "missing",
+    "location": "عمان, شارع النويجا"
+  },
+  "26528": {
+    "status": "missing",
+    "location": "إربد, شارع أبو راشد"
+  },
+  "27226": {
+    "status": "missing",
+    "location": "إربد, كرم حجازي"
+  }
+}

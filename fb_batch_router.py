@@ -278,7 +278,7 @@ def _check_and_update_gemini_daily_limit(db: Session = None) -> bool:
         return True  # Fail open safely
 
 
-def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api_key: str) -> Optional[List[dict]]:
+def _deepseek_location_fallback(ads_data: List[dict], regions_list: List[str], api_key: str) -> Optional[List[dict]]:
     prompt = f"""
     You are an expert Jordanian real estate and location assistant.
     I will provide you a list of ads that currently have "Others" or "أخرى" as their location.
@@ -311,27 +311,34 @@ def _gemini_location_fallback(ads_data: List[dict], regions_list: List[str], api
     Do not return any markdown wrappers like ```json, just the raw JSON.
     """
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-    headers = {"Content-Type": "application/json"}
+    url = "https://api.deepseek.com/chat/completions"
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.1,
-            "responseMimeType": "application/json",
-        }
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": "You are a location extraction expert."},
+            {"role": "user", "content": prompt}
+        ],
+        "response_format": {"type": "json_object"}
     }
     
     res = requests.post(url, json=payload, headers=headers, timeout=60)
     res.raise_for_status()
     data = res.json()
-    raw = data["candidates"][0]["content"]["parts"][0]["text"]
+    raw = data["choices"][0]["message"]["content"]
     
+    # Strip markdown if present
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
             
-    return json.loads(raw.strip())
+    parsed = json.loads(raw.strip())
+    # DeepSeek sometimes wraps arrays in an object when json_object is forced
+    if isinstance(parsed, dict) and len(parsed) == 1:
+        parsed = list(parsed.values())[0]
+        
+    return parsed
 
 
 def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_rules_str: str) -> List[dict]:
@@ -456,149 +463,35 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
             
         return all_parsed
 
-    # 2. Try DeepSeek (if DEEPSEEK_API_KEY is provided), else try Gemini
     api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
-    if not api_key_gemini and not api_key_deepseek:
-        raise RuntimeError("No AI API keys provided (Gemini or DeepSeek).")
+    if not api_key_deepseek:
+        raise RuntimeError("No DEEPSEEK_API_KEY provided. Gemini is disabled.")
 
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            if api_key_deepseek:
-                logger.info(f"Trying DeepSeek AI (Attempt {attempt+1}/{max_retries})...")
-                url = "https://api.deepseek.com/chat/completions"
-                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key_deepseek}"}
-                payload = {
-                    "model": "deepseek-chat",
-                    "messages": [
-                        {"role": "system", "content": "You are an AI assistant that extracts classified ad data and strictly outputs valid JSON."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "response_format": {"type": "json_object"}
-                }
-                res = requests.post(url, json=payload, headers=headers, timeout=90)
-                res.raise_for_status()
-                data = res.json()
-                raw = data["choices"][0]["message"]["content"]
-                ai_model_used = "deepseek-chat"
-            else:
-                sleep_time = 0.0
-                with _GEMINI_LOCK:
-                    if not _check_and_update_gemini_daily_limit():
-                        logger.warning("Gemini Daily Limit (999) Reached! Failing.")
-                        raise RuntimeError("Gemini Daily Limit Reached")
-
-                    # Ensure 5.0 sec gap between requests (max 12 RPM)
-                    now = time.time()
-                    elapsed = now - _LAST_GEMINI_CALL
-                    if elapsed < 5.0:
-                        sleep_time = 5.0 - elapsed
-                        _LAST_GEMINI_CALL = now + sleep_time
-                    else:
-                        _LAST_GEMINI_CALL = now
-
-                if sleep_time > 0:
-                    logger.info(f"Rate limiting Gemini: Sleeping {sleep_time:.2f}s outside lock to respect RPM limit")
-                    time.sleep(sleep_time)
-
-                logger.info(f"Trying Gemini AI (Attempt {attempt+1}/{max_retries})...")
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key_gemini}"
-                headers = {"Content-Type": "application/json"}
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {
-                        "responseMimeType": "application/json",
-                        "maxOutputTokens": 8192
-                    }
-                }
-                
-                res = requests.post(url, json=payload, headers=headers, timeout=60)
-                res.raise_for_status()
-                data = res.json()
-                raw = data["candidates"][0]["content"]["parts"][0]["text"]
-                ai_model_used = "gemini-1.5-flash"
+            logger.info(f"Trying DeepSeek AI (Attempt {attempt+1}/{max_retries})...")
+            url = "https://api.deepseek.com/chat/completions"
+            headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key_deepseek}"}
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "You are an AI assistant that extracts classified ad data and strictly outputs valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                "response_format": {"type": "json_object"}
+            }
+            res = requests.post(url, json=payload, headers=headers, timeout=90)
+            res.raise_for_status()
+            data = res.json()
+            raw = data["choices"][0]["message"]["content"]
+            ai_model_used = "deepseek-chat"
 
             parsed = _parse_json_result(raw.strip())
             for item in parsed:
                 if isinstance(item, dict): 
                     item["ai_model"] = ai_model_used
                     item["raw_unparsed_chunk_layer"] = raw.strip()
-
-            # --- BEGIN NEW CASCADING LOGIC ---
-            if api_key_deepseek and api_key_gemini and ai_model_used == "deepseek-chat":
-                posts_missing_loc = []
-                posts_by_index = {p.index: p for p in chunk_posts if p.index is not None}
-                
-                for p_i, item in enumerate(parsed):
-                    if not isinstance(item, dict): continue
-                    loc = str(item.get("location", "")).strip()
-                    if not loc or loc == "أخرى" or loc.lower() == "other" or "غير محدد" in loc:
-                        item_index = item.get("index")
-                        original_post = posts_by_index.get(item_index)
-                        if original_post:
-                            posts_missing_loc.append((p_i, original_post))
-                
-                if posts_missing_loc:
-                    logger.info(f"DeepSeek missed {len(posts_missing_loc)} locations. Falling back to Gemini...")
-                    missing_posts = [p for _, p in posts_missing_loc]
-                    gemini_prompt = _GEMINI_BATCH_PROMPT.format(
-                        categories_block=categories_block,
-                        posts_block=_build_posts_block(missing_posts),
-                        dynamic_location_rules=dynamic_rules_str
-                    )
-                    
-                    try:
-                        # Ensure Gemini rate limit is respected
-                        sleep_time = 0.0
-                        with _GEMINI_LOCK:
-                            if _check_and_update_gemini_daily_limit():
-                                now = time.time()
-                                elapsed = now - _LAST_GEMINI_CALL
-                                if elapsed < 5.0:
-                                    sleep_time = 5.0 - elapsed
-                                    _LAST_GEMINI_CALL = now + sleep_time
-                                else:
-                                    _LAST_GEMINI_CALL = now
-                        if sleep_time > 0:
-                            time.sleep(sleep_time)
-
-                        g_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key_gemini}"
-                        g_headers = {"Content-Type": "application/json"}
-                        g_payload = {
-                            "contents": [{"parts": [{"text": gemini_prompt}]}],
-                            "generationConfig": {
-                                "responseMimeType": "application/json",
-                                "maxOutputTokens": 8192
-                            }
-                        }
-                        
-                        g_res = requests.post(g_url, json=g_payload, headers=g_headers, timeout=60)
-                        g_res.raise_for_status()
-                        g_data = g_res.json()
-                        g_raw = g_data["candidates"][0]["content"]["parts"][0]["text"]
-                        
-                        gemini_parsed = _parse_json_result(g_raw.strip())
-                        
-                        # Merge back
-                        for gem_item in gemini_parsed:
-                            if not isinstance(gem_item, dict): continue
-                            g_idx = gem_item.get("index")
-                            
-                            for p_i, orig_post in posts_missing_loc:
-                                if orig_post.index == g_idx:
-                                    gem_item["ai_model"] = "deepseek+gemini_fallback"
-                                    gem_item["raw_unparsed_chunk_layer"] = g_raw.strip()
-                                    parsed[p_i] = gem_item
-                                    break
-                    except Exception as e:
-                        error_details = str(e)
-                        if hasattr(e, 'response') and e.response is not None:
-                            try:
-                                error_details += f" - Response: {e.response.text}"
-                            except:
-                                pass
-                        logger.error(f"Gemini fallback failed: {error_details}")
-            # --- END NEW CASCADING LOGIC ---
             
             return parsed
 
@@ -610,18 +503,14 @@ def _ai_process_chunk(chunk_posts: List[FbPost], categories_block: str, dynamic_
                 except:
                     pass
 
-            model_name = "DeepSeek" if api_key_deepseek else "Gemini"
+            model_name = "DeepSeek"
             errors.append(error_details) # <-- MUST append here to capture it for final output!
-
-            # If the exception is Daily Limit, break out immediately
-            if "Gemini Daily Limit Reached" in str(e):
-                break
 
             wait_sec = (attempt + 1) * 5
             logger.warning(f"{model_name} failed (Attempt {attempt+1}/{max_retries}): {error_details}. Retrying in {wait_sec}s...")
             time.sleep(wait_sec)
             
-    model_name_failed = "DeepSeek" if api_key_deepseek else "Gemini"
+    model_name_failed = "DeepSeek"
     
     # Extract the last known error if we have one
     last_error = ""
@@ -1266,9 +1155,9 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         logger.error(f"AI failed: {e}. Falling back to default data.")
         ai_results = [{"ai_chunk_error": f"SYSTEM_ERROR: {str(e)}"}] * len(posts_to_process)
 
-    # Step 2.5: Gemini Fallback for "Other" locations
-    api_key_gemini = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if api_key_gemini:
+    # Step 2.5: DeepSeek Fallback for "Other" locations
+    api_key_deepseek = os.getenv("DEEPSEEK_API_KEY")
+    if api_key_deepseek:
         fallback_indices = []
         fallback_ads_data = []
         
@@ -1290,21 +1179,21 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                         })
         
         if fallback_ads_data:
-            logger.info(f"Triggering Gemini fallback for {len(fallback_ads_data)} posts with 'Other' locations...")
+            logger.info(f"Triggering DeepSeek fallback for {len(fallback_ads_data)} posts with 'Other' locations...")
             try:
                 from models import Region, City
                 regions = db.query(Region).join(City).all()
                 regions_list = [f"{r.city.name_ar}, {r.name_ar}" for r in regions]
                 
-                updates = _gemini_location_fallback(fallback_ads_data, regions_list, api_key_gemini)
+                updates = _deepseek_location_fallback(fallback_ads_data, regions_list, api_key_deepseek)
                 if updates:
                     update_map = {item['ad_id']: item['new_location'] for item in updates if 'ad_id' in item and 'new_location' in item}
                     for j in fallback_indices:
                         if j in update_map:
                             ai_results[j]["location"] = update_map[j]
-                            logger.info(f"Gemini fallback fixed location for post {j} -> {update_map[j]}")
+                            logger.info(f"DeepSeek fallback fixed location for post {j} -> {update_map[j]}")
             except Exception as e:
-                logger.error(f"Gemini location fallback failed: {e}")
+                logger.error(f"DeepSeek location fallback failed: {e}")
 
     # Step 3: Save each AI result to the database
     for j, post in enumerate(posts_to_process):

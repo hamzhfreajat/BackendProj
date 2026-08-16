@@ -1141,6 +1141,7 @@ def read_ads(
     user_lng: float = None,
     only_others: bool = False,
     location_search: str = None,
+    phone: str = None,
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = None
@@ -1160,6 +1161,9 @@ def read_ads(
     
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
+        
+    if phone:
+        query = query.filter(models.Ad.phone.ilike(f"%{phone}%"))
         
     from sqlalchemy.sql.expression import case
     
@@ -1533,12 +1537,16 @@ def get_ads_count(
     tags: List[str] = Query(None),
     only_others: bool = False,
     location_search: str = None,
+    phone: str = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Ad)
     
     if location_search:
         query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
+        
+    if phone:
+        query = query.filter(models.Ad.phone.ilike(f"%{phone}%"))
         
     if only_others:
         query = query.filter(or_(
