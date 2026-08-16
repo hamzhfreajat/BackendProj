@@ -1165,10 +1165,6 @@ def read_ads(
     
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
-        
-    if phone:
-        query = query.filter(models.Ad.phone.ilike(f"%{phone}%"))
-        
     from sqlalchemy.sql.expression import case
     
     ignore_location = False
