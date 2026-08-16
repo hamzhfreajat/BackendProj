@@ -12,20 +12,16 @@ router = APIRouter(prefix="/api/blacklist", tags=["blacklist"])
 @router.get("/phones", response_model=List[schemas.BlockedPhoneNumberResponse])
 def get_blocked_phones(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user)
+    current_admin: models.User = Depends(auth.get_current_admin)
 ):
-    if current_user.role != models.Role.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
     return db.query(models.BlockedPhoneNumber).all()
 
 @router.post("/phones", response_model=schemas.BlockedPhoneNumberResponse)
 def add_blocked_phone(
     block_req: schemas.BlockedPhoneNumberCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user)
+    current_admin: models.User = Depends(auth.get_current_admin)
 ):
-    if current_user.role != models.Role.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
         
     phone = block_req.phone_number.strip()
     existing = db.query(models.BlockedPhoneNumber).filter(models.BlockedPhoneNumber.phone_number == phone).first()
@@ -60,10 +56,8 @@ def add_blocked_phone(
 def delete_blocked_phone(
     phone_number: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user)
+    current_admin: models.User = Depends(auth.get_current_admin)
 ):
-    if current_user.role != models.Role.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
         
     block_entry = db.query(models.BlockedPhoneNumber).filter(models.BlockedPhoneNumber.phone_number == phone_number).first()
     if not block_entry:
