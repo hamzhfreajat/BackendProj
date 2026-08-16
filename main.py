@@ -1160,8 +1160,13 @@ def read_ads(
         query = query.filter(norm_col(models.Ad.location).ilike(f"%{norm_str(location_search).replace('،', ',')}%"))
     
     if phone:
+        from sqlalchemy import cast, String
         query = query.outerjoin(models.User, models.Ad.user_id == models.User.id)
-        query = query.filter(or_(models.User.phone.ilike(f"%{phone}%"), models.User.mobile_number.ilike(f"%{phone}%")))
+        query = query.filter(or_(
+            models.User.phone.ilike(f"%{phone}%"), 
+            models.User.mobile_number.ilike(f"%{phone}%"),
+            cast(models.Ad.attributes, String).ilike(f"%{phone}%")
+        ))
     
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
@@ -1546,8 +1551,13 @@ def get_ads_count(
         query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
         
     if phone:
+        from sqlalchemy import cast, String
         query = query.outerjoin(models.User, models.Ad.user_id == models.User.id)
-        query = query.filter(or_(models.User.phone.ilike(f"%{phone}%"), models.User.mobile_number.ilike(f"%{phone}%")))
+        query = query.filter(or_(
+            models.User.phone.ilike(f"%{phone}%"), 
+            models.User.mobile_number.ilike(f"%{phone}%"),
+            cast(models.Ad.attributes, String).ilike(f"%{phone}%")
+        ))
         
     if only_others:
         query = query.filter(or_(
