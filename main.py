@@ -2224,7 +2224,7 @@ def update_ad(
             
     update_dict["attributes"] = attributes
     
-    if image_urls:
+    if image_urls_updated and image_urls:
         update_dict["image_url"] = image_urls[0]
 
     # Handle automatic region creation if location specifies a new region
