@@ -268,7 +268,9 @@ app.include_router(fb_batch_router)
 app.include_router(fb_publisher_router)
 
 from routers import users_admin_router
+import wallet_router
 app.include_router(users_admin_router.router)
+app.include_router(wallet_router.router)
 
 app.include_router(ai_router)
 app.include_router(media_router)
@@ -1154,14 +1156,13 @@ def read_ads(
     if tags and len(tags) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 tags allowed per search.")
         
-    query = db.query(models.Ad)
+    query = db.query(models.Ad).outerjoin(models.User, models.Ad.user_id == models.User.id)
     
     if location_search:
         query = query.filter(norm_col(models.Ad.location).ilike(f"%{norm_str(location_search).replace('،', ',')}%"))
     
     if phone:
         from sqlalchemy import cast, String
-        query = query.outerjoin(models.User, models.Ad.user_id == models.User.id)
         query = query.filter(or_(
             models.User.phone.ilike(f"%{phone}%"), 
             models.User.mobile_number.ilike(f"%{phone}%"),
@@ -1486,6 +1487,12 @@ def read_ads(
         else_=1
     )
 
+    # Calculate effective CPC bid (only counts if user has enough balance)
+    effective_bid = case(
+        ((models.User.wallet_balance >= models.Ad.cpc_bid) & (models.Ad.cpc_bid > 0), models.Ad.cpc_bid),
+        else_=0
+    )
+
     if sort_by == 'price_asc':
         query = query.order_by(models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
@@ -1503,17 +1510,17 @@ def read_ads(
             func.pow(models.Region.latitude - user_lat, 2) + 
             func.pow((models.Region.longitude - user_lng) * func.cos(user_lat * 3.14159 / 180.0), 2)
         )
-        query = query.order_by(distance.asc().nulls_last(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), distance.asc().nulls_last(), models.Ad.id.desc())
     elif sort_by == 'newest':
-        query = query.order_by(has_image.desc(), has_price.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), has_image.desc(), has_price.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'strict_newest':
-        query = query.order_by(is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
-        query = query.order_by(models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'recommended' or sort_by is None:
-        query = query.order_by(models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     else:
-        query = query.order_by(is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
         
     ads = query.offset(skip).limit(limit).all()
     
@@ -2303,6 +2310,55 @@ def update_ad(
         )
     
     return db_ad
+
+@app.post("/api/ads/{ad_id}/bid", response_model=schemas.Ad)
+def set_ad_bid(
+    ad_id: int, 
+    bid_request: schemas.AdBidRequest, 
+    current_user: models.User = Depends(auth.get_current_user), 
+    db: Session = Depends(get_db)
+):
+    ad = db.query(models.Ad).filter(models.Ad.id == ad_id, models.Ad.user_id == current_user.id).first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+        
+    if bid_request.cpc_bid > 0 and bid_request.cpc_bid < 0.07:
+        raise HTTPException(status_code=400, detail="Minimum bid must be 0.07 JOD")
+        
+    ad.cpc_bid = bid_request.cpc_bid
+    db.commit()
+    db.refresh(ad)
+    return ad
+
+@app.post("/api/ads/{ad_id}/track-click", response_model=dict)
+def track_ad_click(
+    ad_id: int, 
+    action_type: str = Body(..., embed=True), # 'call', 'whatsapp', 'chat'
+    db: Session = Depends(get_db)
+):
+    ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+        
+    # Check if this ad has an active bid and the owner has balance
+    owner = db.query(models.User).filter(models.User.id == ad.user_id).with_for_update().first()
+    if ad.cpc_bid > 0 and owner.wallet_balance >= ad.cpc_bid:
+        # Deduct the bid amount
+        owner.wallet_balance = float(owner.wallet_balance) - float(ad.cpc_bid)
+        
+        # Log the transaction
+        transaction = models.WalletTransaction(
+            user_id=owner.id,
+            amount=-float(ad.cpc_bid),
+            transaction_type="CLICK_DEDUCTION",
+            description=f"Action: {action_type} on Ad #{ad.id} '{ad.title}'",
+            reference_id=str(ad.id)
+        )
+        db.add(transaction)
+        db.commit()
+        return {"status": "success", "deducted": float(ad.cpc_bid)}
+        
+    return {"status": "success", "deducted": 0.0}
 
 @app.delete("/api/ads/{ad_id}")
 def delete_ad(

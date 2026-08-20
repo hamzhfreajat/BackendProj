@@ -124,6 +124,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_banned = Column(Boolean, default=False)
     
+    wallet_balance = Column(DECIMAL(10, 2), default=0.00)
+    
     # KYC Identity Verification
     full_name = Column(String(100), nullable=True)
     national_id = Column(String(20), nullable=True, unique=True)
@@ -203,6 +205,19 @@ class UserMetric(Base):
 
     user = relationship("User", back_populates="metrics")
 
+class WalletTransaction(Base):
+    __tablename__ = "wallet_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    amount = Column(DECIMAL(10, 2), nullable=False) # Positive for top-up, negative for deduction
+    transaction_type = Column(String(50), nullable=False) # e.g., 'TOPUP', 'CLICK_DEDUCTION'
+    description = Column(String(255), nullable=True) # e.g., 'Click on Ad #123'
+    reference_id = Column(String(255), nullable=True) # e.g., IAP Receipt ID
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    user = relationship("User")
+
 class Category(Base):
     __tablename__ = "categories"
 
@@ -249,6 +264,9 @@ class Ad(Base):
     boost_expiry = Column(TIMESTAMP, nullable=True)
     chats_count = Column(Integer, default=0)
     favorites_count = Column(Integer, default=0)
+    
+    # Pay-Per-Click Bidding
+    cpc_bid = Column(DECIMAL(10, 2), default=0.00)
     
     last_republished_at = Column(TIMESTAMP, nullable=True)
     republish_notification_sent = Column(Boolean, default=False)

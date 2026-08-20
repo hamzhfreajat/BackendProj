@@ -2,6 +2,28 @@ from pydantic import BaseModel, field_validator
 from typing import List, Optional, Any
 from datetime import datetime
 
+class WalletTransactionBase(BaseModel):
+    amount: float
+    transaction_type: str
+    description: Optional[str] = None
+    reference_id: Optional[str] = None
+
+class WalletTransaction(WalletTransactionBase):
+    id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class WalletTopupRequest(BaseModel):
+    receipt_data: str
+    product_id: str
+    platform: str # 'ios' or 'android'
+
+class AdBidRequest(BaseModel):
+    cpc_bid: float
+
 class UserBase(BaseModel):
     mobile_number: Optional[str] = None
     username: Optional[str] = None
@@ -37,6 +59,8 @@ class User(UserBase):
     location: Optional[str] = ""
     is_active: Optional[bool] = True
     is_banned: Optional[bool] = False
+    
+    wallet_balance: Optional[float] = 0.0
     
     # KYC
     national_id: Optional[str] = None
@@ -94,6 +118,7 @@ class UserPrivateProfile(BaseModel):
     location: Optional[str] = ""
     is_active: Optional[bool] = True
     is_banned: Optional[bool] = False
+    wallet_balance: Optional[float] = 0.0
     bio: Optional[str] = None
     preferred_contact: Optional[str] = None
     languages_spoken: Optional[List[str]] = None
@@ -415,6 +440,7 @@ class Ad(AdBase):
     favorites_count: int = 0
     is_saved: Optional[bool] = False
     last_republished_at: Optional[datetime] = None
+    cpc_bid: Optional[float] = 0.0
 
     class Config:
         from_attributes = True
