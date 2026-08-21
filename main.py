@@ -2333,8 +2333,11 @@ def set_ad_bid(
     if not ad:
         raise HTTPException(status_code=404, detail="Ad not found")
         
-    if bid_request.cpc_bid > 0 and bid_request.cpc_bid < 0.07:
-        raise HTTPException(status_code=400, detail="Minimum bid must be 0.07 JOD")
+    if bid_request.cpc_bid > 0:
+        if bid_request.cpc_bid < 0.07:
+            raise HTTPException(status_code=400, detail="Minimum bid must be 0.07 JOD")
+        if float(current_user.wallet_balance or 0) < 10.0:
+            raise HTTPException(status_code=402, detail="Insufficient balance. Minimum 10 JOD required.")
         
     ad.cpc_bid = bid_request.cpc_bid
     db.commit()

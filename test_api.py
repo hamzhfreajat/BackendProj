@@ -1,60 +1,22 @@
-import requests
+import urllib.request
+import json
 
-# We don't have a valid token, but we can check if the server HAS our fix.
-# If we try to hit PUT /api/ads/14068/toggle-publish without a token, it returns 401.
-# This means we MUST have a valid token to test the logic.
+def test():
+    urls = [
+        "http://5.45.131.27:8081/api/ads",
+        "http://5.45.131.27/api/ads",
+        "https://classifieds-app-staging.optimizasolutions.com/api/ads"
+    ]
+    for url in urls:
+        print(f"Testing {url}...")
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                print("Status:", response.status)
+                data = json.loads(response.read().decode())
+                print("Response keys:", list(data.keys()) if isinstance(data, dict) else type(data))
+        except Exception as e:
+            print("Failed:", e)
 
-# Let's get a valid user from the DB to forge a token.
-import psycopg2
-import jwt
-import datetime
-
-conn = psycopg2.connect(
-    dbname='cmnynjgg90003aumlerff4j9q',
-    user='postgres',
-    password='p2j9ggm6cWLAhhVTsbNzYFqK',
-    host='178.104.204.148',
-    port=9000
-)
-cur = conn.cursor()
-# find a real user
-cur.execute('SELECT id FROM users LIMIT 1;')
-user_id = cur.fetchone()[0]
-conn.close()
-
-print(f"Testing with User ID: {user_id}")
-
-SECRET_KEY = 'dummy_secret_for_local_run'
-payload = {
-    'sub': str(user_id),
-    'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
-}
-token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-
-headers = {
-    'Authorization': f'Bearer {token}',
-    'Content-Type': 'application/json'
-}
-
-# Try to toggle-publish Ad 14068 (which has NO images)
-# Note: Ad 14068 belongs to whoever created it, so we need to use THEIR user ID!
-conn = psycopg2.connect(
-    dbname='cmnynjgg90003aumlerff4j9q',
-    user='postgres',
-    password='p2j9ggm6cWLAhhVTsbNzYFqK',
-    host='178.104.204.148',
-    port=9000
-)
-cur = conn.cursor()
-cur.execute('SELECT user_id FROM ads WHERE id = 14068;')
-ad_user_id = cur.fetchone()[0]
-conn.close()
-
-payload['sub'] = str(ad_user_id)
-token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-headers['Authorization'] = f'Bearer {token}'
-
-print(f"Testing with Ad Owner ID: {ad_user_id}")
-
-resp = requests.put('https://api.sooq-com.com/api/ads/14068/toggle-publish', headers=headers)
-print('Toggle Publish Response:', resp.status_code, resp.text)
+if __name__ == "__main__":
+    test()

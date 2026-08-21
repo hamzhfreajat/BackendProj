@@ -34,7 +34,9 @@ class ExtractedAdAttributes(BaseModel):
     bathrooms: Optional[int] = Field(description="Number of bathrooms")
     furnished: Optional[str] = Field(description="Furnished state. Match exactly: مفروشة, غير مفروشة, مفروش جزئياً")
     floor: Optional[str] = Field(description="Floor level. Match exactly: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, 1, 2, 3, 4, 5, 6, 7")
-    key_features: List[str] = Field(description="Array of features. Match exactly if possible: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج")
+    key_features: List[str] = Field(description="Array of features. Match exactly if possible: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج, مطبخ راكب, صالون واسع, تأسيس تكييف")
+    has_terrace: Optional[str] = Field(description="Match exactly: نعم, لا if the ad mentions having a terrace (ترس)")
+    terrace_area: Optional[str] = Field(description="Terrace area in square meters if mentioned")
     
     # 1. Basic Info (Shared Rooms)
     room_type: Optional[str] = Field(description="Type of room. Match with: غرفة خاصة, غرفة مشتركة, سرير في غرفة, استوديو ملحق بالسكن")
@@ -67,12 +69,12 @@ class ExtractedAdAttributes(BaseModel):
     
     # 6. Building Specs
     building_age: Optional[str] = Field(description="Age of building: Match exactly: 0 - 11 شهر, 1 - 5 سنوات, 6 - 9 سنوات, 10 - 19 سنوات, +20 سنة")
-    building_features: List[str] = Field(description="Building perks. Match exactly if possible: يوجد مصعد, حديقة, موقف سيارات, حارس / أمن وحماية, كراج تفك, منطقة شواء, نظام كهرباء احتياطي للطوارئ, بركة سباحة, انتركم")
+    building_features: List[str] = Field(description="Building perks. Match exactly if possible: يوجد مصعد, حديقة, كراج, حارس / أمن وحماية, كراج تفك, منطقة شواء, نظام كهرباء احتياطي للطوارئ, بركة سباحة, انتركم")
     
     # Lands & Commercial Specs
     land_type: Optional[str] = Field(description="Match exactly: سكنية, تجارية, زراعية, صناعية, استثمارية, سياحية, مختلطة, أخرى")
     zoning_classification: Optional[str] = Field(description="Match exactly: سكن أ, سكن ب, سكن ج, سكن د, تجاري, زراعي, صناعي, أخرى")
-    facade: Optional[str] = Field(description="Match exactly: شمالية, جنوبية, شرقية, غربية, شمالية شرقية, شمالية غربية, جنوبية شرقية, جنوبية غربية")
+    facade: Optional[str] = Field(description="Match exactly: شقة طابقية, شمالية, جنوبية, شرقية, غربية, شمالية شرقية, شمالية غربية, جنوبية شرقية, جنوبية غربية")
     geometric_shape: Optional[str] = Field(description="Match exactly: مستطيل, مربع, غير منتظم, زاوية / شارعَين")
     topography: Optional[str] = Field(description="Match exactly: مستوية, منحدرة, جبلية, واد")
     available_services: List[str] = Field(description="Match exactly: ماء, كهرباء, صرف صحي, إنترنت, شوارع معبدة")
