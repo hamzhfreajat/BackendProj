@@ -2322,6 +2322,18 @@ def update_ad(
     
     return db_ad
 
+import os
+
+@app.get("/api/diagnostic")
+def diagnostic(db: Session = Depends(get_db)):
+    commit = os.popen("git rev-parse HEAD").read().strip()
+    user = db.query(models.User).filter(models.User.id == 63).first()
+    return {
+        "commit": commit,
+        "wallet_balance": float(user.wallet_balance or 0) if user else None,
+        "is_wallet_balance_less_than_10": (float(user.wallet_balance or 0) < 10.0) if user else None
+    }
+
 @app.post("/api/ads/{ad_id}/bid", response_model=schemas.Ad)
 def set_ad_bid(
     ad_id: int, 
