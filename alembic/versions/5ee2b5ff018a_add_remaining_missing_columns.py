@@ -42,7 +42,8 @@ def upgrade() -> None:
         op.create_index(op.f('ix_wallet_transactions_user_id'), 'wallet_transactions', ['user_id'], unique=False)
         
     try:
-        op.create_foreign_key(None, 'ad_real_estate_details', 'ads', ['ad_id'], ['id'], ondelete='CASCADE')
+        with conn.begin_nested():
+            op.create_foreign_key(None, 'ad_real_estate_details', 'ads', ['ad_id'], ['id'], ondelete='CASCADE')
     except Exception:
         pass
     op.drop_index(op.f('idx_ad_search_attributes'), table_name='ad_search_index', postgresql_using='gin')
@@ -63,12 +64,13 @@ def upgrade() -> None:
                existing_type=sa.TEXT(),
                nullable=True)
     try:
-        op.alter_column('ads', 'source_type',
-                existing_type=sa.VARCHAR(length=50),
-                type_=sa.Enum('ORGANIC_USER', 'SCRAPER_BOT', 'SCRAPER', name='sourcetype'),
-                existing_nullable=True,
-                existing_server_default=sa.text("'ORGANIC_USER'::character varying"),
-                postgresql_using="source_type::sourcetype")
+        with conn.begin_nested():
+            op.alter_column('ads', 'source_type',
+                    existing_type=sa.VARCHAR(length=50),
+                    type_=sa.Enum('ORGANIC_USER', 'SCRAPER_BOT', 'SCRAPER', name='sourcetype'),
+                    existing_nullable=True,
+                    existing_server_default=sa.text("'ORGANIC_USER'::character varying"),
+                    postgresql_using="source_type::sourcetype")
     except Exception:
         pass
     op.drop_index(op.f('idx_ads_location_pattern'), table_name='ads', postgresql_ops={'location': 'text_pattern_ops'})
