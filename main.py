@@ -128,16 +128,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Ensure all database tables exist (creates newly added tables like saved_ads)
 models.Base.metadata.create_all(bind=engine)
 
-# Force run migrations on startup
-import subprocess
-try:
-    print("Running database migrations from main.py...")
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
-    print("Migrations successful.")
-except subprocess.CalledProcessError as e:
-    print(f"Failed to run migrations. Exit code: {e.returncode}")
-except Exception as e:
-    print(f"Exception while running migrations: {e}")
+
 
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
