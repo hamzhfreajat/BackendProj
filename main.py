@@ -3144,53 +3144,46 @@ async def startup_event():
         app.state.arq_pool = None
     
     # Run DB Migrations for new tracking columns
-    db = SessionLocal()
     try:
-        # Add is_active and is_banned to users
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE"))
-        
-        # Create support_messages table if it doesn't exist
-        db.execute(text("""
-        CREATE TABLE IF NOT EXISTS support_messages (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            sender VARCHAR(50) NOT NULL,
-            message TEXT NOT NULL,
-            is_read BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """))
-        db.commit()
+        db = SessionLocal()
+        try:
+            # Add is_active and is_banned to users
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE"))
+            
+            # Create support_messages table if it doesn't exist
+            db.execute(text("""
+            CREATE TABLE IF NOT EXISTS support_messages (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                sender VARCHAR(50) NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """))
+            # Add latest_category_id to users
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL"))
+            
+            # Add category_filters_prefs to users
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS category_filters_prefs JSONB DEFAULT '{}'::jsonb"))
+            
+            # Add last_notified_ad_count to categories
+            db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS last_notified_ad_count INTEGER DEFAULT 0"))
+            db.commit()
+        except Exception as e:
+            print(f"Migration error: {e}")
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        finally:
+            try:
+                db.close()
+            except Exception:
+                pass
     except Exception as e:
-        print(f"Migration error for users: {e}")
-        db.rollback()
-
-    try:
-        # Add latest_category_id to users
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL"))
-        db.commit()
-    except Exception as e:
-        print(f"Migration error: {e}")
-        db.rollback()
-        
-    try:
-        # Add category_filters_prefs to users
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS category_filters_prefs JSONB DEFAULT '{}'::jsonb"))
-        db.commit()
-    except Exception as e:
-        print(f"Migration error: {e}")
-        db.rollback()
-        
-    try:
-        # Add last_notified_ad_count to categories
-        db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS last_notified_ad_count INTEGER DEFAULT 0"))
-        db.commit()
-    except Exception as e:
-        print(f"Migration error: {e}")
-        db.rollback()
-    finally:
-        db.close()
+        print(f"Critical error during startup DB migrations: {e}")
 
 def log_search_query_task(search: str, results_count: int, user_id: int, category_id: int = None, tags: list = None):
     if not search or not search.strip():
