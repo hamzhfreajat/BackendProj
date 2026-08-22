@@ -62,11 +62,15 @@ def upgrade() -> None:
     op.alter_column('ads', 'location',
                existing_type=sa.TEXT(),
                nullable=True)
-    op.alter_column('ads', 'source_type',
-               existing_type=sa.VARCHAR(length=50),
-               type_=sa.Enum('ORGANIC_USER', 'SCRAPER_BOT', 'SCRAPER', name='sourcetype'),
-               existing_nullable=True,
-               existing_server_default=sa.text("'ORGANIC_USER'::character varying"))
+    try:
+        op.alter_column('ads', 'source_type',
+                existing_type=sa.VARCHAR(length=50),
+                type_=sa.Enum('ORGANIC_USER', 'SCRAPER_BOT', 'SCRAPER', name='sourcetype'),
+                existing_nullable=True,
+                existing_server_default=sa.text("'ORGANIC_USER'::character varying"),
+                postgresql_using="source_type::sourcetype")
+    except Exception:
+        pass
     op.drop_index(op.f('idx_ads_location_pattern'), table_name='ads', postgresql_ops={'location': 'text_pattern_ops'})
     op.create_index(op.f('ix_ads_id'), 'ads', ['id'], unique=False)
     op.create_index(op.f('ix_ads_primary_image_hash'), 'ads', ['primary_image_hash'], unique=False)
