@@ -2996,7 +2996,11 @@ async def republish_notifier_worker():
         except Exception as e:
             print(f"Error in republish_notifier_worker: {e}")
         finally:
-            if 'db' in locals(): db.close()
+            if 'db' in locals(): 
+                try:
+                    db.close()
+                except Exception:
+                    pass
         await asyncio.sleep(600)
 
 async def facebook_autopost_worker():
@@ -3111,7 +3115,11 @@ async def facebook_autopost_worker():
         except Exception as e:
             print(f"Error in facebook_autopost_worker: {e}")
         finally:
-            if 'db' in locals(): db.close()
+            if 'db' in locals(): 
+                try:
+                    db.close()
+                except Exception:
+                    pass
         await asyncio.sleep(1800) # Check every 30 minutes
 
 from arq import create_pool
