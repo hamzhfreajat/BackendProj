@@ -126,7 +126,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Ensure all database tables exist (creates newly added tables like saved_ads)
-# models.Base.metadata.create_all(bind=engine) # Handled by Alembic
+models.Base.metadata.create_all(bind=engine)
 
 # Force run migrations on startup
 import subprocess
