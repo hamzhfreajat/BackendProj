@@ -80,7 +80,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_ai_training_logs_id'), 'ai_training_logs', ['id'], unique=False)
     op.alter_column('categories', 'icon_name',
                existing_type=sa.TEXT(),
-               type_=sa.String(length=50),
+               type_=sa.String(length=255),
                existing_nullable=True)
     op.create_index(op.f('ix_categories_id'), 'categories', ['id'], unique=False)
     op.alter_column('facebook_autopost_rules', 'region_name',

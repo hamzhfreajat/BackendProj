@@ -1175,6 +1175,12 @@ def read_ads(
         query = query.filter(models.Ad.user_id == user_id)
     from sqlalchemy.sql.expression import case
     
+    # Calculate effective CPC bid (only counts if user has enough balance)
+    effective_bid = case(
+        ((models.User.wallet_balance >= models.Ad.cpc_bid) & (models.Ad.cpc_bid > 0), models.Ad.cpc_bid),
+        else_=0
+    )
+    
     ignore_location = False
     if search:
         try:
@@ -1203,7 +1209,7 @@ def read_ads(
         whens = [(models.Ad.id == ad_id, index) for ad_id, index in order_cases.items()]
         
         if whens:
-            query = query.order_by(case(*whens))
+            query = query.order_by(effective_bid.desc(), case(*whens))
     elif background_tasks and log_query and log_query.strip():
         user_id_val = current_user.id if hasattr(current_user, 'id') else None
         total_results = query.count()
@@ -1489,20 +1495,14 @@ def read_ads(
         else_=1
     )
 
-    # Calculate effective CPC bid (only counts if user has enough balance)
-    effective_bid = case(
-        ((models.User.wallet_balance >= models.Ad.cpc_bid) & (models.Ad.cpc_bid > 0), models.Ad.cpc_bid),
-        else_=0
-    )
-
     if sort_by == 'price_asc':
-        query = query.order_by(models.Ad.price.asc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
-        query = query.order_by(models.Ad.price.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), models.Ad.price.desc(), models.Ad.id.desc())
     elif sort_by == 'oldest':
-        query = query.order_by(models.Ad.created_at.asc(), models.Ad.id.asc())
+        query = query.order_by(effective_bid.desc(), models.Ad.created_at.asc(), models.Ad.id.asc())
     elif sort_by == 'most_viewed':
-        query = query.order_by(models.Ad.views.desc(), models.Ad.id.desc())
+        query = query.order_by(effective_bid.desc(), models.Ad.views.desc(), models.Ad.id.desc())
     elif sort_by == 'nearest' and user_lat is not None and user_lng is not None:
         from sqlalchemy import func
         query = query.outerjoin(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
