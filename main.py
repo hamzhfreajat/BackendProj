@@ -25,7 +25,7 @@ except Exception:
 
 import models
 from sqlalchemy import text
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import re
 
@@ -127,6 +127,17 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Ensure all database tables exist (creates newly added tables like saved_ads)
 # models.Base.metadata.create_all(bind=engine) # Handled by Alembic
+
+# Force run migrations on startup
+import subprocess
+try:
+    print("Running database migrations from main.py...")
+    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    print("Migrations successful.")
+except subprocess.CalledProcessError as e:
+    print(f"Failed to run migrations. Exit code: {e.returncode}")
+except Exception as e:
+    print(f"Exception while running migrations: {e}")
 
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -2336,16 +2347,52 @@ def set_ad_bid(
 @app.post("/api/ads/{ad_id}/track-click", response_model=dict)
 def track_ad_click(
     ad_id: int, 
+    request: Request,
     action_type: str = Body(..., embed=True), # 'call', 'whatsapp', 'chat'
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not ad:
         raise HTTPException(status_code=404, detail="Ad not found")
         
+    if current_user and current_user.id == ad.user_id:
+        return {"status": "success", "deducted": 0.0, "reason": "self_click"}
+        
     # Check if this ad has an active bid and the owner has balance
     owner = db.query(models.User).filter(models.User.id == ad.user_id).with_for_update().first()
     if ad.cpc_bid > 0 and owner.wallet_balance >= ad.cpc_bid:
+        
+        # Click Fraud Protection
+        ip_address = auth.get_real_ip(request)
+        one_day_ago = datetime.utcnow() - timedelta(days=1)
+        
+        query = db.query(models.AdClickTracking).filter(
+            models.AdClickTracking.ad_id == ad_id,
+            models.AdClickTracking.created_at >= one_day_ago
+        )
+        
+        if current_user:
+            query = query.filter(
+                (models.AdClickTracking.user_id == current_user.id) | 
+                (models.AdClickTracking.ip_address == ip_address)
+            )
+        else:
+            query = query.filter(models.AdClickTracking.ip_address == ip_address)
+            
+        previous_click = query.first()
+        
+        if previous_click:
+            return {"status": "success", "deducted": 0.0, "reason": "duplicate_click_within_24h"}
+            
+        # Record new click
+        click_log = models.AdClickTracking(
+            ad_id=ad_id,
+            user_id=current_user.id if current_user else None,
+            ip_address=ip_address
+        )
+        db.add(click_log)
+        
         # Deduct the bid amount
         owner.wallet_balance = float(owner.wallet_balance) - float(ad.cpc_bid)
         

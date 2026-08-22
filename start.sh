@@ -3,4 +3,4 @@
 arq worker.WorkerSettings &
 
 # Start the FastAPI web server in the foreground with 4 workers to utilize all CPU cores
-exec uvicorn main:app --host 0.0.0.0 --port 8080 --workers 4
+exec gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8080 --preload

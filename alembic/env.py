@@ -29,18 +29,9 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 import models
 target_metadata = models.Base.metadata
 
-# Override sqlalchemy.url with the environment variable
-db_url = os.environ.get("DATABASE_URL")
-if not db_url:
-    # Construct it if missing
-    db_user = os.environ.get("DB_USER", "postgres")
-    db_pass = os.environ.get("DB_PASSWORD", "postgres")
-    db_host = os.environ.get("DB_HOST", "localhost")
-    db_port = os.environ.get("DB_PORT", "5432")
-    db_name = os.environ.get("DB_NAME", "classifieds_db")
-    db_url = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+import database
+config.set_main_option("sqlalchemy.url", database.SQLALCHEMY_DATABASE_URL)
 
-config.set_main_option("sqlalchemy.url", db_url)
 
 
 # other values from the config, defined by the needs of env.py,
