@@ -621,3 +621,12 @@ class BlockedPhoneNumber(Base):
     __tablename__ = 'blocked_phone_numbers'
     phone_number = Column(String(20), primary_key=True, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+class AdClickTracking(Base):
+    __tablename__ = "ad_click_tracking"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    ip_address = Column(String(50), nullable=True, index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now(), index=True)

@@ -639,12 +639,37 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
         return user
-    except jwt.ExpiredSignatureError:
-        log_expired_token(get_real_ip(request), request.url.path)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
-    except jwt.PyJWTError:
-        log_jwt_forgery_attempt(get_real_ip(request), request.url.path)
+        
+    except JWTError:
+        log_auth_failure(get_real_ip(request), request.url.path, "Invalid JWT structure")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+
+
+def get_current_user_optional(request: Request, db: Session = Depends(get_db)):
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        
+    if not token:
+        token = request.cookies.get("access_token")
+            
+    if not token:
+        return None
+        
+    if is_token_revoked(token):
+        return None
+        
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+            
+        user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+        return user
+    except Exception:
+        return None
 
 @router.get("/me", response_model=schemas.User)
 def get_me(current_user: models.User = Depends(get_current_user)):
