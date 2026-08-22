@@ -99,7 +99,11 @@ def upgrade() -> None:
     op.create_index(op.f('ix_user_metrics_id'), 'user_metrics', ['id'], unique=False)
     op.create_index(op.f('ix_user_reviews_id'), 'user_reviews', ['id'], unique=False)
     op.create_index(op.f('ix_user_reviews_target_user_id'), 'user_reviews', ['target_user_id'], unique=False)
-    op.add_column('users', sa.Column('wallet_balance', sa.DECIMAL(precision=10, scale=2), nullable=True))
+    try:
+        with op.get_bind().begin_nested():
+            op.add_column('users', sa.Column('wallet_balance', sa.DECIMAL(precision=10, scale=2), nullable=True))
+    except Exception:
+        pass
     op.drop_constraint(op.f('users_mobile_number_key'), 'users', type_='unique')
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_mobile_number'), 'users', ['mobile_number'], unique=True)
