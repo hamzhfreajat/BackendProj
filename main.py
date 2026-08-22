@@ -2545,12 +2545,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 @app.post("/api/ads/{ad_id}/interaction/view", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
 def record_ad_view(
     ad_id: int, 
-    request: Request,
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Logs an ad view per user for the history tracking and deducts CPC balance if applicable."""
+    """Logs an ad view per user for the history tracking."""
     # Ensure ad exists
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
@@ -2569,41 +2568,6 @@ def record_ad_view(
         set_=dict(viewed_at=func.now())
     )
     db.execute(stmt)
-    
-    deducted = 0.0
-    if current_user.id != db_ad.user_id:
-        owner = db.query(models.User).filter(models.User.id == db_ad.user_id).with_for_update().first()
-        if db_ad.cpc_bid > 0 and owner.wallet_balance >= db_ad.cpc_bid:
-            ip_address = auth.get_real_ip(request)
-            one_day_ago = datetime.utcnow() - timedelta(days=1)
-            
-            # Check for duplicate clicks within 24h
-            previous_click = db.query(models.AdClickTracking).filter(
-                models.AdClickTracking.ad_id == ad_id,
-                models.AdClickTracking.created_at >= one_day_ago,
-                ((models.AdClickTracking.user_id == current_user.id) | (models.AdClickTracking.ip_address == ip_address))
-            ).first()
-            
-            if not previous_click:
-                click_log = models.AdClickTracking(
-                    ad_id=ad_id,
-                    user_id=current_user.id,
-                    ip_address=ip_address
-                )
-                db.add(click_log)
-                
-                owner.wallet_balance = float(owner.wallet_balance) - float(db_ad.cpc_bid)
-                deducted = float(db_ad.cpc_bid)
-                
-                transaction = models.WalletTransaction(
-                    user_id=owner.id,
-                    amount=-deducted,
-                    transaction_type="CLICK_DEDUCTION",
-                    description=f"Ad View (Click) on Ad #{db_ad.id} '{db_ad.title}'",
-                    reference_id=str(db_ad.id)
-                )
-                db.add(transaction)
-
     db.commit()
     
     milestones = [10, 50, 100, 500, 1000]
@@ -2617,7 +2581,7 @@ def record_ad_view(
             reference_id=ad_id
         )
         
-    return {"status": "success", "deducted": deducted}
+    return {"status": "success"}
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
 def read_recently_viewed_ads(
