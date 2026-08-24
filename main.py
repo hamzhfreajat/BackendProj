@@ -1104,6 +1104,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
 def get_search_logs(
     limit: int = 100, 
     results_count: int = Query(None, description="Filter by exact results count"),
+    current_admin: models.User = Depends(auth.get_current_admin),
     db: Session = Depends(get_db)
 ):
     """Admin endpoint to fetch recent raw search queries."""
@@ -2602,45 +2603,6 @@ def record_ad_view(
     )
     db.execute(stmt)
     
-    deducted = 0.0
-    if current_user.id != db_ad.user_id:
-        owner = db.query(models.User).filter(models.User.id == db_ad.user_id).with_for_update().first()
-        if db_ad.cpc_bid > 0 and owner.wallet_balance >= db_ad.cpc_bid:
-            ip_address = auth.get_real_ip(request)
-            one_day_ago = datetime.utcnow() - timedelta(days=1)
-            
-            # Check for duplicate clicks within 24h
-            previous_click = db.query(models.AdClickTracking).filter(
-                models.AdClickTracking.ad_id == ad_id,
-                models.AdClickTracking.created_at >= one_day_ago,
-                ((models.AdClickTracking.user_id == current_user.id) | (models.AdClickTracking.ip_address == ip_address))
-            ).first()
-            
-            if not previous_click:
-                click_log = models.AdClickTracking(
-                    ad_id=ad_id,
-                    user_id=current_user.id,
-                    ip_address=ip_address
-                )
-                db.add(click_log)
-                
-                owner.wallet_balance = float(owner.wallet_balance) - float(db_ad.cpc_bid)
-                if owner.wallet_balance < 0.07:
-                    db.query(models.Ad).filter(models.Ad.user_id == owner.id, models.Ad.cpc_bid > 0).update({"cpc_bid": 0.0}, synchronize_session=False)
-                deducted = float(db_ad.cpc_bid)
-                
-                # SECURITY: Sanitize ad title in transaction description
-                safe_title = (db_ad.title or "")[:50].replace("'", "").replace('"', '')
-                
-                transaction = models.WalletTransaction(
-                    user_id=owner.id,
-                    amount=-deducted,
-                    transaction_type="CLICK_DEDUCTION",
-                    description=f"Ad View (Click) on Ad #{db_ad.id} '{safe_title}'",
-                    reference_id=str(db_ad.id)
-                )
-                db.add(transaction)
-
     db.commit()
     
     milestones = [10, 50, 100, 500, 1000]
@@ -3368,7 +3330,7 @@ def get_version_config(db: Session = Depends(get_db)):
     }
 
 @app.put("/api/config/version")
-def update_version_config(req: AppConfigUpdate, db: Session = Depends(get_db)):
+def update_version_config(req: AppConfigUpdate, current_admin: models.User = Depends(auth.get_current_admin), db: Session = Depends(get_db)):
     config = db.query(models.AppConfig).first()
     if not config:
         config = models.AppConfig(**req.dict())

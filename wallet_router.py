@@ -20,13 +20,18 @@ async def verify_apple_receipt(receipt_data: str) -> dict:
         "exclude-old-transactions": True
     }
     
+    is_production = os.environ.get("ENV", "development") == "production"
+    
     # Try production first
     async with aiohttp.ClientSession() as session:
         async with session.post("https://buy.itunes.apple.com/verifyReceipt", json=payload) as resp:
             data = await resp.json()
             
             # 21007 indicates this receipt is from the Sandbox environment
+            # SECURITY: Only allow sandbox fallback in non-production environments
             if data.get("status") == 21007:
+                if is_production:
+                    raise HTTPException(status_code=400, detail="Sandbox receipts are not accepted in production")
                 async with session.post("https://sandbox.itunes.apple.com/verifyReceipt", json=payload) as sandbox_resp:
                     data = await sandbox_resp.json()
                     

@@ -113,7 +113,7 @@ SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("CRITICAL: JWT_SECRET_KEY environment variable is not set. Refusing to start.")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 525600 # 1 Year (365 days)
+ACCESS_TOKEN_EXPIRE_MINUTES = 30 # 30 minutes
 REFRESH_TOKEN_EXPIRE_DAYS = 365 # 1 Year
 
 # Disable testing mode in production to re-enable rate limits
@@ -239,16 +239,9 @@ def normalize_jo_phone(phone_number: str) -> str:
     return cleaned
 
 def get_real_ip(request: Request) -> str:
-    # ProxyHeadersMiddleware sets request.client.host based on X-Forwarded-For if available
-    # But we can also manually check CF-Connecting-IP for Cloudflare if needed
-    cf_ip = request.headers.get("cf-connecting-ip")
-    if cf_ip:
-        return cf_ip
-    
-    x_forwarded_for = request.headers.get("x-forwarded-for")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-        
+    # SECURITY: Rely on request.client.host which is set by ProxyHeadersMiddleware
+    # from trusted proxy headers only. Do NOT read raw X-Forwarded-For/CF-Connecting-IP
+    # headers directly as they can be spoofed by untrusted clients.
     if request.client and request.client.host:
         return request.client.host
     return "127.0.0.1"
@@ -642,7 +635,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
         return user
         
-    except JWTError:
+    except jwt.PyJWTError:
         log_auth_failure(get_real_ip(request), request.url.path, "Invalid JWT structure")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
