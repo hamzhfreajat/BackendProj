@@ -2564,6 +2564,10 @@ def notify_phone_revealed(
             notification_type="phone_revealed",
             reference_id=ad_id
         )
+        
+    db_ad.chats_count = (db_ad.chats_count or 0) + 1
+    db.commit()
+    
     return {"status": "success"}
 
 @app.post("/api/ads/{ad_id}/interaction/chat", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
