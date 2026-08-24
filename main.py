@@ -2662,6 +2662,8 @@ def record_bulk_ad_views(
     for ad_id in request.ad_ids:
         redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
         
+    print(f"[DEBUG] Received bulk views from frontend for ads: {request.ad_ids}")
+        
     return {"status": "success"}
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
@@ -3223,6 +3225,7 @@ async def sync_ad_views_worker():
                                     views=func.coalesce(models.Ad.views, 0) + count
                                 ))
                         db.commit()
+                        print(f"[DEBUG] sync_ad_views_worker successfully updated views for {len(views_data)} ads.")
                     except Exception as e:
                         db.rollback()
                         print(f"Error bulk updating ad views: {e}")
