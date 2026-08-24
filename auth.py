@@ -1,4 +1,5 @@
 import os
+import hashlib
 from datetime import datetime, timedelta
 import secrets
 from typing import List
@@ -127,7 +128,8 @@ def create_access_token(data: dict):
 
 def create_refresh_token(db: Session, user_id: int) -> str:
     token_str = secrets.token_urlsafe(64)
-    hashed_token = get_password_hash(token_str)
+    # SECURITY: Use hashlib.sha256 consistently (must match refresh_token_endpoint verification)
+    hashed_token = hashlib.sha256(token_str.encode()).hexdigest()
     
     expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     db_refresh_token = models.RefreshToken(

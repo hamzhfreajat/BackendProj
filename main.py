@@ -146,7 +146,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"])
 import time
 from database import SessionLocal
 
@@ -2330,7 +2330,7 @@ def update_ad(
     
     return db_ad
 
-@app.post("/api/ads/{ad_id}/bid", response_model=schemas.Ad)
+@app.post("/api/ads/{ad_id}/bid", response_model=schemas.Ad, dependencies=[Depends(auth.get_rate_limiter(10, 60))])
 def set_ad_bid(
     ad_id: int, 
     bid_request: schemas.AdBidRequest, 
@@ -2344,7 +2344,11 @@ def set_ad_bid(
     if bid_request.cpc_bid > 0:
         if bid_request.cpc_bid < 0.07:
             raise HTTPException(status_code=400, detail="Minimum bid must be 0.07 JOD")
-        if float(current_user.wallet_balance or 0) < 0.07:
+        if bid_request.cpc_bid > 10.0:
+            raise HTTPException(status_code=400, detail="Maximum bid is 10.0 JOD")
+        # SECURITY: Lock user row to prevent race condition on balance check
+        user = db.query(models.User).filter(models.User.id == current_user.id).with_for_update().first()
+        if float(user.wallet_balance or 0) < 0.07:
             raise HTTPException(status_code=402, detail="Insufficient balance. Minimum 0.07 JOD required.")
         
     ad.cpc_bid = bid_request.cpc_bid
@@ -2352,7 +2356,9 @@ def set_ad_bid(
     db.refresh(ad)
     return ad
 
-@app.post("/api/ads/{ad_id}/track-click", response_model=dict)
+ALLOWED_ACTION_TYPES = {"call", "whatsapp", "chat"}
+
+@app.post("/api/ads/{ad_id}/track-click", response_model=dict, dependencies=[Depends(auth.get_rate_limiter(20, 60))])
 def track_ad_click(
     ad_id: int, 
     request: Request,
@@ -2360,6 +2366,10 @@ def track_ad_click(
     current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+    # SECURITY: Validate action_type to prevent injection
+    if action_type not in ALLOWED_ACTION_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid action type")
+    
     ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not ad:
         raise HTTPException(status_code=404, detail="Ad not found")
@@ -2406,12 +2416,15 @@ def track_ad_click(
         if owner.wallet_balance < 0.07:
             db.query(models.Ad).filter(models.Ad.user_id == owner.id, models.Ad.cpc_bid > 0).update({"cpc_bid": 0.0}, synchronize_session=False)
         
+        # SECURITY: Sanitize ad title in transaction description (truncate, no raw user input)
+        safe_title = (ad.title or "")[:50].replace("'", "").replace('"', '')
+        
         # Log the transaction
         transaction = models.WalletTransaction(
             user_id=owner.id,
             amount=-float(ad.cpc_bid),
             transaction_type="CLICK_DEDUCTION",
-            description=f"Action: {action_type} on Ad #{ad.id} '{ad.title}'",
+            description=f"Action: {action_type} on Ad #{ad.id} '{safe_title}'",
             reference_id=str(ad.id)
         )
         db.add(transaction)
@@ -2616,11 +2629,14 @@ def record_ad_view(
                     db.query(models.Ad).filter(models.Ad.user_id == owner.id, models.Ad.cpc_bid > 0).update({"cpc_bid": 0.0}, synchronize_session=False)
                 deducted = float(db_ad.cpc_bid)
                 
+                # SECURITY: Sanitize ad title in transaction description
+                safe_title = (db_ad.title or "")[:50].replace("'", "").replace('"', '')
+                
                 transaction = models.WalletTransaction(
                     user_id=owner.id,
                     amount=-deducted,
                     transaction_type="CLICK_DEDUCTION",
-                    description=f"Ad View (Click) on Ad #{db_ad.id} '{db_ad.title}'",
+                    description=f"Ad View (Click) on Ad #{db_ad.id} '{safe_title}'",
                     reference_id=str(db_ad.id)
                 )
                 db.add(transaction)
