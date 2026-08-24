@@ -2571,6 +2571,10 @@ def notify_chat_started(
             notification_type="chat_started",
             reference_id=ad_id
         )
+        
+    db_ad.chats_count = (db_ad.chats_count or 0) + 1
+    db.commit()
+    
     return {"status": "success"}
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -2616,7 +2620,7 @@ def record_ad_view(
             reference_id=ad_id
         )
         
-    return {"status": "success", "deducted": deducted}
+    return {"status": "success"}
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
 def read_recently_viewed_ads(
