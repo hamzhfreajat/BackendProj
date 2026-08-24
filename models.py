@@ -521,6 +521,7 @@ class AdSearchIndex(Base):
     build_area = Column(DECIMAL(10, 2), nullable=True)
     floor_number = Column(Integer, nullable=True)
     is_hot = Column(Boolean, default=False)
+    is_featured = Column(Boolean, default=False)
     is_boosted = Column(Boolean, default=False)
     attributes_jsonb = Column(JSONB, nullable=True)
     search_text = Column(Text, nullable=True)

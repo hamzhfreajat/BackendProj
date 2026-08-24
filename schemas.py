@@ -384,6 +384,7 @@ class AdBase(BaseModel):
     category_id: Optional[int] = None
     attributes: Optional[dict] = None
     video_url: Optional[str] = None
+    is_featured: Optional[bool] = False
 
 class AdCreate(AdBase):
     linked_tags: Optional[List[str]] = []
@@ -405,6 +406,7 @@ class AdUpdate(BaseModel):
     phone_number: Optional[str] = None
     real_estate_detail: Optional[dict] = None
     is_published: Optional[bool] = None
+    is_featured: Optional[bool] = None
 
 class AdDraftCreate(BaseModel):
     category_id: Optional[int] = None

@@ -33,7 +33,7 @@ class ExtractedAdAttributes(BaseModel):
     rooms: Optional[int] = Field(description="Number of rooms, if mentioned")
     bathrooms: Optional[int] = Field(description="Number of bathrooms")
     furnished: Optional[str] = Field(description="Furnished state. Match exactly: مفروشة, غير مفروشة, مفروش جزئياً")
-    floor: Optional[str] = Field(description="Floor level. Match exactly: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, 1, 2, 3, 4, 5, 6, 7")
+    floor: Optional[str] = Field(description="Floor level. Match exactly: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, 1, 2, 3, 4, 5, 6, 7, طابق أخير, روف, طابق أخير مع روف")
     key_features: List[str] = Field(description="Array of features. Match exactly if possible: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج, مطبخ راكب, صالون واسع, تأسيس تكييف")
     has_terrace: Optional[str] = Field(description="Match exactly: نعم, لا if the ad mentions having a terrace (ترس)")
     terrace_area: Optional[str] = Field(description="Terrace area in square meters if mentioned")

@@ -1514,13 +1514,13 @@ def read_ads(
     )
 
     if sort_by == 'price_asc':
-        query = query.order_by(effective_bid.desc(), models.Ad.price.asc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.price.asc(), models.Ad.id.desc())
     elif sort_by == 'price_desc':
-        query = query.order_by(effective_bid.desc(), models.Ad.price.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.price.desc(), models.Ad.id.desc())
     elif sort_by == 'oldest':
-        query = query.order_by(effective_bid.desc(), models.Ad.created_at.asc(), models.Ad.id.asc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.created_at.asc(), models.Ad.id.asc())
     elif sort_by == 'most_viewed':
-        query = query.order_by(effective_bid.desc(), models.Ad.views.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.views.desc(), models.Ad.id.desc())
     elif sort_by == 'nearest' and user_lat is not None and user_lng is not None:
         from sqlalchemy import func
         query = query.outerjoin(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
@@ -1530,17 +1530,17 @@ def read_ads(
             func.pow(models.Region.latitude - user_lat, 2) + 
             func.pow((models.Region.longitude - user_lng) * func.cos(user_lat * 3.14159 / 180.0), 2)
         )
-        query = query.order_by(effective_bid.desc(), distance.asc().nulls_last(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), distance.asc().nulls_last(), models.Ad.id.desc())
     elif sort_by == 'newest':
-        query = query.order_by(effective_bid.desc(), has_image.desc(), has_price.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), has_image.desc(), has_price.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'strict_newest':
-        query = query.order_by(effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
-        query = query.order_by(effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'recommended' or sort_by is None:
-        query = query.order_by(effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     else:
-        query = query.order_by(effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+        query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
         
     ads = query.offset(skip).limit(limit).all()
     
@@ -2493,6 +2493,22 @@ def toggle_publish_ad(
             notification_type="ad_unpublished",
             reference_id=db_ad.id
         )
+
+    return db_ad
+
+@app.put("/api/ads/{ad_id}/toggle-featured", response_model=schemas.Ad)
+def toggle_featured_ad(
+    ad_id: int,
+    current_admin: models.User = Depends(auth.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if not db_ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+            
+    db_ad.is_featured = not db_ad.is_featured
+    db.commit()
+    db.refresh(db_ad)
 
     return db_ad
 
