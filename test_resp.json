@@ -1,0 +1,92 @@
+[
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (android)",
+    "reference_id": "innlfnmpccfmkjbnibcfdhhh.AO-J1OwqMEj1PZQglvVTmu0CB",
+    "id": 12,
+    "user_id": 479,
+    "created_at": "2026-08-24T13:46:13.732734"
+  },
+  {
+    "amount": 20.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (android)",
+    "reference_id": "cekffpbocdabhmphofmfpfij.AO-J1OyXtHcHAiYWJEeaXkoOU",
+    "id": 11,
+    "user_id": 479,
+    "created_at": "2026-08-24T13:45:49.188851"
+  },
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (android)",
+    "reference_id": "naclnbbnanogobijooaabepo.AO-J1OwEzW3QlVGekKM18ugM4",
+    "id": 10,
+    "user_id": 479,
+    "created_at": "2026-08-24T13:44:28.395028"
+  },
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (android)",
+    "reference_id": "fbmdjegjpjcaclicegnlbcca.AO-J1OwEGuQsY58UnSdpBRRYY",
+    "id": 9,
+    "user_id": 479,
+    "created_at": "2026-08-24T13:19:44.104542"
+  },
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (ios)",
+    "reference_id": "eyJhbGciOiJFUzI1NiIsIng1YyI6WyJNSUlFTVRDQ0E3YWdBd0",
+    "id": 8,
+    "user_id": 479,
+    "created_at": "2026-08-23T22:44:36.078810"
+  },
+  {
+    "amount": 20.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (ios)",
+    "reference_id": "eyJhbGciOiJFUzI1NiIsIng1YyI6WyJNSUlFTVRDQ0E3YWdBd0",
+    "id": 7,
+    "user_id": 479,
+    "created_at": "2026-08-23T22:43:18.083744"
+  },
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (ios)",
+    "reference_id": "eyJhbGciOiJFUzI1NiIsIng1YyI6WyJNSUlFTVRDQ0E3YWdBd0",
+    "id": 6,
+    "user_id": 479,
+    "created_at": "2026-08-23T22:28:19.495681"
+  },
+  {
+    "amount": -0.07,
+    "transaction_type": "CLICK_DEDUCTION",
+    "description": "Action: call on Ad #36275 'شقة فاخرة 350م في تلاع العلي - 4 نوم مع بلكونة 110م'",
+    "reference_id": "36275",
+    "id": 5,
+    "user_id": 479,
+    "created_at": "2026-08-22T23:40:23.145065"
+  },
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (android)",
+    "reference_id": "cccfnpgekhgpeblpohmeopio.AO-J1OyrMm_FM7gqSayaPs0cp",
+    "id": 3,
+    "user_id": 479,
+    "created_at": "2026-08-22T18:03:56.187097"
+  },
+  {
+    "amount": 10.0,
+    "transaction_type": "TOPUP",
+    "description": "In-App Purchase Top-up (android)",
+    "reference_id": "cccfnpgekhgpeblpohmeopio.AO-J1OyrMm_FM7gqSayaPs0cp",
+    "id": 4,
+    "user_id": 479,
+    "created_at": "2026-08-22T18:03:56.185686"
+  }
+]

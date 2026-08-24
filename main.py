@@ -2414,7 +2414,20 @@ def track_ad_click(
         
         from auth import redis_client
         if redis_client:
-            redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
+            try:
+                redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
+            except Exception as e:
+                print(f"Redis error during track_ad_click, triggering fallback: {e}")
+                from sqlalchemy import func
+                db.query(models.Ad).filter(models.Ad.id == ad_id).update({
+                    "views": func.coalesce(models.Ad.views, 0) + 1
+                }, synchronize_session=False)
+        else:
+            # Fallback to direct DB update
+            from sqlalchemy import func
+            db.query(models.Ad).filter(models.Ad.id == ad_id).update({
+                "views": func.coalesce(models.Ad.views, 0) + 1
+            }, synchronize_session=False)
         
         # Deduct the bid amount
         owner.wallet_balance = float(owner.wallet_balance) - float(ad.cpc_bid)
@@ -2633,7 +2646,8 @@ def record_ad_view(
 @app.post("/api/ads/interactions/bulk-views")
 def record_bulk_ad_views(
     request: schemas.BulkViewsRequest,
-    current_user: Optional[models.User] = Depends(auth.get_current_user_optional)
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
+    db: Session = Depends(get_db)
 ):
     """
     Called by the frontend every few seconds to record impressions (views).
@@ -2641,14 +2655,31 @@ def record_bulk_ad_views(
     """
     from auth import redis_client
     if not redis_client:
-        return {"status": "error", "message": "Redis not available"}
+        _fallback_bulk_views(db, request.ad_ids)
+        return {"status": "success", "fallback": True}
         
-    for ad_id in request.ad_ids:
-        redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
-        
-    print(f"[DEBUG] Received bulk views from frontend for ads: {request.ad_ids}")
+    try:
+        for ad_id in request.ad_ids:
+            redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
+        print(f"[DEBUG] Received bulk views from frontend for ads: {request.ad_ids}")
+    except Exception as e:
+        print(f"Redis error during bulk-views, triggering fallback: {e}")
+        _fallback_bulk_views(db, request.ad_ids)
+        return {"status": "success", "fallback": True}
         
     return {"status": "success"}
+
+def _fallback_bulk_views(db: Session, ad_ids: list[int]):
+    from sqlalchemy import update, func
+    try:
+        db.execute(update(models.Ad).where(models.Ad.id.in_(ad_ids)).values(
+            views=func.coalesce(models.Ad.views, 0) + 1
+        ))
+        db.commit()
+        print(f"[DEBUG] Fallback updated views directly in DB for ads: {ad_ids}")
+    except Exception as e:
+        db.rollback()
+        print(f"Error in fallback ad views update: {e}")
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
 def read_recently_viewed_ads(

@@ -20,11 +20,25 @@ try:
     redis_host = os.getenv("REDIS_HOST", "redis")
     redis_port = int(os.getenv("REDIS_PORT", 6379))
     redis_password = os.getenv("REDIS_PASSWORD", None)
-    redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password, db=0, decode_responses=True, socket_connect_timeout=1)
-    redis_client.ping()
-    USING_REDIS = True
-except Exception as e:
-    print(f"Failed to connect to Redis in auth.py: {e}")
+    redis_client = redis.Redis(
+        host=redis_host, 
+        port=redis_port, 
+        password=redis_password, 
+        db=0, 
+        decode_responses=True, 
+        socket_connect_timeout=3, # Increased timeout
+        retry_on_timeout=True
+    )
+    # We attempt a ping to check initial status, but we DO NOT 
+    # permanently disable the client if it fails (Docker timing issue)
+    try:
+        redis_client.ping()
+        USING_REDIS = True
+    except Exception as e:
+        print(f"Warning: Redis not immediately available at startup, will retry automatically: {e}")
+        USING_REDIS = False
+except ImportError:
+    print("Redis package not installed.")
     USING_REDIS = False
     redis_client = None
 

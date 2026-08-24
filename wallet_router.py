@@ -28,15 +28,20 @@ async def verify_apple_receipt(receipt_data: str) -> dict:
             data = await resp.json()
             
             # 21007 indicates this receipt is from the Sandbox environment
-            # SECURITY: Only allow sandbox fallback in non-production environments
+            # Apple REQUIRES production servers to accept Sandbox receipts during App Review,
+            # because Apple reviewers test the live app using sandbox accounts.
+            # (The shared_secret protects against spoofing, as it must match your app).
             if data.get("status") == 21007:
-                if is_production:
-                    raise HTTPException(status_code=400, detail="Sandbox receipts are not accepted in production")
                 async with session.post("https://sandbox.itunes.apple.com/verifyReceipt", json=payload) as sandbox_resp:
                     data = await sandbox_resp.json()
                     
     if data.get("status") != 0:
         raise HTTPException(status_code=400, detail=f"Apple validation failed with status {data.get('status')}")
+        
+    # SECURITY: Verify the bundle ID to prevent cross-app receipt spoofing
+    receipt_bundle_id = data.get("receipt", {}).get("bundle_id")
+    if receipt_bundle_id != "com.sooqcom.app":
+        raise HTTPException(status_code=400, detail="Invalid bundle ID in receipt")
         
     return data
 
