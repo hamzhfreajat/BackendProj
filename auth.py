@@ -113,7 +113,7 @@ SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("CRITICAL: JWT_SECRET_KEY environment variable is not set. Refusing to start.")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30 # 30 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 525600 # 1 Year (365 days)
 REFRESH_TOKEN_EXPIRE_DAYS = 365 # 1 Year
 
 # Disable testing mode in production to re-enable rate limits
