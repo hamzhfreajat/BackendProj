@@ -22,13 +22,18 @@ SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{DB_USER}:{encoded_password}@{D
 
 # Globally enforce the exact timezone so the Postgres func.now() strictly outputs Jordan time,
 # eliminating the 3-hour "time ago" parsing discrepancy in Flutter.
+# NOTE: We disable prepared statements (prepare_threshold=None) because 
+# psycopg 3's prepared statements are incompatible with PgBouncer's transaction mode.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"options": "-c timezone=Asia/Amman"},
+    connect_args={
+        "options": "-c timezone=Asia/Amman",
+        "prepare_threshold": None
+    },
     pool_pre_ping=True,
-    pool_recycle=120,
-    pool_size=5,
-    max_overflow=10,
+    pool_recycle=300, # Recycle connections every 5 minutes
+    pool_size=20,     # Increased pool size to prevent starvation under load
+    max_overflow=30,  # Increased overflow to handle traffic spikes
     pool_timeout=30
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

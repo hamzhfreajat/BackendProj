@@ -253,6 +253,7 @@ class Ad(Base):
     views = Column(Integer, default=0)
     is_hot = Column(Boolean, default=False)
     is_published = Column(Boolean, default=False)
+    is_featured = Column(Boolean, default=False)
     
     # My Ads / User Listings support fields
     expires_at = Column(TIMESTAMP, nullable=True)
