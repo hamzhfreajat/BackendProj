@@ -2412,6 +2412,10 @@ def track_ad_click(
         )
         db.add(click_log)
         
+        from auth import redis_client
+        if redis_client:
+            redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
+        
         # Deduct the bid amount
         owner.wallet_balance = float(owner.wallet_balance) - float(ad.cpc_bid)
         if owner.wallet_balance < 0.07:
@@ -3019,7 +3023,8 @@ async def republish_notifier_worker():
             )
             
             # fetchall() executes the statement and retrieves the rows updated by THIS specific worker
-            updated_ads = db.execute(stmt).fetchall()
+            result = db.execute(stmt)
+            updated_ads = result.fetchall() if result.returns_rows else []
             db.commit()
             
             if updated_ads:
@@ -3193,13 +3198,13 @@ async def sync_ad_views_worker():
                     # views_data is a dict like {'1': '5', '12': '1'}
                     db = SessionLocal()
                     try:
-                        from sqlalchemy import update
+                        from sqlalchemy import update, func
                         for ad_id_str, count_str in views_data.items():
                             ad_id = int(ad_id_str)
                             count = int(count_str)
                             if count > 0:
                                 db.execute(update(models.Ad).where(models.Ad.id == ad_id).values(
-                                    views=(models.Ad.views or 0) + count
+                                    views=func.coalesce(models.Ad.views, 0) + count
                                 ))
                         db.commit()
                     except Exception as e:
