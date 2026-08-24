@@ -450,6 +450,7 @@ class Ad(AdBase):
     views: int = 0
     is_hot: bool = False
     is_published: bool = False
+    is_featured: bool = False
     linked_tags: Optional[List[Tag]] = []
     
     @field_validator('location', mode='before')
