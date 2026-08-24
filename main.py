@@ -1403,9 +1403,12 @@ def read_ads(
                 for val in values:
                     conds.append(models.Ad.attributes['rent_duration'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['rent_duration'].astext == val)
-            elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible"]:
+            elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible", "advertiser_type"]:
                 for val in values:
                     conds.append(models.Ad.attributes['dynamic_data'][prefix].astext == val)
+            elif prefix in ["payment_method", "transaction_type"]:
+                for val in values:
+                    conds.append(models.Ad.attributes[prefix].astext == val)
             elif prefix == "available_services":
                 for val in values:
                     conds.append(models.Ad.attributes['dynamic_data']['available_services'].astext.ilike(f"%{val}%"))
@@ -1431,7 +1434,21 @@ def read_ads(
                 query = query.filter(or_(*conds))
                 
         for t in generic_tags:
-            query = query.filter(models.Ad.linked_tags.any(models.Tag.name == t))
+            tag_cond = models.Ad.linked_tags.any(models.Tag.name == t)
+            attr_cond = or_(
+                models.Ad.attributes['dynamic_data']['advertiser_type'].astext == t,
+                models.Ad.attributes['payment_method'].astext == t,
+                models.Ad.attributes['transaction_type'].astext == t,
+                models.Ad.attributes['dynamic_data']['facade'].astext == t,
+                models.Ad.attributes['dynamic_data']['land_type'].astext == t,
+                models.Ad.attributes['dynamic_data']['ownership_type'].astext == t,
+                models.Ad.attributes['dynamic_data']['zoning_classification'].astext == t,
+                models.Ad.attributes['dynamic_data']['geometric_shape'].astext == t,
+                models.Ad.attributes['dynamic_data']['topography'].astext == t,
+                models.Ad.attributes['dynamic_data']['is_mortgaged'].astext == t,
+                models.Ad.attributes['dynamic_data']['installment_possible'].astext == t,
+            )
+            query = query.filter(or_(tag_cond, attr_cond))
     
     # Optional support for the old section name method (for the homepage tabs)
     if section:
@@ -2327,8 +2344,8 @@ def set_ad_bid(
     if bid_request.cpc_bid > 0:
         if bid_request.cpc_bid < 0.07:
             raise HTTPException(status_code=400, detail="Minimum bid must be 0.07 JOD")
-        if float(current_user.wallet_balance or 0) < 10.0:
-            raise HTTPException(status_code=402, detail="Insufficient balance. Minimum 10 JOD required.")
+        if float(current_user.wallet_balance or 0) < 0.07:
+            raise HTTPException(status_code=402, detail="Insufficient balance. Minimum 0.07 JOD required.")
         
     ad.cpc_bid = bid_request.cpc_bid
     db.commit()
@@ -2386,6 +2403,8 @@ def track_ad_click(
         
         # Deduct the bid amount
         owner.wallet_balance = float(owner.wallet_balance) - float(ad.cpc_bid)
+        if owner.wallet_balance < 0.07:
+            db.query(models.Ad).filter(models.Ad.user_id == owner.id, models.Ad.cpc_bid > 0).update({"cpc_bid": 0.0}, synchronize_session=False)
         
         # Log the transaction
         transaction = models.WalletTransaction(
@@ -2545,11 +2564,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 @app.post("/api/ads/{ad_id}/interaction/view", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
 def record_ad_view(
     ad_id: int, 
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Logs an ad view per user for the history tracking."""
+    """Logs an ad view per user for the history tracking and deducts CPC balance if applicable."""
     # Ensure ad exists
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
@@ -2568,6 +2588,43 @@ def record_ad_view(
         set_=dict(viewed_at=func.now())
     )
     db.execute(stmt)
+    
+    deducted = 0.0
+    if current_user.id != db_ad.user_id:
+        owner = db.query(models.User).filter(models.User.id == db_ad.user_id).with_for_update().first()
+        if db_ad.cpc_bid > 0 and owner.wallet_balance >= db_ad.cpc_bid:
+            ip_address = auth.get_real_ip(request)
+            one_day_ago = datetime.utcnow() - timedelta(days=1)
+            
+            # Check for duplicate clicks within 24h
+            previous_click = db.query(models.AdClickTracking).filter(
+                models.AdClickTracking.ad_id == ad_id,
+                models.AdClickTracking.created_at >= one_day_ago,
+                ((models.AdClickTracking.user_id == current_user.id) | (models.AdClickTracking.ip_address == ip_address))
+            ).first()
+            
+            if not previous_click:
+                click_log = models.AdClickTracking(
+                    ad_id=ad_id,
+                    user_id=current_user.id,
+                    ip_address=ip_address
+                )
+                db.add(click_log)
+                
+                owner.wallet_balance = float(owner.wallet_balance) - float(db_ad.cpc_bid)
+                if owner.wallet_balance < 0.07:
+                    db.query(models.Ad).filter(models.Ad.user_id == owner.id, models.Ad.cpc_bid > 0).update({"cpc_bid": 0.0}, synchronize_session=False)
+                deducted = float(db_ad.cpc_bid)
+                
+                transaction = models.WalletTransaction(
+                    user_id=owner.id,
+                    amount=-deducted,
+                    transaction_type="CLICK_DEDUCTION",
+                    description=f"Ad View (Click) on Ad #{db_ad.id} '{db_ad.title}'",
+                    reference_id=str(db_ad.id)
+                )
+                db.add(transaction)
+
     db.commit()
     
     milestones = [10, 50, 100, 500, 1000]
@@ -2581,7 +2638,7 @@ def record_ad_view(
             reference_id=ad_id
         )
         
-    return {"status": "success"}
+    return {"status": "success", "deducted": deducted}
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
 def read_recently_viewed_ads(
