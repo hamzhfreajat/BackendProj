@@ -2638,6 +2638,24 @@ def record_ad_view(
         
     return {"status": "success"}
 
+@app.post("/api/ads/interactions/bulk-views")
+def record_bulk_ad_views(
+    request: schemas.BulkViewsRequest,
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional)
+):
+    """
+    Called by the frontend every few seconds to record impressions (views).
+    This buffers the views in Redis to prevent database thrashing.
+    """
+    from auth import redis_client
+    if not redis_client:
+        return {"status": "error", "message": "Redis not available"}
+        
+    for ad_id in request.ad_ids:
+        redis_client.hincrby("ad_views_buffer", str(ad_id), 1)
+        
+    return {"status": "success"}
+
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
 def read_recently_viewed_ads(
     current_user: models.User = Depends(auth.get_current_user),
@@ -3168,6 +3186,47 @@ async def facebook_autopost_worker():
                     pass
         await asyncio.sleep(1800) # Check every 30 minutes
 
+async def sync_ad_views_worker():
+    """Periodically fetch aggregated ad views from Redis and bulk update PostgreSQL."""
+    from auth import redis_client
+    import asyncio
+    
+    while True:
+        try:
+            if redis_client and redis_client.exists("ad_views_buffer"):
+                # Fetch all buffered views and immediately delete the key to start a new buffer
+                pipe = redis_client.pipeline()
+                pipe.hgetall("ad_views_buffer")
+                pipe.delete("ad_views_buffer")
+                results = pipe.execute()
+                
+                views_data = results[0]
+                if views_data:
+                    # views_data is a dict like {'1': '5', '12': '1'}
+                    db = SessionLocal()
+                    try:
+                        from sqlalchemy import update
+                        for ad_id_str, count_str in views_data.items():
+                            ad_id = int(ad_id_str)
+                            count = int(count_str)
+                            if count > 0:
+                                db.execute(update(models.Ad).where(models.Ad.id == ad_id).values(
+                                    views=(models.Ad.views or 0) + count
+                                ))
+                        db.commit()
+                    except Exception as e:
+                        db.rollback()
+                        print(f"Error bulk updating ad views: {e}")
+                        # Put them back if it failed to not lose impressions
+                        for ad_id_str, count_str in views_data.items():
+                            redis_client.hincrby("ad_views_buffer", ad_id_str, int(count_str))
+                    finally:
+                        db.close()
+        except Exception as e:
+            print(f"Error in sync_ad_views_worker: {e}")
+            
+        await asyncio.sleep(60)
+
 from arq import create_pool
 from arq.connections import RedisSettings
 
@@ -3175,6 +3234,7 @@ from arq.connections import RedisSettings
 async def startup_event():
     asyncio.create_task(republish_notifier_worker())
     asyncio.create_task(facebook_autopost_worker())
+    asyncio.create_task(sync_ad_views_worker())
     
     try:
         redis_host = os.getenv("REDIS_HOST", "redis")

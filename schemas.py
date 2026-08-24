@@ -3,6 +3,9 @@ from typing import List, Optional, Any
 from datetime import datetime
 import math
 
+class BulkViewsRequest(BaseModel):
+    ad_ids: List[int]
+
 class WalletTransactionBase(BaseModel):
     amount: float
     transaction_type: str
