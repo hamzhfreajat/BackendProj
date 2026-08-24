@@ -1,6 +1,7 @@
 from pydantic import BaseModel, field_validator
 from typing import List, Optional, Any
 from datetime import datetime
+import math
 
 class WalletTransactionBase(BaseModel):
     amount: float
@@ -16,13 +17,54 @@ class WalletTransaction(WalletTransactionBase):
     class Config:
         from_attributes = True
 
+ALLOWED_PRODUCT_IDS = {"wallet_topup_10", "wallet_topup_20", "wallet_topup_50"}
+ALLOWED_PLATFORMS = {"ios", "android"}
+
 class WalletTopupRequest(BaseModel):
     receipt_data: str
     product_id: str
     platform: str # 'ios' or 'android'
 
+    @field_validator('platform')
+    @classmethod
+    def validate_platform(cls, v):
+        if v.lower() not in ALLOWED_PLATFORMS:
+            raise ValueError(f"Platform must be one of: {', '.join(ALLOWED_PLATFORMS)}")
+        return v.lower()
+
+    @field_validator('product_id')
+    @classmethod
+    def validate_product_id(cls, v):
+        if v not in ALLOWED_PRODUCT_IDS:
+            raise ValueError("Invalid product ID")
+        return v
+
+    @field_validator('receipt_data')
+    @classmethod
+    def validate_receipt_data(cls, v):
+        if not v or len(v.strip()) == 0:
+            raise ValueError("Receipt data cannot be empty")
+        if len(v) > 50000:
+            raise ValueError("Receipt data exceeds maximum allowed length")
+        return v
+
 class AdBidRequest(BaseModel):
     cpc_bid: float
+
+    @field_validator('cpc_bid')
+    @classmethod
+    def validate_cpc_bid(cls, v):
+        if math.isnan(v) or math.isinf(v):
+            raise ValueError("Bid must be a valid number")
+        if v < 0:
+            raise ValueError("Bid cannot be negative")
+        if v > 0 and v < 0.07:
+            raise ValueError("Minimum bid is 0.07 JOD")
+        if v > 10.0:
+            raise ValueError("Maximum bid is 10.0 JOD")
+        return round(v, 2)
+
+
 
 class UserBase(BaseModel):
     mobile_number: Optional[str] = None

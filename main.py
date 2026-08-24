@@ -146,7 +146,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "ngrok-skip-browser-warning", "Bypass-Tunnel-Reminder"],
 )
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"])
 import time
 from database import SessionLocal
 
@@ -1104,6 +1104,7 @@ def search_autocomplete(q: str, db: Session = Depends(get_db)):
 def get_search_logs(
     limit: int = 100, 
     results_count: int = Query(None, description="Filter by exact results count"),
+    current_admin: models.User = Depends(auth.get_current_admin),
     db: Session = Depends(get_db)
 ):
     """Admin endpoint to fetch recent raw search queries."""
@@ -1403,9 +1404,12 @@ def read_ads(
                 for val in values:
                     conds.append(models.Ad.attributes['rent_duration'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['rent_duration'].astext == val)
-            elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible"]:
+            elif prefix in ["land_type", "zoning_classification", "facade", "geometric_shape", "topography", "ownership_type", "is_mortgaged", "installment_possible", "advertiser_type"]:
                 for val in values:
                     conds.append(models.Ad.attributes['dynamic_data'][prefix].astext == val)
+            elif prefix in ["payment_method", "transaction_type"]:
+                for val in values:
+                    conds.append(models.Ad.attributes[prefix].astext == val)
             elif prefix == "available_services":
                 for val in values:
                     conds.append(models.Ad.attributes['dynamic_data']['available_services'].astext.ilike(f"%{val}%"))
@@ -1431,7 +1435,21 @@ def read_ads(
                 query = query.filter(or_(*conds))
                 
         for t in generic_tags:
-            query = query.filter(models.Ad.linked_tags.any(models.Tag.name == t))
+            tag_cond = models.Ad.linked_tags.any(models.Tag.name == t)
+            attr_cond = or_(
+                models.Ad.attributes['dynamic_data']['advertiser_type'].astext == t,
+                models.Ad.attributes['payment_method'].astext == t,
+                models.Ad.attributes['transaction_type'].astext == t,
+                models.Ad.attributes['dynamic_data']['facade'].astext == t,
+                models.Ad.attributes['dynamic_data']['land_type'].astext == t,
+                models.Ad.attributes['dynamic_data']['ownership_type'].astext == t,
+                models.Ad.attributes['dynamic_data']['zoning_classification'].astext == t,
+                models.Ad.attributes['dynamic_data']['geometric_shape'].astext == t,
+                models.Ad.attributes['dynamic_data']['topography'].astext == t,
+                models.Ad.attributes['dynamic_data']['is_mortgaged'].astext == t,
+                models.Ad.attributes['dynamic_data']['installment_possible'].astext == t,
+            )
+            query = query.filter(or_(tag_cond, attr_cond))
     
     # Optional support for the old section name method (for the homepage tabs)
     if section:
@@ -2313,7 +2331,7 @@ def update_ad(
     
     return db_ad
 
-@app.post("/api/ads/{ad_id}/bid", response_model=schemas.Ad)
+@app.post("/api/ads/{ad_id}/bid", response_model=schemas.Ad, dependencies=[Depends(auth.get_rate_limiter(10, 60))])
 def set_ad_bid(
     ad_id: int, 
     bid_request: schemas.AdBidRequest, 
@@ -2327,15 +2345,21 @@ def set_ad_bid(
     if bid_request.cpc_bid > 0:
         if bid_request.cpc_bid < 0.07:
             raise HTTPException(status_code=400, detail="Minimum bid must be 0.07 JOD")
-        if float(current_user.wallet_balance or 0) < 10.0:
-            raise HTTPException(status_code=402, detail="Insufficient balance. Minimum 10 JOD required.")
+        if bid_request.cpc_bid > 10.0:
+            raise HTTPException(status_code=400, detail="Maximum bid is 10.0 JOD")
+        # SECURITY: Lock user row to prevent race condition on balance check
+        user = db.query(models.User).filter(models.User.id == current_user.id).with_for_update().first()
+        if float(user.wallet_balance or 0) < 0.07:
+            raise HTTPException(status_code=402, detail="Insufficient balance. Minimum 0.07 JOD required.")
         
     ad.cpc_bid = bid_request.cpc_bid
     db.commit()
     db.refresh(ad)
     return ad
 
-@app.post("/api/ads/{ad_id}/track-click", response_model=dict)
+ALLOWED_ACTION_TYPES = {"call", "whatsapp", "chat"}
+
+@app.post("/api/ads/{ad_id}/track-click", response_model=dict, dependencies=[Depends(auth.get_rate_limiter(20, 60))])
 def track_ad_click(
     ad_id: int, 
     request: Request,
@@ -2343,6 +2367,10 @@ def track_ad_click(
     current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+    # SECURITY: Validate action_type to prevent injection
+    if action_type not in ALLOWED_ACTION_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid action type")
+    
     ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not ad:
         raise HTTPException(status_code=404, detail="Ad not found")
@@ -2386,13 +2414,18 @@ def track_ad_click(
         
         # Deduct the bid amount
         owner.wallet_balance = float(owner.wallet_balance) - float(ad.cpc_bid)
+        if owner.wallet_balance < 0.07:
+            db.query(models.Ad).filter(models.Ad.user_id == owner.id, models.Ad.cpc_bid > 0).update({"cpc_bid": 0.0}, synchronize_session=False)
+        
+        # SECURITY: Sanitize ad title in transaction description (truncate, no raw user input)
+        safe_title = (ad.title or "")[:50].replace("'", "").replace('"', '')
         
         # Log the transaction
         transaction = models.WalletTransaction(
             user_id=owner.id,
             amount=-float(ad.cpc_bid),
             transaction_type="CLICK_DEDUCTION",
-            description=f"Action: {action_type} on Ad #{ad.id} '{ad.title}'",
+            description=f"Action: {action_type} on Ad #{ad.id} '{safe_title}'",
             reference_id=str(ad.id)
         )
         db.add(transaction)
@@ -2545,11 +2578,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 @app.post("/api/ads/{ad_id}/interaction/view", dependencies=[Depends(auth.get_rate_limiter(30, 60))])
 def record_ad_view(
     ad_id: int, 
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Logs an ad view per user for the history tracking."""
+    """Logs an ad view per user for the history tracking and deducts CPC balance if applicable."""
     # Ensure ad exists
     db_ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
     if not db_ad:
@@ -2568,6 +2602,7 @@ def record_ad_view(
         set_=dict(viewed_at=func.now())
     )
     db.execute(stmt)
+    
     db.commit()
     
     milestones = [10, 50, 100, 500, 1000]
@@ -2581,7 +2616,7 @@ def record_ad_view(
             reference_id=ad_id
         )
         
-    return {"status": "success"}
+    return {"status": "success", "deducted": deducted}
 
 @app.get("/api/my-ads/recently-viewed", response_model=List[schemas.Ad])
 def read_recently_viewed_ads(
@@ -3295,7 +3330,7 @@ def get_version_config(db: Session = Depends(get_db)):
     }
 
 @app.put("/api/config/version")
-def update_version_config(req: AppConfigUpdate, db: Session = Depends(get_db)):
+def update_version_config(req: AppConfigUpdate, current_admin: models.User = Depends(auth.get_current_admin), db: Session = Depends(get_db)):
     config = db.query(models.AppConfig).first()
     if not config:
         config = models.AppConfig(**req.dict())

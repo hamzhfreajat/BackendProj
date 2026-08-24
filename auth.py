@@ -1,4 +1,5 @@
 import os
+import hashlib
 from datetime import datetime, timedelta
 import secrets
 from typing import List
@@ -127,7 +128,8 @@ def create_access_token(data: dict):
 
 def create_refresh_token(db: Session, user_id: int) -> str:
     token_str = secrets.token_urlsafe(64)
-    hashed_token = get_password_hash(token_str)
+    # SECURITY: Use hashlib.sha256 consistently (must match refresh_token_endpoint verification)
+    hashed_token = hashlib.sha256(token_str.encode()).hexdigest()
     
     expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     db_refresh_token = models.RefreshToken(
@@ -237,16 +239,9 @@ def normalize_jo_phone(phone_number: str) -> str:
     return cleaned
 
 def get_real_ip(request: Request) -> str:
-    # ProxyHeadersMiddleware sets request.client.host based on X-Forwarded-For if available
-    # But we can also manually check CF-Connecting-IP for Cloudflare if needed
-    cf_ip = request.headers.get("cf-connecting-ip")
-    if cf_ip:
-        return cf_ip
-    
-    x_forwarded_for = request.headers.get("x-forwarded-for")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-        
+    # SECURITY: Rely on request.client.host which is set by ProxyHeadersMiddleware
+    # from trusted proxy headers only. Do NOT read raw X-Forwarded-For/CF-Connecting-IP
+    # headers directly as they can be spoofed by untrusted clients.
     if request.client and request.client.host:
         return request.client.host
     return "127.0.0.1"
@@ -640,7 +635,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
         return user
         
-    except JWTError:
+    except jwt.PyJWTError:
         log_auth_failure(get_real_ip(request), request.url.path, "Invalid JWT structure")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
