@@ -1,5 +1,9 @@
 import os
+import json
+import base64
 import aiohttp
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 import models
@@ -35,8 +39,21 @@ async def verify_apple_receipt(receipt_data: str) -> dict:
                 async with session.post("https://sandbox.itunes.apple.com/verifyReceipt", json=payload) as sandbox_resp:
                     data = await sandbox_resp.json()
                     
-    if data.get("status") != 0:
-        raise HTTPException(status_code=400, detail=f"Apple validation failed with status {data.get('status')}")
+    status_code = data.get("status")
+    if status_code != 0:
+        error_messages = {
+            21000: "The request to the App Store was not made using the HTTP POST request method.",
+            21002: "The data in the receipt-data property was malformed or missing.",
+            21003: "The receipt could not be authenticated.",
+            21004: "The shared secret you provided does not match the shared secret on file for your account.",
+            21005: "The receipt server is currently not available.",
+            21006: "This receipt is valid but the subscription has expired.",
+            21007: "This receipt is from the test environment, but it was sent to the production environment for verification.",
+            21008: "This receipt is from the production environment, but it was sent to the test environment for verification.",
+            21010: "This receipt could not be authorized. Treat this the same as if a purchase was never made."
+        }
+        status_msg = error_messages.get(status_code, "Unknown error")
+        raise HTTPException(status_code=400, detail=f"Apple validation failed with status {status_code}: {status_msg}")
         
     # SECURITY: Verify the bundle ID to prevent cross-app receipt spoofing
     receipt_bundle_id = data.get("receipt", {}).get("bundle_id")
@@ -44,6 +61,41 @@ async def verify_apple_receipt(receipt_data: str) -> dict:
         raise HTTPException(status_code=400, detail="Invalid bundle ID in receipt")
         
     return data
+
+async def verify_google_play_receipt(product_id: str, purchase_token: str) -> dict:
+    b64_json = os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_B64")
+    if not b64_json:
+        raise HTTPException(status_code=500, detail="Google Play service account JSON not configured on the server")
+        
+    try:
+        json_str = base64.b64decode(b64_json).decode("utf-8")
+        service_account_info = json.loads(json_str)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to decode Google Play service account JSON")
+
+    try:
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info, 
+            scopes=["https://www.googleapis.com/auth/androidpublisher"]
+        )
+        
+        # Build the Android Publisher service
+        # In a real async app, this blocking call should be offloaded to a thread pool, but it's acceptable for now
+        service = build("androidpublisher", "v3", credentials=credentials)
+        
+        # Verify the purchase
+        package_name = "com.sooqcom.app"
+        
+        # Calls the API: GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{packageName}/purchases/products/{productId}/tokens/{token}
+        result = service.purchases().products().get(
+            packageName=package_name,
+            productId=product_id,
+            token=purchase_token
+        ).execute()
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Google Play validation failed: {str(e)}")
 
 @router.post("/topup", response_model=schemas.UserPrivateProfile, dependencies=[Depends(auth.get_rate_limiter(5, 60))])
 async def topup_wallet(
@@ -99,9 +151,25 @@ async def topup_wallet(
             raise HTTPException(status_code=400, detail="This receipt has already been processed")
             
     elif req.platform == "android":
-        # Google Play validation requires a Service Account JSON and the Google Play Developer API.
-        # Until implemented, we block Android purchases to prevent fraud.
-        raise HTTPException(status_code=501, detail="Android validation is not yet implemented on the server")
+        play_result = await verify_google_play_receipt(req.product_id, req.receipt_data)
+        
+        # Check purchaseState (0 = Purchased, 1 = Canceled, 2 = Pending)
+        purchase_state = play_result.get("purchaseState")
+        if purchase_state != 0:
+            raise HTTPException(status_code=400, detail=f"Google Play purchase not in 'Purchased' state (state: {purchase_state})")
+            
+        # The transaction ID in Google Play is orderId
+        transaction_id = play_result.get("orderId")
+        if not transaction_id:
+            raise HTTPException(status_code=400, detail="Transaction ID missing from Google Play receipt")
+            
+        # Check for replay attack
+        existing_tx = db.query(models.WalletTransaction).filter(
+            models.WalletTransaction.reference_id == transaction_id
+        ).first()
+        
+        if existing_tx:
+            raise HTTPException(status_code=400, detail="This receipt has already been processed")
     else:
         raise HTTPException(status_code=400, detail="Invalid platform specified")
         

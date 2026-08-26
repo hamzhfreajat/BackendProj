@@ -43,3 +43,4 @@ prometheus-fastapi-instrumentator
 alembic
 imagehash
 gunicorn
+google-api-python-client>=2.0.0
