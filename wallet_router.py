@@ -53,11 +53,13 @@ async def verify_apple_receipt(receipt_data: str) -> dict:
             21010: "This receipt could not be authorized. Treat this the same as if a purchase was never made."
         }
         status_msg = error_messages.get(status_code, "Unknown error")
+        print(f"[IAP ERROR - APPLE] Status: {status_code}, Message: {status_msg}, Full Response: {data}")
         raise HTTPException(status_code=400, detail=f"Apple validation failed with status {status_code}: {status_msg}")
         
     # SECURITY: Verify the bundle ID to prevent cross-app receipt spoofing
     receipt_bundle_id = data.get("receipt", {}).get("bundle_id")
     if receipt_bundle_id != "com.sooqcom.app":
+        print(f"[IAP ERROR - APPLE] Invalid bundle ID: {receipt_bundle_id}")
         raise HTTPException(status_code=400, detail="Invalid bundle ID in receipt")
         
     return data
@@ -95,6 +97,7 @@ async def verify_google_play_receipt(product_id: str, purchase_token: str) -> di
         
         return result
     except Exception as e:
+        print(f"[IAP ERROR - GOOGLE] Validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Google Play validation failed: {str(e)}")
 
 @router.post("/topup", response_model=schemas.UserPrivateProfile, dependencies=[Depends(auth.get_rate_limiter(5, 60))])
@@ -140,6 +143,7 @@ async def topup_wallet(
         transaction_id = valid_purchase.get("transaction_id")
         
         if not transaction_id:
+            print("[IAP ERROR - APPLE] Transaction ID missing from receipt.")
             raise HTTPException(status_code=400, detail="Transaction ID missing from Apple receipt")
             
         # Check for replay attack
@@ -148,6 +152,7 @@ async def topup_wallet(
         ).first()
         
         if existing_tx:
+            print(f"[IAP ERROR - APPLE] Transaction {transaction_id} was already processed.")
             raise HTTPException(status_code=400, detail="This receipt has already been processed")
             
     elif req.platform == "android":
@@ -156,11 +161,13 @@ async def topup_wallet(
         # Check purchaseState (0 = Purchased, 1 = Canceled, 2 = Pending)
         purchase_state = play_result.get("purchaseState")
         if purchase_state != 0:
+            print(f"[IAP ERROR - GOOGLE] Purchase not in 'Purchased' state. Current state: {purchase_state}, Token: {req.receipt_data}")
             raise HTTPException(status_code=400, detail=f"Google Play purchase not in 'Purchased' state (state: {purchase_state})")
             
         # The transaction ID in Google Play is orderId
         transaction_id = play_result.get("orderId")
         if not transaction_id:
+            print(f"[IAP ERROR - GOOGLE] Missing orderId in Play response: {play_result}")
             raise HTTPException(status_code=400, detail="Transaction ID missing from Google Play receipt")
             
         # Check for replay attack
@@ -169,6 +176,7 @@ async def topup_wallet(
         ).first()
         
         if existing_tx:
+            print(f"[IAP ERROR - GOOGLE] Transaction {transaction_id} was already processed.")
             raise HTTPException(status_code=400, detail="This receipt has already been processed")
     else:
         raise HTTPException(status_code=400, detail="Invalid platform specified")
