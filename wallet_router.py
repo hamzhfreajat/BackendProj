@@ -153,7 +153,9 @@ async def topup_wallet(
         
         if existing_tx:
             print(f"[IAP ERROR - APPLE] Transaction {transaction_id} was already processed.")
-            raise HTTPException(status_code=400, detail="This receipt has already been processed")
+            # Return 200 OK instead of 400 to allow the frontend to complete the purchase 
+            # and clear it from the queue without showing a confusing error dialog.
+            return current_user
             
     elif req.platform == "android":
         play_result = await verify_google_play_receipt(req.product_id, req.receipt_data)
@@ -177,7 +179,9 @@ async def topup_wallet(
         
         if existing_tx:
             print(f"[IAP ERROR - GOOGLE] Transaction {transaction_id} was already processed.")
-            raise HTTPException(status_code=400, detail="This receipt has already been processed")
+            # Return 200 OK instead of 400 to allow the frontend to complete the purchase 
+            # and clear it from the queue without showing a confusing error dialog.
+            return current_user
     else:
         raise HTTPException(status_code=400, detail="Invalid platform specified")
         
