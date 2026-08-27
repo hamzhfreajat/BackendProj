@@ -3117,7 +3117,10 @@ async def republish_notifier_worker():
             
             # fetchall() executes the statement and retrieves the rows updated by THIS specific worker
             result = db.execute(stmt)
-            updated_ads = result.fetchall() if result.returns_rows else []
+            try:
+                updated_ads = result.fetchall()
+            except Exception:
+                updated_ads = []
             db.commit()
             
             if updated_ads:
