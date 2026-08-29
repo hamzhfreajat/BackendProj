@@ -38,9 +38,10 @@ def add_blocked_phone(
     
     from sqlalchemy import text
     try:
-        # PostgreSQL specific syntax for JSONB
+        # Search for the phone number anywhere in the ad text fields
+        # This catches phone numbers embedded in descriptions or stored in any attribute
         ads_to_delete = db.query(models.Ad).filter(
-            text("attributes->>'phone_number' = :phone").bindparams(phone=phone)
+            text("ads::text LIKE :phone").bindparams(phone=f"%{phone}%")
         ).all()
         
         for ad in ads_to_delete:

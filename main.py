@@ -1169,8 +1169,11 @@ def read_ads(
         query = query.filter(or_(
             models.User.phone.ilike(f"%{phone}%"), 
             models.User.mobile_number.ilike(f"%{phone}%"),
-            cast(models.Ad.attributes, String).ilike(f"%{phone}%")
+            cast(models.Ad.attributes, String).ilike(f"%{phone}%"),
+            models.Ad.description.ilike(f"%{phone}%"),
+            models.Ad.raw_description.ilike(f"%{phone}%")
         ))
+
     
     if user_id is not None:
         query = query.filter(models.Ad.user_id == user_id)
