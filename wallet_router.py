@@ -127,12 +127,15 @@ async def topup_wallet(
         receipt_info = await verify_apple_receipt(req.receipt_data)
         
         in_app_list = receipt_info.get("receipt", {}).get("in_app", [])
+        latest_receipt_info = receipt_info.get("latest_receipt_info", [])
+        
+        all_transactions = in_app_list + latest_receipt_info
         
         # Sort by purchase_date_ms desc so we get the latest purchase
-        in_app_list.sort(key=lambda x: int(x.get("purchase_date_ms", 0)), reverse=True)
+        all_transactions.sort(key=lambda x: int(x.get("purchase_date_ms", 0)), reverse=True)
         
         valid_purchase = None
-        for p in in_app_list:
+        for p in all_transactions:
             if p.get("product_id") == req.product_id:
                 valid_purchase = p
                 break
