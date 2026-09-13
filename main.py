@@ -269,9 +269,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(fb_batch_router)
 app.include_router(fb_publisher_router)
 
+from duplicate_detection_router import router as duplicate_router
 from routers import users_admin_router
 import wallet_router
 app.include_router(users_admin_router.router)
+app.include_router(duplicate_router)
 app.include_router(wallet_router.router)
 
 app.include_router(ai_router)
@@ -735,6 +737,11 @@ def perform_bulk_action(
     
     for ad in ads:
         if req.action == "delete":
+            db.query(models.AdRealEstateDetail).filter(models.AdRealEstateDetail.ad_id == ad.id).delete()
+            db.query(models.AdSearchIndex).filter(models.AdSearchIndex.ad_id == ad.id).delete()
+            db.query(models.SavedAd).filter(models.SavedAd.ad_id == ad.id).delete()
+            db.query(models.AdReport).filter(models.AdReport.ad_id == ad.id).delete()
+            db.query(models.AdClickTracking).filter(models.AdClickTracking.ad_id == ad.id).delete()
             db.delete(ad)
         elif req.action == "pause":
             ad.is_paused = True
@@ -1557,6 +1564,110 @@ def read_ads(
             ad.is_saved = ad.id in saved_ids
             
     return ads
+
+
+
+
+
+@app.get("/api/ads/aggregate", response_model=List[dict])
+def aggregate_ads(
+    group_by: str = Query("location", description="Field to group by: location, category_id"),
+    category_id: int = None, 
+    section: str = None, 
+    search: str = None,
+    location: List[str] = Query(None),
+    min_price: float = None,
+    max_price: float = None,
+    is_hot: bool = None,
+    is_published: bool = None,
+    source_type: str = None,
+    tags: List[str] = Query(None),
+    only_others: bool = False,
+    location_search: str = None,
+    db: Session = Depends(get_db)
+):
+    from sqlalchemy import func, or_, cast, String
+    # Use AdSearchIndex for maximum performance
+    query = db.query(models.Ad).join(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
+    
+    if location_search:
+        query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
+        
+    if only_others:
+        query = query.filter(or_(
+            models.Ad.location.ilike("%أخرى%"),
+            models.Ad.location.ilike("%اخرى%"),
+            models.Ad.location.ilike("%other%")
+        ))
+    
+    if category_id:
+        category = db.query(models.Category).filter(models.Category.id == category_id).first()
+        if category:
+            subcats = db.query(models.Category).filter(models.Category.parent_id == category_id).all()
+            cat_ids = [category_id] + [c.id for c in subcats]
+            query = query.filter(models.AdSearchIndex.category_id.in_(cat_ids))
+        
+    if section:
+        if section == 'rent':
+            query = query.filter(models.AdSearchIndex.category_id.in_([3, 4])) # Real estate rent
+        elif section == 'buy':
+            query = query.filter(models.AdSearchIndex.category_id.in_([1, 2])) # Real estate buy
+            
+    if location and len(location) > 0:
+        loc_filters = []
+        for loc in location:
+            loc_filters.append(models.Ad.location.ilike(f"%{loc}%"))
+        query = query.filter(or_(*loc_filters))
+        
+    if min_price is not None:
+        query = query.filter(models.AdSearchIndex.price >= min_price)
+    if max_price is not None:
+        query = query.filter(models.AdSearchIndex.price <= max_price)
+        
+    if is_hot is not None:
+        query = query.filter(models.AdSearchIndex.is_hot == is_hot)
+        
+    if is_published is not None:
+        query = query.filter(models.Ad.is_published == is_published)
+    else:
+        query = query.filter(models.Ad.is_published == True)
+        
+    if source_type:
+        query = query.filter(models.Ad.source_type == source_type)
+        
+    if tags and len(tags) > 0:
+        for tag in tags:
+            if ":" in tag:
+                prefix, val = tag.split(":", 1)
+                if prefix == "bedrooms":
+                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%bedrooms:{val}%") | cast(models.AdSearchIndex.search_text, String).ilike(f"%rooms:{val}%") | (models.AdSearchIndex.bedrooms == int(val) if val.isdigit() else False))
+                elif prefix == "bathrooms":
+                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%bathrooms:{val}%") | (models.AdSearchIndex.bathrooms == int(val) if val.isdigit() else False))
+                elif prefix == "floor":
+                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%floor:{val}%") | (models.AdSearchIndex.floor_number == int(val) if val.isdigit() else False))
+                elif prefix == "furnished":
+                    is_furn = val in ['مفروشة', 'مفروش', 'مفروش جزئياً', 'yes']
+                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%furnished:{val}%") | (models.AdSearchIndex.furnished == is_furn))
+                elif prefix == "min_area" and val.isdigit():
+                    query = query.filter(models.AdSearchIndex.build_area >= float(val))
+                elif prefix == "max_area" and val.isdigit():
+                    query = query.filter(models.AdSearchIndex.build_area <= float(val))
+                elif prefix == "period":
+                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%period:{val}%"))
+                else:
+                    query = query.filter(cast(models.AdSearchIndex.attributes_jsonb, String).ilike(f"%{tag}%"))
+            else:
+                query = query.filter(cast(models.AdSearchIndex.attributes_jsonb, String).ilike(f"%{tag}%"))
+            
+    if group_by == 'location':
+        results = query.with_entities(models.Ad.location, func.count(models.Ad.id)).group_by(models.Ad.location).all()
+        return [{"group": row[0] or "Unknown", "count": row[1]} for row in results]
+    elif group_by == 'category_id':
+        results = query.with_entities(models.AdSearchIndex.category_id, func.count(models.Ad.id)).group_by(models.AdSearchIndex.category_id).all()
+        return [{"group": str(row[0]), "count": row[1]} for row in results]
+    
+    return []
+
 
 @app.get("/api/ads/count", response_model=dict)
 def get_ads_count(
@@ -2465,6 +2576,14 @@ def delete_ad(
         raise HTTPException(status_code=404, detail="Ad not found")
     if db_ad.user_id != current_user.id and current_user.user_type != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this ad")
+    
+    # Explicitly delete child records to prevent foreign key constraint IntegrityError
+    # (in case the database is missing ON DELETE CASCADE on these tables)
+    db.query(models.AdRealEstateDetail).filter(models.AdRealEstateDetail.ad_id == db_ad.id).delete()
+    db.query(models.AdSearchIndex).filter(models.AdSearchIndex.ad_id == db_ad.id).delete()
+    db.query(models.SavedAd).filter(models.SavedAd.ad_id == db_ad.id).delete()
+    db.query(models.AdReport).filter(models.AdReport.ad_id == db_ad.id).delete()
+    db.query(models.AdClickTracking).filter(models.AdClickTracking.ad_id == db_ad.id).delete()
     
     db.delete(db_ad)
     db.commit()
