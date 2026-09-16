@@ -267,7 +267,17 @@ class Ad(Base):
     favorites_count = Column(Integer, default=0)
     
     # Pay-Per-Click Bidding
+    
     cpc_bid = Column(DECIMAL(10, 2), default=0.00)
+    
+    market_price_status = Column(String(50), nullable=True)
+    market_average_price = Column(DECIMAL(10, 2), nullable=True)
+    deviation_pct = Column(DECIMAL(10, 4), nullable=True)
+    comparables_count = Column(Integer, nullable=True)
+    confidence_level = Column(String(50), nullable=True)
+    matching_level_used = Column(Integer, nullable=True)
+    calculated_at = Column(TIMESTAMP, nullable=True)
+    
     
     last_republished_at = Column(TIMESTAMP, nullable=True)
     republish_notification_sent = Column(Boolean, default=False)

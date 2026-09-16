@@ -490,6 +490,17 @@ class Ad(AdBase):
     last_republished_at: Optional[datetime] = None
     cpc_bid: Optional[float] = 0.0
 
+    duplicate_status: Optional[str] = None
+    highest_duplicate_score: Optional[int] = None
+    original_created_at: Optional[datetime] = None
+    market_price_status: Optional[str] = None
+    market_average_price: Optional[float] = None
+    deviation_pct: Optional[float] = None
+    comparables_count: Optional[int] = None
+    confidence_level: Optional[str] = None
+    matching_level_used: Optional[int] = None
+    calculated_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 

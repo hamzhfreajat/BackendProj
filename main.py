@@ -1586,7 +1586,7 @@ def aggregate_ads(
     location_search: str = None,
     db: Session = Depends(get_db)
 ):
-    from sqlalchemy import func, or_, cast, String
+    from sqlalchemy import func, or_, cast, String, Integer
     # Use AdSearchIndex for maximum performance
     query = db.query(models.Ad).join(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
     
@@ -1601,11 +1601,23 @@ def aggregate_ads(
         ))
     
     if category_id:
-        category = db.query(models.Category).filter(models.Category.id == category_id).first()
-        if category:
-            subcats = db.query(models.Category).filter(models.Category.parent_id == category_id).all()
-            cat_ids = [category_id] + [c.id for c in subcats]
-            query = query.filter(models.AdSearchIndex.category_id.in_(cat_ids))
+        # Get all descendant category IDs efficiently in memory
+        all_cats = db.query(models.Category.id, models.Category.parent_id).all()
+        cat_graph = {}
+        for c_id, p_id in all_cats:
+            if p_id not in cat_graph:
+                cat_graph[p_id] = []
+            cat_graph[p_id].append(c_id)
+            
+        def get_descendants_fast(cat_id):
+            descendants = [cat_id]
+            if cat_id in cat_graph:
+                for child_id in cat_graph[cat_id]:
+                    descendants.extend(get_descendants_fast(child_id))
+            return descendants
+            
+        all_cat_ids = get_descendants_fast(category_id)
+        query = query.filter(models.AdSearchIndex.category_id.in_(all_cat_ids))
         
     if section:
         if section == 'rent':
@@ -1630,7 +1642,12 @@ def aggregate_ads(
     if is_published is not None:
         query = query.filter(models.Ad.is_published == is_published)
     else:
-        query = query.filter(models.Ad.is_published == True)
+        query = query.filter(models.Ad.is_published == True, models.Ad.is_sold == False)
+        
+    if not search:
+        query = query.filter(models.Ad.image_url.isnot(None))
+        query = query.filter(models.Ad.image_url != '[]')
+        query = query.filter(models.Ad.image_url != '')
         
     if source_type:
         query = query.filter(models.Ad.source_type == source_type)
@@ -1640,18 +1657,96 @@ def aggregate_ads(
             if ":" in tag:
                 prefix, val = tag.split(":", 1)
                 if prefix == "bedrooms":
-                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%bedrooms:{val}%") | cast(models.AdSearchIndex.search_text, String).ilike(f"%rooms:{val}%") | (models.AdSearchIndex.bedrooms == int(val) if val.isdigit() else False))
+                    vals = val.split(",")
+                    conditions = []
+                    for v in vals:
+                        if v == '+6' or v == '6+':
+                            conditions.extend([
+                                models.Ad.attributes['rooms'].astext == '+6',
+                                models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%6%'),
+                                models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%7%'),
+                                models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%6%'),
+                                models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%7%')
+                            ])
+                        elif v == 'ستوديو':
+                            conditions.extend([
+                                models.Ad.attributes['rooms'].astext == '0',
+                                models.Ad.attributes['rooms'].astext == 'ستوديو',
+                                models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%ستوديو%'),
+                                models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike('%0%'),
+                                models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%ستوديو%'),
+                                models.Ad.attributes['dynamic_data']['rooms'].astext.ilike('%0%')
+                            ])
+                        else:
+                            conditions.extend([
+                                models.Ad.attributes['rooms'].astext == v,
+                                models.Ad.attributes['dynamic_data']['bedrooms'].astext.ilike(f"%{v}%"),
+                                models.Ad.attributes['dynamic_data']['rooms'].astext.ilike(f"%{v}%")
+                            ])
+                    query = query.filter(or_(*conditions))
                 elif prefix == "bathrooms":
-                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%bathrooms:{val}%") | (models.AdSearchIndex.bathrooms == int(val) if val.isdigit() else False))
+                    vals = val.split(",")
+                    conditions = []
+                    for v in vals:
+                        if v == '+6' or v == '6+':
+                            conditions.extend([
+                                models.Ad.attributes['bathrooms'].astext == '+6',
+                                models.Ad.attributes['dynamic_data']['bathrooms'].astext.ilike('%6%'),
+                                models.Ad.attributes['dynamic_data']['bathrooms'].astext.ilike('%7%')
+                            ])
+                        else:
+                            conditions.extend([
+                                models.Ad.attributes['bathrooms'].astext == v,
+                                models.Ad.attributes['dynamic_data']['bathrooms'].astext.ilike(f"%{v}%")
+                            ])
+                    query = query.filter(or_(*conditions))
                 elif prefix == "floor":
-                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%floor:{val}%") | (models.AdSearchIndex.floor_number == int(val) if val.isdigit() else False))
+                    vals = val.split(",")
+                    conditions = []
+                    for v in vals:
+                        conditions.extend([
+                            models.Ad.attributes['floor'].astext == v,
+                            models.Ad.attributes['dynamic_data']['floor'].astext == v
+                        ])
+                    query = query.filter(or_(*conditions))
                 elif prefix == "furnished":
-                    is_furn = val in ['مفروشة', 'مفروش', 'مفروش جزئياً', 'yes']
-                    query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%furnished:{val}%") | (models.AdSearchIndex.furnished == is_furn))
+                    vals = val.split(",")
+                    conditions = []
+                    for v in vals:
+                        conditions.extend([
+                            models.Ad.attributes['furnished'].astext == v,
+                            models.Ad.attributes['dynamic_data']['furnishing'].astext == v,
+                            models.Ad.attributes['dynamic_data']['furnished'].astext == v
+                        ])
+                    query = query.filter(or_(*conditions))
                 elif prefix == "min_area" and val.isdigit():
-                    query = query.filter(models.AdSearchIndex.build_area >= float(val))
+                    v = int(val)
+                    area_conds = [models.AdSearchIndex.build_area >= float(v)]
+                    try:
+                        numeric_area = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_area.cast(Integer) >= v)
+                        numeric_barea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['building_area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_barea.cast(Integer) >= v)
+                        numeric_larea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['land_area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_larea.cast(Integer) >= v)
+                        numeric_area_top = func.nullif(func.regexp_replace(models.Ad.attributes['area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_area_top.cast(Integer) >= v)
+                    except: pass
+                    query = query.filter(or_(*area_conds))
                 elif prefix == "max_area" and val.isdigit():
-                    query = query.filter(models.AdSearchIndex.build_area <= float(val))
+                    v = int(val)
+                    area_conds = [models.AdSearchIndex.build_area <= float(v)]
+                    try:
+                        numeric_area = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_area.cast(Integer) <= v)
+                        numeric_barea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['building_area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_barea.cast(Integer) <= v)
+                        numeric_larea = func.nullif(func.regexp_replace(models.Ad.attributes['dynamic_data']['land_area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_larea.cast(Integer) <= v)
+                        numeric_area_top = func.nullif(func.regexp_replace(models.Ad.attributes['area'].astext, '[^0-9]', '', 'g'), '')
+                        area_conds.append(numeric_area_top.cast(Integer) <= v)
+                    except: pass
+                    query = query.filter(or_(*area_conds))
                 elif prefix == "period":
                     query = query.filter(cast(models.AdSearchIndex.search_text, String).ilike(f"%period:{val}%"))
                 else:
