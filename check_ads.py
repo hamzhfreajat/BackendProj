@@ -1,19 +1,9 @@
-import psycopg2
-try:
-    conn = psycopg2.connect(host='178.104.204.148', port='9000', dbname='cmnynjgg90003aumlerff4j9q', user='postgres', password='p2j9ggm6cWLAhhVTsbNzYFqK')
-    cur = conn.cursor()
-    
-    cur.execute("SELECT COUNT(id) FROM ads WHERE search_text ILIKE '%دوار الداخليه%'")
-    print('دوار الداخلية Ads:', cur.fetchone()[0])
-    
-    cur.execute("SELECT COUNT(id) FROM ads WHERE search_text ILIKE '%الجبيهه%'")
-    print('جبيهة Ads:', cur.fetchone()[0])
-    
-    cur.execute("SELECT COUNT(id) FROM ads WHERE search_text ILIKE '%المدينه الرياضيه%'")
-    print('المدينة الرياضية Ads:', cur.fetchone()[0])
-    
-    cur.execute("SELECT COUNT(id) FROM ads WHERE search_text ILIKE '%دوار الواحه%'")
-    print('دوار الواحة Ads:', cur.fetchone()[0])
-    
-except Exception as e:
-    print('ERROR:', e)
+from database import SessionLocal
+from sqlalchemy import text
+
+db = SessionLocal()
+query = "SELECT id, title FROM ads WHERE ads::text LIKE '%0787224854%'"
+result = db.execute(text(query)).fetchall()
+print(f'Found {len(result)} ads')
+for row in result:
+    print(f'- ID: {row[0]}')
