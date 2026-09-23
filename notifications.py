@@ -74,10 +74,14 @@ def init_firebase_admin():
         from firebase_admin import credentials
         if not firebase_admin._apps:
             firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
-            if firebase_creds_json:
-                cred_dict = json.loads(firebase_creds_json)
-                cred = credentials.Certificate(cred_dict)
-                firebase_admin.initialize_app(cred)
+            if firebase_creds_json and firebase_creds_json.strip():
+                try:
+                    cred_dict = json.loads(firebase_creds_json)
+                    cred = credentials.Certificate(cred_dict)
+                    firebase_admin.initialize_app(cred)
+                except Exception as e:
+                    print(f"[FCM] Invalid FIREBASE_CREDENTIALS JSON: {e}")
+                    return False
             else:
                 cred_path = "firebase-service-account.json"
                 if os.path.exists(cred_path):
@@ -86,6 +90,9 @@ def init_firebase_admin():
         return True
     except ImportError:
         print("[FCM] firebase-admin not installed.")
+        return False
+    except Exception as e:
+        print(f"[FCM] Error initializing firebase: {e}")
         return False
 
 def send_welcome_chat_message(user_id: int, user_name: str, user_phone: str):
