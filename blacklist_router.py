@@ -36,12 +36,17 @@ def add_blocked_phone(
     # or the ad might be owned by a user with this phone number.
     # We will query and delete ads where attributes->>'phone_number' == phone.
     
-    from sqlalchemy import text
+    from sqlalchemy import cast, String
     try:
-        # Search for the phone number anywhere in the ad text fields
-        # This catches phone numbers embedded in descriptions or stored in any attribute
+        # Delete scraped ads where the phone is in attributes OR description
+        # Leave organic ads alone!
         ads_to_delete = db.query(models.Ad).filter(
-            text("ads::text LIKE :phone").bindparams(phone=f"%{phone}%")
+            (
+                cast(models.Ad.attributes, String).ilike(f'%{phone}%') |
+                models.Ad.description.ilike(f'%{phone}%') |
+                models.Ad.raw_description.ilike(f'%{phone}%')
+            ),
+            models.Ad.source_type != models.SourceType.ORGANIC_USER
         ).all()
         
         for ad in ads_to_delete:
