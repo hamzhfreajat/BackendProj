@@ -1,6 +1,7 @@
-﻿import os
+import os
 import json
 import logging
+from auth import redis_client
 import urllib.request
 import urllib.error
 import difflib
@@ -213,7 +214,19 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
         norm_loc = normalize_arabic(raw_loc)
         if not norm_loc: continue
         
-        # 1. Check Zone Dictionary first (e.g. "Ø¹Ù…Ø§Ù† Ø§Ù„ØºØ±Ø¨ÙŠØ©")
+        # 0. Check if it's a City
+        city_matched = False
+        all_cities = db.query(models.City).all()
+        for city in all_cities:
+            if normalize_arabic(city.name_ar) == norm_loc or (city.name_en and city.name_en.lower() == norm_loc.lower()):
+                inferred_city = city.id
+                city_matched = True
+                break
+        
+        if city_matched:
+            continue
+            
+        # 1. Check Zone Dictionary first (e.g. "عمان الغربية")
         zone_matched = False
         for zone_key, zone_areas in ZONE_REGIONS.items():
             if norm_loc == normalize_arabic(zone_key):
@@ -274,9 +287,9 @@ def build_search_query(db: Session, filters: dict):
     
     q = q.filter(
         models.Ad.is_published == True,
-        models.Ad.is_paused == False,
-    query = db.query(models.AdSearchIndex)
-    
+        models.Ad.is_paused == False
+    )
+    query = q
     if filters.get("category_id"):
         # For rent categories specifically, we want to match exact or subcategories
         cat_id = filters["category_id"]
@@ -350,22 +363,25 @@ def parse_floor(floor_word: str):
 def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db)):
     text_clean = request.text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').lower()
 
-    # 1. Check for multiple property types
-    prop_keywords = ["شقه", "شقق", "استوديو", "فيلا", "فلل", "محل", "محلات", "مكتب", "مكاتب", "ارض", "اراضي", "مزرعه", "مزارع", "شاليه"]
-    found_props = [p for p in prop_keywords if p in text_clean]
-    
-    generic_props = set()
-    for p in found_props:
-        if p in ["شقه", "شقق"]: generic_props.add("شقة")
-        elif p == "استوديو": generic_props.add("استوديو")
-        elif p in ["فيلا", "فلل"]: generic_props.add("فيلا")
-        elif p in ["محل", "محلات"]: generic_props.add("محل تجاري")
-        elif p in ["مكتب", "مكاتب"]: generic_props.add("مكتب")
-        elif p in ["ارض", "اراضي"]: generic_props.add("أرض")
-        elif p in ["مزرعه", "مزارع", "شاليه"]: generic_props.add("مزرعة / شاليه")
+    # Dynamic Validation using Dialect Dictionary
+    from dialect_dictionary import TRANSACTION_SYNONYMS, CATEGORY_SYNONYMS
 
-    if len(generic_props) > 1:
-        props_str = " أو ".join(list(generic_props)[:2])
+    # 1. Check for multiple property types dynamically
+    found_props = []
+    mapped_categories = set()
+    
+    # Sort keys by length descending to match longest first (e.g. "شقة فندقية" before "شقة")
+    sorted_cat_keys = sorted(CATEGORY_SYNONYMS.keys(), key=len, reverse=True)
+    
+    for k in sorted_cat_keys:
+        if k in text_clean:
+            # Prevent substring matching (e.g. finding "شقة" inside "شقة فندقية")
+            if not any(k in found_larger for found_larger in found_props):
+                found_props.append(k)
+                mapped_categories.add(CATEGORY_SYNONYMS[k])
+
+    if len(mapped_categories) > 1:
+        props_str = " أو ".join(found_props[:2])
         return SmartSearchResponse(
             intent="search",
             result_count=0,
@@ -373,10 +389,16 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             action_required=f"يرجى تحديد نوع عقار واحد فقط للبحث (مثلاً: {props_str})."
         )
         
-    # 2. Check for rent/sale intent
-    has_rent = any(w in text_clean for w in ["ايجار", "استاجر", "يومي", "شهري", "سنوي", "اسبوعي"])
-    has_sale = any(w in text_clean for w in ["بيع", "شراء"])
-    
+    # 2. Check for rent/sale intent dynamically
+    has_rent = False
+    has_sale = False
+    for k, v in TRANSACTION_SYNONYMS.items():
+        if k in text_clean:
+            if v == "rent":
+                has_rent = True
+            elif v == "sale":
+                has_sale = True
+                
     if not has_rent and not has_sale:
         return SmartSearchResponse(
             intent="search",
@@ -397,6 +419,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     ai_response = extract_raw_data_via_deepseek(request.text, valid_tags=valid_tags)
     
     intent = ai_response.get("intent", "search")
+    if intent == "error":
+        return SmartSearchResponse(intent="search", result_count=0, filters_applied={}, action_required=ai_response.get("message", "عذراً، النظام تحت ضغط عالي. يرجى الانتظار."))
     if intent != "search":
         return SmartSearchResponse(intent=intent, result_count=0, filters_applied={})
         
@@ -539,6 +563,18 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         applied_filters["location_names"] = [n for n in location_names if n == "عمان"]
         query = build_search_query(db, applied_filters)
         count = query.count()
+        
+    try:
+        from models import SearchQueryLog
+        query_log = SearchQueryLog(
+            query_text=request.text,
+            results_count=count,
+            extracted_tags=json.dumps(ai_response)
+        )
+        db.add(query_log)
+        db.commit()
+    except Exception as e:
+        logger.error(f"Failed to log search query: {e}")
         if count > 0:
             return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج في هذه المنطقة تحديداً، تم عرض نتائج المدينة كاملة.")
             
@@ -548,32 +584,4 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         filters_applied=applied_filters,
         suggestion="نعتذر، لا يوجد أي عقارات مطابقة لبحثك حالياً."
     )
-        if current_val:
-            temp_val = alternative_filters[filter_key]
-            alternative_filters[filter_key] = [] if filter_key == "region_ids" else None
-            
-            fallback_query = build_search_query(db, alternative_filters)
-            alternative_count = fallback_query.count()
-            
-            if alternative_count > 0:
-                removed_filter_name = filter_key
-                break
-            alternative_filters[filter_key] = temp_val
-                
-    if alternative_count > 0:
-        sugg = generate_fallback_suggestion(applied_filters, alternative_count, removed_filter_name)
-        if suggestion: sugg = suggestion + "\n\n" + sugg
-        suggestion = sugg
-    else:
-        suggestion = "Ø¹Ø°Ø±Ø§Ù‹ØŒ Ù„Ù… Ù†ØªÙ…ÙƒÙ† Ù…Ù† Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø£ÙŠ Ø¹Ù‚Ø§Ø± Ù…Ø·Ø§Ø¨Ù‚. Ø¬Ø±Ø¨ ØªØºÙŠÙŠØ± ÙØ¦Ø© Ø§Ù„Ø¹Ù‚Ø§Ø± Ø£Ùˆ Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©."
-        
-    return SmartSearchResponse(
-        intent=intent,
-        result_count=0,
-        filters_applied=applied_filters,
-        suggestion=suggestion,
-        alternative_count=alternative_count,
-        alternative_filters=alternative_filters
-    )
-
 
