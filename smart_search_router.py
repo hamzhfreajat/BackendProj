@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-from auth import redis_client
 import urllib.request
 import urllib.error
 import difflib
@@ -15,6 +14,7 @@ from database import get_db
 
 from arabic_utils import normalize_arabic, convert_hindi_numerals, parse_price
 from dialect_dictionary import FURNISHING_SYNONYMS, TRANSACTION_SYNONYMS, CATEGORY_SYNONYMS, ZONE_REGIONS
+from auth import redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +30,22 @@ class SmartSearchResponse(BaseModel):
     suggestion: Optional[str] = None
     alternative_count: Optional[int] = None
     alternative_filters: Optional[dict] = None
+    action_required: Optional[str] = None
 
-def extract_raw_data_via_deepseek(text: str) -> dict:
+def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     """
     Step 1: Uses DeepSeek to act purely as an NLP entity extractor.
-    It does NOT attempt to match IDs or predefined lists. It just extracts raw Arabic words.
     """
+    cache_key = f"smart_search_ai:{text}"
+    cached_result = redis_client.get(cache_key)
+    if cached_result:
+        return json.loads(cached_result)
+
     url = "https://api.deepseek.com/chat/completions"
+    import os
+    from fastapi import HTTPException
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
-        logger.error("DEEPSEEK_API_KEY is not set.")
         raise HTTPException(status_code=500, detail="Search service configuration error.")
 
     headers = {
@@ -47,31 +53,47 @@ def extract_raw_data_via_deepseek(text: str) -> dict:
         "Authorization": f"Bearer {api_key}"
     }
 
-    system_prompt = """You are a helpful NLP assistant. Extract entities from Jordanian real estate search queries.
-Do NOT guess or correct anything. Output exactly what the user said in the specified JSON fields.
+    system_prompt = f"""You are a helpful NLP assistant. Extract entities from Jordanian real estate search queries.
+Do NOT guess or correct anything, except for category_id which must be selected from the provided list.
+You MUST choose the most specific end-level category from the list. 
+CRITICAL RULE: If the user DOES NOT explicitly mention whether they want to RENT (ايجار) or BUY/SALE (بيع / شراء), you MUST set category_id to null so the search can span across both. Do not guess the category if rent/sale intent is ambiguous.
+CRITICAL RULE: If the user explicitly negates a feature (e.g. 'مش طابق ارضي', 'بدون فرش', 'غير مفروش'), DO NOT extract it.
+CRITICAL RULE: If the user uses relative sizes for an apartment:
+- 'صغيرة' (small): set max_area_number to 90 (unless a specific number is provided).
+- 'كبيرة' (large) or 'واسعة': set min_area_number to 150 (unless a specific number is provided).
 
 Intent mapping:
-- "search": Looking for properties
-- "post_ad": Wants to sell or rent out their own property
+- search: Looking for properties (e.g. "شقة للايجار", "بدي استأجر", "عقارات")
+- post_ad: Wants to sell or rent out their own property (e.g. "عندي شقة للبيع", "بدي انزل اعلان")
+
+Available Categories (End-level only):
+{categories_str}
 
 Output JSON format:
-{
+{{
   "intent": "search" | "post_ad",
-  "raw_filters": {
-    "property_type": "Extract property type (e.g. Ø´Ù‚Ø©, ÙÙŠÙ„Ø§)",
-    "transaction": "Extract transaction type (e.g. Ù„Ù„Ø¨ÙŠØ¹, Ø§ÙŠØ¬Ø§Ø±)",
-    "locations": ["Array of location names"],
-    "bedrooms_number": integer or null,
-    "bathrooms_number": integer or null,
-    "furnishing_word": "Extract word indicating furniture (e.g. Ù…Ø¹Ø´ÙŠØ©, ÙØ§Ø¶ÙŠØ©)",
+  "raw_filters": {{
+    "category_id": integer ID of the best matching category from the list above, or null if unknown,
+    "property_type": "Extract the property type mentioned (e.g. شقة, فيلا, سيارة), or null",
+    "locations": ["Extract ALL location names, regions, or cities mentioned in the text as a list of strings"],
+    "nearby_locations": ["Choose from: بنك / صراف آلي, دراي كلين, سوبر ماركت, صالة رياضية / جيم, صيدلية, محطة باصات, مدرسة, مستشفى, مسجد, مطعم. If not mentioned, return empty list."],
+    "furnishing_word": "Choose ONE from: مفروشة, غير مفروشة, مفروش جزئياً. If not mentioned, return null.",
+    "payment_method": "Choose ONE from: كاش, أقساط. If not mentioned, return null.",
     "max_price_word": "Extract text indicating max price",
     "min_price_word": "Extract text indicating min price",
-    "floor_word": "Extract floor mentioned (e.g. Ø§Ø±Ø¶ÙŠ, ØªØ³ÙˆÙŠØ©)",
-    "min_area_number": integer or null (e.g. from 'ÙÙˆÙ‚ 120 Ù…ØªØ±' -> 120),
-    "max_area_number": integer or null,
-    "features": ["Extract any extra features/amenities as a list of strings, e.g. 'ÙƒØ±Ø§Ø¬', 'Ø­Ø¯ÙŠÙ‚Ø©', 'Ø¨Ù„ÙƒÙˆÙ†Ø©', 'Ù…ØµØ¹Ø¯', 'Ù…Ù† Ø§Ù„Ù…Ø§Ù„Ùƒ Ù…Ø¨Ø§Ø´Ø±Ø©', 'Ø¹Ù‚Ø¯ Ø³Ù†ÙˆÙŠ'"]
-  }
-}"""
+    "min_area_number": "Extract the integer minimum area in square meters mentioned, or null",
+    "max_area_number": "Extract the integer maximum area in square meters mentioned, or null",
+    "floor_words": ["Choose from: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, طابق أخير, روف, طابق أخير مع روف. If not mentioned, return empty list."],
+    "floor_numbers": ["Extract all floor integer numbers mentioned as a list of ints"],
+    "bedrooms_number": "Extract the integer number of bedrooms mentioned, or null if not mentioned",
+    "bathrooms_number": "Extract the integer number of bathrooms mentioned, or null if not mentioned",
+    "rent_period": "Choose ONE from: يومي, أسبوعي, شهري, كل 3 أشهر, كل أربع أشهر, كل 5 أشهر, كل 6 أشهر, سنوي. If not mentioned, return null.",
+    "building_age": "Choose ONE from: 0 - 11 شهر, 1 - 5 سنوات, 6 - 9 سنوات, 10 - 19 سنوات, +20 سنة. If not mentioned, return null.",
+    "interface": "Choose ONE from: شمالية, جنوبية, شرقية, غربية, شمالية شرقية, شمالية غربية, جنوبية شرقية, جنوبية غربية. If not mentioned, return null.",
+    "main_features": ["Choose from: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج, مناسبة لعرسان, كراج, سوبر ديلوكس. If not mentioned, return empty list."],
+    "extra_features": ["Choose from: يوجد مصعد, موقف سيارات, حارس / أمن وحماية, نظام كهرباء احتياطي للطوارئ, انتركم, حديقة, منطقة شواء, بركة سباحة. If not mentioned, return empty list."]
+  }}
+}}"""
 
     data = {
         "model": "deepseek-chat",
@@ -79,24 +101,32 @@ Output JSON format:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ],
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
+        "temperature": 0.0
     }
 
     try:
         req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:
             result = json.loads(response.read().decode("utf-8"))
             content = result["choices"][0]["message"]["content"]
-            return json.loads(content)
+            parsed_json = json.loads(content)
+            redis_client.setex(cache_key, 86400, json.dumps(parsed_json))
+            if redis_client:
+                redis_client.setex(cache_key, 86400, json.dumps(parsed_json))
+            return parsed_json
+    except urllib.error.HTTPError as e:
+        logger.error(f"HTTPError calling DeepSeek API: {str(e)}")
+        return {"intent": "error", "message": "عذراً، هنالك ضغط كبير على محرك البحث الذكي حالياً. يرجى المحاولة مرة أخرى أو استخدام الفلاتر اليدوية."}
     except Exception as e:
         logger.error(f"Error calling DeepSeek API: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error communicating with AI service.")
+        return {"intent": "error", "message": "عذراً، هنالك ضغط كبير على محرك البحث الذكي حالياً. يرجى المحاولة مرة أخرى أو استخدام الفلاتر اليدوية."}
 
 def generate_fallback_suggestion(original_filters: dict, alternative_count: int, removed_filter: str) -> str:
     url = "https://api.deepseek.com/chat/completions"
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
-        return "Ø¬Ø±Ø¨ ØªØºÙŠÙŠØ± Ø¨Ø¹Ø¶ Ø§Ù„ÙÙ„Ø§ØªØ± Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ù†ØªØ§Ø¦Ø¬."
+        return "جرب تغيير بعض ال�?لاتر للحصول على نتائج."
 
     headers = {
         "Content-Type": "application/json",
@@ -104,13 +134,13 @@ def generate_fallback_suggestion(original_filters: dict, alternative_count: int,
     }
 
     prompt = f"""
-Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø­Ø« Ø¹Ù† Ø¹Ù‚Ø§Ø± Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Ù‡Ø°Ù‡ Ø§Ù„ÙÙ„Ø§ØªØ±:
+المستخدم بحث عن عقار باستخدام هذه ال�?لاتر:
 {json.dumps(original_filters, ensure_ascii=False)}
 
-ÙˆÙ„ÙƒÙ† Ù„Ù… Ù†Ø¬Ø¯ Ø£ÙŠ Ù†ØªØ§Ø¦Ø¬. 
-Ù‚Ù…Ù†Ø§ Ø¨Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ÙÙ„ØªØ±: {removed_filter} ÙˆÙˆØ¬Ø¯Ù†Ø§ {alternative_count} Ø¥Ø¹Ù„Ø§Ù†Ø§Øª.
+ولكن لم نجد أي نتائج. 
+قمنا بإزالة ال�?لتر: {removed_filter} ووجدنا {alternative_count} إعلانات.
 
-Ø§ÙƒØªØ¨ Ø±Ø³Ø§Ù„Ø© ÙˆØ¯ÙŠØ© Ù‚ØµÙŠØ±Ø© Ø¬Ø¯Ø§Ù‹ Ø¨Ø§Ù„Ù„Ù‡Ø¬Ø© Ø§Ù„Ø£Ø±Ø¯Ù†ÙŠØ© ØªÙ‚ØªØ±Ø­ Ø¹Ù„Ù‰ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ØªØ¹Ø¯ÙŠÙ„ Ù‡Ø°Ø§ Ø§Ù„ÙÙ„ØªØ± Ø¨Ø§Ù„Ø°Ø§Øª (Ù…Ø«Ù„Ø§Ù‹ Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ø³Ø¹Ø±ØŒ Ø§Ù‚ØªØ±Ø­ Ø²ÙŠØ§Ø¯Ø© Ø§Ù„Ù…ÙŠØ²Ø§Ù†ÙŠØ©ØŒ Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ù…Ù†Ø·Ù‚Ø© Ø§Ù‚ØªØ±Ø­ ØªÙˆØ³ÙŠØ¹ Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¨Ø­Ø«) Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ {alternative_count} Ù†ØªØ§Ø¦Ø¬. Ù„Ø§ ØªØ³ØªØ®Ø¯Ù… Ø£ÙŠ Ø±Ù…ÙˆØ² Markdown.
+اكتب رسالة ودية قصيرة جداً باللهجة الأردنية تقترح على المستخدم تعديل هذا ال�?لتر بالذات (مثلاً إذا كان السعر، اقترح زيادة الميزانية، إذا كان المنطقة اقترح توسيع نطاق البحث) للحصول على {alternative_count} نتائج. لا تستخدم أي رموز Markdown.
     """
 
     data = {
@@ -123,76 +153,84 @@ def generate_fallback_suggestion(original_filters: dict, alternative_count: int,
             result = json.loads(response.read().decode("utf-8"))
             return result["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        return "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù…Ø·Ø§Ø¨Ù‚Ø©ØŒ Ø¬Ø±Ø¨ ØªØºÙŠÙŠØ± Ø¨Ø¹Ø¶ Ø§Ù„ÙÙ„Ø§ØªØ± Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ù†ØªØ§Ø¦Ø¬."
+        return "لا توجد نتائج مطابقة، جرب تغيير بعض ال?لاتر للحصول على نتائج."
 
-def map_category_smart(raw_prop: str, raw_trans: str) -> Optional[int]:
-    """Combines property type and transaction to find the best category ID."""
-    if not raw_prop:
-        return None
-        
-    prop_norm = raw_prop.lower()
-    trans_norm = raw_trans.lower() if raw_trans else ""
-    
-    # 1. Resolve Transaction (Sale vs Rent)
-    transaction_intent = None
-    for k, v in TRANSACTION_SYNONYMS.items():
-        if k in trans_norm or k in prop_norm:
-            transaction_intent = v
-            break
-            
-    # If the user did NOT specify if they want rent or sale,
-    # return None so the search API spans across both rent and sale categories!
-    if not transaction_intent:
-        return None
-                
-    # 2. Try combined match first
-    combined = f"{prop_norm} للايجار" if transaction_intent == "rent" else f"{prop_norm} للبيع"
-    for k, v in CATEGORY_SYNONYMS.items():
-        if k in combined:
-            return v
-            
-    # 3. Fallback to direct mapping
-    for k, v in CATEGORY_SYNONYMS.items():
-        if k in prop_norm:
-            # If it's a generic map (like 10301), and they want rent, force rent ID
-            if transaction_intent == "rent" and v == 10301: return 301 # apartments
-            if transaction_intent == "rent" and v == 10101: return 3101 # villas
-            if transaction_intent == "rent" and v == 10302: return 302 # studios
-            if transaction_intent == "rent" and v == 10853: return 303 # shops
-            return v
-            
-    return None
-        
-    prop_norm = raw_prop.lower()
-    trans_norm = raw_trans.lower() if raw_trans else ""
-    
-    # 1. Resolve Transaction (Sale vs Rent)
-    is_rent = False
-    for k, v in TRANSACTION_SYNONYMS.items():
-        if k in trans_norm or k in prop_norm:
-            if v == "rent":
-                is_rent = True
-                break
-                
-    # 2. Try combined match first
-    combined = f"{prop_norm} Ù„Ù„Ø§ÙŠØ¬Ø§Ø±" if is_rent else f"{prop_norm} Ù„Ù„Ø¨ÙŠØ¹"
-    for k, v in CATEGORY_SYNONYMS.items():
-        if k in combined:
-            return v
-            
-    # 3. Fallback to direct mapping
-    for k, v in CATEGORY_SYNONYMS.items():
-        if k in prop_norm:
-            # If it's a generic map (like 10301), and they want rent, force rent ID
-            if is_rent and v == 10301: return 301 # apartments
-            if is_rent and v == 10101: return 3101 # villas
-            if is_rent and v == 10302: return 302 # studios
-            if is_rent and v == 10853: return 303 # shops
-            return v
-            
-    return None
+ZONE_REGIONS = {
+    "عمان الغربية": [
+        'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
+        'الدوار السابع', 'الدوار الثامن', 'الروابي', 'الصويفية', 'العبدلي', 'المدينة الرياضية', 
+        'ام اذينة', 'ام اذينة الشرقي', 'ام اذينة الغربي', 'ام السماق', 'تلاع العلي', 
+        'تلاع العلي الشمالي', 'تلاع العلي الشرقي', 'دير غبار', 'شارع المدينة', 
+        'شارع المدينة المنورة', 'شارع مكة', 'شارع الجامعة', 'ضاحية الامير راشد', 
+        'ضاحية الرشيد', 'ضاحية الحسين', 'ضاحية النخيل', 'ضاحية الروضة', 'وادي صقرة', 
+        'دوار الداخلية', 'دوار الواحة', 'دوار الكيلو', 'بزنس بارك', 'طلوع نيفين', 
+        'البحاث', 'البيادر', 'الجاردنز', 'الجندويل', 'الحمر', 'الديار', 'الرابية', 
+        'الرضوان', 'الرونق', 'السهل', 'الصناعة', 'الظهير', 'الكرسي', 'الكمالية', 
+        'أم الأسود', 'بدر الجديدة', 'خلدا', 'دابوق', 'شفا بدران', 'شميساني', 
+        'صويلح', 'طريق المطار', 'طريق المطار - جسر ديونز', 'عبدون', 'عبدون الجنوبي', 
+        'عبدون الشمالي', 'عراق الامير', 'مرج الحمام', 'وادي السير', 'حي البركة', 
+        'حي الخالدين', 'حي الرحمانية', 'حي الصالحين', 'حي الصحابة', 'رجم عميش'
+    ],
+    "غرب عمان": [
+        'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
+        'الدوار السابع', 'الدوار الثامن', 'الروابي', 'الصويفية', 'العبدلي', 'المدينة الرياضية', 
+        'ام اذينة', 'ام اذينة الشرقي', 'ام اذينة الغربي', 'ام السماق', 'تلاع العلي', 
+        'تلاع العلي الشمالي', 'تلاع العلي الشرقي', 'دير غبار', 'شارع المدينة', 
+        'شارع المدينة المنورة', 'شارع مكة', 'شارع الجامعة', 'ضاحية الامير راشد', 
+        'ضاحية الرشيد', 'ضاحية الحسين', 'ضاحية النخيل', 'ضاحية الروضة', 'وادي صقرة', 
+        'دوار الداخلية', 'دوار الواحة', 'دوار الكيلو', 'بزنس بارك', 'طلوع نيفين', 
+        'البحاث', 'البيادر', 'الجاردنز', 'الجندويل', 'الحمر', 'الديار', 'الرابية', 
+        'الرضوان', 'الرونق', 'السهل', 'الصناعة', 'الظهير', 'الكرسي', 'الكمالية', 
+        'أم الأسود', 'بدر الجديدة', 'خلدا', 'دابوق', 'شفا بدران', 'شميساني', 
+        'صويلح', 'طريق المطار', 'طريق المطار - جسر ديونز', 'عبدون', 'عبدون الجنوبي', 
+        'عبدون الشمالي', 'عراق الامير', 'مرج الحمام', 'وادي السير', 'حي البركة', 
+        'حي الخالدين', 'حي الرحمانية', 'حي الصالحين', 'حي الصحابة', 'رجم عميش'
+    ],
+    "عمان الشرقية": [
+        'ابو علندا', 'البنيات', 'المناره', 'ضاحية الامير حسن', 'ضاحية الحاج حسن', 
+        'ضاحية الاستقلال', 'ضاحية الاقصى', 'وادي السرور', 'وادي الرمم', 'وادي الحدادة', 
+        'وادي العش', 'أم الحيران', 'النويجيس', 'جبل القلعة', 'جبل الأشرفية', 'جبل التاج', 
+        'جبل الجوفة', 'جبل الحسين', 'جبل الزهور', 'جبل المريخ', 'جبل النزهة', 'جبل النصر', 
+        'جبل النظيف', 'جبل عمان', 'دوار المشاغل', 'شارع الحزام', 'عين غزال', 'البيضاء', 
+        'الجويدة', 'الحرّيّة', 'الخزنة', 'الخشافية', 'الدوار الأول', 'الدوار الثاني', 
+        'الذراع', 'الربوة', 'الرجيب', 'الرقيم', 'القصور', 'القويسمة', 'الماضونة', 
+        'المحطة', 'المستندة', 'المقابلين', 'الموقر', 'المغيرات', 'الهاشمي الجنوبي', 
+        'الهاشمي الشمالي', 'الوحدات', 'اليادودة', 'الياسمين', 'اليرموك', 'ام نوارة', 
+        'أم قصير', 'بدر', 'بسمان', 'جاوا', 'حطين', 'حي نزال', 'حي عدن', 'خربة السوق', 
+        'راس العين', 'سحاب', 'صالحية العابد', 'طبربور', 'طلوع المصدار', 'عرجان', 
+        'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
+    ],
+    "شرق عمان": [
+        'ابو علندا', 'البنيات', 'المناره', 'ضاحية الامير حسن', 'ضاحية الحاج حسن', 
+        'ضاحية الاستقلال', 'ضاحية الاقصى', 'وادي السرور', 'وادي الرمم', 'وادي الحدادة', 
+        'وادي العش', 'أم الحيران', 'النويجيس', 'جبل القلعة', 'جبل الأشرفية', 'جبل التاج', 
+        'جبل الجوفة', 'جبل الحسين', 'جبل الزهور', 'جبل المريخ', 'جبل النزهة', 'جبل النصر', 
+        'جبل النظيف', 'جبل عمان', 'دوار المشاغل', 'شارع الحزام', 'عين غزال', 'البيضاء', 
+        'الجويدة', 'الحرّيّة', 'الخزنة', 'الخشافية', 'الدوار الأول', 'الدوار الثاني', 
+        'الذراع', 'الربوة', 'الرجيب', 'الرقيم', 'القصور', 'القويسمة', 'الماضونة', 
+        'المحطة', 'المستندة', 'المقابلين', 'الموقر', 'المغيرات', 'الهاشمي الجنوبي', 
+        'الهاشمي الشمالي', 'الوحدات', 'اليادودة', 'الياسمين', 'اليرموك', 'ام نوارة', 
+        'أم قصير', 'بدر', 'بسمان', 'جاوا', 'حطين', 'حي نزال', 'حي عدن', 'خربة السوق', 
+        'راس العين', 'سحاب', 'صالحية العابد', 'طبربور', 'طلوع المصدار', 'عرجان', 
+        'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
+    ]
+}
 
 def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None) -> tuple:
+    if raw_locations:
+        expanded = []
+        for loc in raw_locations:
+            loc_clean = loc.strip()
+            matched = False
+            for zname, zregs in ZONE_REGIONS.items():
+                if zname in loc_clean or loc_clean in zname:
+                    expanded.extend(zregs)
+                    matched = True
+                    break
+            if not matched:
+                expanded.append(loc_clean)
+        raw_locations = list(set(expanded))
+
     """
     Step 2: Python Matcher Engine.
     Uses fuzzy matching against normalized DB values to find regions.
@@ -203,8 +241,10 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
         
     # Fetch all regions to memory for matching (small enough to be very fast)
     all_regions = db.query(models.Region).all()
+    all_cities = db.query(models.City).all()
     # Pre-calculate normalized names
     db_candidates = {r.id: {"norm": normalize_arabic(r.name_ar), "obj": r} for r in all_regions}
+    city_candidates = {c.id: {"norm": normalize_arabic(c.name_ar), "obj": c} for c in all_cities}
     
     found_region_ids = []
     not_found_names = []
@@ -214,15 +254,15 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
         norm_loc = normalize_arabic(raw_loc)
         if not norm_loc: continue
         
-        # 0. Check if it's a City
+        # 0. Check if it's a City directly
         city_matched = False
-        all_cities = db.query(models.City).all()
-        for city in all_cities:
-            if normalize_arabic(city.name_ar) == norm_loc or (city.name_en and city.name_en.lower() == norm_loc.lower()):
-                inferred_city = city.id
+        for c_id, c_data in city_candidates.items():
+            if norm_loc == c_data["norm"] or (difflib.SequenceMatcher(None, norm_loc, c_data["norm"]).ratio() > 0.85):
+                if not inferred_city:
+                    inferred_city = c_id
                 city_matched = True
                 break
-        
+                
         if city_matched:
             continue
             
@@ -283,62 +323,55 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
     return list(set(found_region_ids)), not_found_names, inferred_city
 
 def build_search_query(db: Session, filters: dict):
-    q = db.query(models.Ad).join(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
+    from sqlalchemy import or_
+    query = db.query(models.AdSearchIndex)
+    joined_ad = False
     
-    q = q.filter(
-        models.Ad.is_published == True,
-        models.Ad.is_paused == False
-    )
-    query = q
     if filters.get("category_id"):
-        # For rent categories specifically, we want to match exact or subcategories
-        cat_id = filters["category_id"]
-        if cat_id in [301, 302, 3101]:  # Subcategories of rent
-            query = query.filter(models.AdSearchIndex.category_id == cat_id)
-        elif cat_id in [2, 3]: # Parent categories
-            subcats = db.query(models.Category).filter(models.Category.parent_id == cat_id).all()
-            sub_ids = [s.id for s in subcats]
-            if sub_ids:
-                query = query.filter(models.AdSearchIndex.category_id.in_(sub_ids))
-            else:
-                query = query.filter(models.AdSearchIndex.category_id == cat_id)
-        else:
-            query = query.filter(models.AdSearchIndex.category_id == cat_id)
-            
+        query = query.filter(models.AdSearchIndex.category_id == filters["category_id"])
+        
     if filters.get("city_id"):
         query = query.filter(models.AdSearchIndex.city_id == filters["city_id"])
         
-    if filters.get("region_ids"):
+    if filters.get("location_names"):
+        query = query.join(models.Ad, models.AdSearchIndex.ad_id == models.Ad.id)
+        joined_ad = True
+        loc_conditions = [models.Ad.location.ilike(f"%{loc}%") for loc in filters["location_names"]]
+        if filters.get("region_ids"):
+            query = query.filter(or_(models.AdSearchIndex.region_id.in_(filters["region_ids"]), *loc_conditions))
+        else:
+            query = query.filter(or_(*loc_conditions))
+    elif filters.get("region_ids"):
         query = query.filter(models.AdSearchIndex.region_id.in_(filters["region_ids"]))
         
     if filters.get("min_price"):
         query = query.filter(models.AdSearchIndex.price >= filters["min_price"])
+        
     if filters.get("max_price"):
         query = query.filter(models.AdSearchIndex.price <= filters["max_price"])
         
-    if filters.get("bedrooms"):
+    if filters.get("bedrooms") is not None:
         query = query.filter(models.AdSearchIndex.bedrooms >= filters["bedrooms"])
         
-    if filters.get("bathrooms"):
+    if filters.get("bathrooms") is not None:
         query = query.filter(models.AdSearchIndex.bathrooms >= filters["bathrooms"])
         
     if filters.get("furnished") is not None:
         query = query.filter(models.AdSearchIndex.furnished == filters["furnished"])
         
-    if filters.get("floor") is not None:
-        query = query.filter(models.AdSearchIndex.floor_number == filters["floor"])
-
+    if filters.get("floor_numbers"):
+        query = query.filter(models.AdSearchIndex.floor_number.in_(filters["floor_numbers"]))
+        
     if filters.get("min_area"):
         query = query.filter(models.AdSearchIndex.build_area >= filters["min_area"])
         
     if filters.get("max_area"):
         query = query.filter(models.AdSearchIndex.build_area <= filters["max_area"])
-
-    # Generic features matched against search_text
-    features = filters.get("features_list", [])
-    for feat in features:
-        if feat:
-            query = query.filter(models.AdSearchIndex.search_text.ilike(f"%{feat}%"))
+        
+    if filters.get("features_list"):
+        for feat in filters["features_list"]:
+            if feat:
+                query = query.filter(models.AdSearchIndex.search_text.ilike(f"%{feat}%"))
 
     return query
 
@@ -346,21 +379,59 @@ def parse_floor(floor_word: str):
     if not floor_word:
         return None
     w = floor_word.lower()
-    if "Ø§Ø±Ø¶ÙŠ" in w or "Ø£Ø±Ø¶ÙŠ" in w or "Ø­Ø¯ÙŠÙ‚Ø©" in w:
+    if "ارضي" in w or "أرضي" in w or "حديقة" in w:
         return -1
-    if "ØªØ³ÙˆÙŠØ©" in w:
+    if "تسوية" in w:
         return -2
-    if "Ø§ÙˆÙ„" in w or "Ø£ÙˆÙ„" in w: return 1
-    if "Ø«Ø§Ù†ÙŠ" in w: return 2
-    if "Ø«Ø§Ù„Ø«" in w: return 3
-    if "Ø±Ø§Ø¨Ø¹" in w: return 4
-    if "Ø®Ø§Ù…Ø³" in w: return 5
-    if "Ø³Ø§Ø¯Ø³" in w: return 6
-    if "Ø§Ø®ÙŠØ±" in w or "Ø£Ø®ÙŠØ±" in w or "Ø±ÙˆÙ" in w: return 100 # usually top floor
+    if "اول" in w or "أول" in w: return 1
+    if "ثاني" in w: return 2
+    if "ثالث" in w: return 3
+    if "رابع" in w: return 4
+    if "خامس" in w: return 5
+    if "سادس" in w: return 6
+    if "اخير" in w or "أخير" in w or "رو�?" in w: return 100 # usually top floor
     return None
 
 @smart_search_router.post("/api/smart-voice-search", response_model=SmartSearchResponse)
 def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db)):
+    # Fetch ONLY leaf categories under real estate (IDs 2 and 3)
+    try:
+        all_cats = db.query(models.Category).all()
+        
+        descendants = []
+        current_parents = [2, 3]
+        while current_parents:
+            children = [c for c in all_cats if c.parent_id in current_parents]
+            descendants.extend(children)
+            current_parents = [c.id for c in children]
+            
+        parent_ids = {c.parent_id for c in all_cats if c.parent_id is not None}
+        leaf_cats = [c for c in descendants if c.id not in parent_ids]
+        
+        cat_mapping = [f"ID: {c.id}, Name: {c.name}" for c in leaf_cats]
+        categories_str = "\n".join(cat_mapping)
+    except Exception:
+        categories_str = ""
+
+    # STEP 1: AI Entity Extraction
+    print("CATEGORIES SENT TO AI:", categories_str)
+    ai_response = extract_raw_data_via_deepseek(request.text, categories_str=categories_str)
+    
+    intent = ai_response.get("intent", "search")
+    if intent == "error":
+        return SmartSearchResponse(intent="search", result_count=0, filters_applied={}, action_required=ai_response.get("message"))
+    if intent == "error":
+        return SmartSearchResponse(intent="search", result_count=0, filters_applied={}, action_required=ai_response.get("message", "عذراً، النظام تحت ضغط عالي. يرجى الانتظار."))
+    if intent != "search":
+        return SmartSearchResponse(intent=intent, result_count=0, filters_applied={})
+        
+    raw = ai_response.get("raw_filters") or {}
+    
+    # STEP 2: Python Engine Smart Matching
+    
+    category_id = raw.get("category_id")
+    
+    # INTERCEPT: "بيت للايجار" -> "شقق للايجار" (301) unless "مستقل" is mentioned
     text_clean = request.text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').lower()
 
     # Dynamic Validation using Dialect Dictionary
@@ -407,32 +478,56 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             action_required="يرجى التحديد: هل تبحث عن عقار للإيجار أم للبيع؟"
         )
 
-    # Fetch valid tags from DB for real estate (cats 2 and 3, and maybe others, but we'll fetch all or just rely on a subset)
-    # Fetching all tags is usually fast if there aren't thousands.
-    try:
-        valid_tags_objs = db.query(models.Tag).all()
-        valid_tags = [t.name for t in valid_tags_objs if t.name]
-    except Exception:
-        valid_tags = []
+    if "بيت" in text_clean and ("ايجار" in text_clean or "اجار" in text_clean):
+        if "مستقل" not in text_clean:
+            category_id = 301  # شقق للايجار
+    raw_locations = raw.get("locations") or []
+    
+    WEST_AMMAN_REGIONS = [
+        'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
+        'الدوار السابع', 'الدوار الثامن', 'الروابي', 'الصويفية', 'العبدلي', 'المدينة الرياضية', 
+        'ام اذينة', 'ام اذينة الشرقي', 'ام اذينة الغربي', 'ام السماق', 'تلاع العلي', 
+        'تلاع العلي الشمالي', 'تلاع العلي الشرقي', 'دير غبار', 'شارع المدينة', 
+        'شارع المدينة المنورة', 'شارع مكة', 'شارع الجامعة', 'ضاحية الامير راشد', 
+        'ضاحية الرشيد', 'ضاحية الحسين', 'ضاحية النخيل', 'ضاحية الروضة', 'وادي صقرة', 
+        'دوار الداخلية', 'دوار الواحة', 'دوار الكيلو', 'بزنس بارك', 'طلوع نيفين', 
+        'البحاث', 'البيادر', 'الجاردنز', 'الجندويل', 'الحمر', 'الديار', 'الرابية', 
+        'الرضوان', 'الرونق', 'السهل', 'الصناعة', 'الظهير', 'الكرسي', 'الكمالية', 
+        'أم الأسود', 'بدر الجديدة', 'خلدا', 'دابوق', 'شفا بدران', 'شميساني', 
+        'صويلح', 'طريق المطار', 'طريق المطار - جسر ديونز', 'عبدون', 'عبدون الجنوبي', 
+        'عبدون الشمالي', 'عراق الامير', 'مرج الحمام', 'وادي السير', 'حي البركة', 
+        'حي الخالدين', 'حي الرحمانية', 'حي الصالحين', 'حي الصحابة', 'رجم عميش'
+    ]
 
-    # STEP 1: AI Entity Extraction
-    ai_response = extract_raw_data_via_deepseek(request.text, valid_tags=valid_tags)
+    EAST_AMMAN_REGIONS = [
+        'ابو علندا', 'البنيات', 'المناره', 'ضاحية الامير حسن', 'ضاحية الحاج حسن', 
+        'ضاحية الاستقلال', 'ضاحية الاقصى', 'وادي السرور', 'وادي الرمم', 'وادي الحدادة', 
+        'وادي العش', 'أم الحيران', 'النويجيس', 'جبل القلعة', 'جبل الأشرفية', 'جبل التاج', 
+        'جبل الجوفة', 'جبل الحسين', 'جبل الزهور', 'جبل المريخ', 'جبل النزهة', 'جبل النصر', 
+        'جبل النظيف', 'جبل عمان', 'دوار المشاغل', 'شارع الحزام', 'عين غزال', 'البيضاء', 
+        'الجويدة', 'الحرّيّة', 'الخزنة', 'الخشافية', 'الدوار الأول', 'الدوار الثاني', 
+        'الذراع', 'الربوة', 'الرجيب', 'الرقيم', 'القصور', 'القويسمة', 'الماضونة', 
+        'المحطة', 'المستندة', 'المقابلين', 'الموقر', 'المغيرات', 'الهاشمي الجنوبي', 
+        'الهاشمي الشمالي', 'الوحدات', 'اليادودة', 'الياسمين', 'اليرموك', 'ام نوارة', 
+        'أم قصير', 'بدر', 'بسمان', 'جاوا', 'حطين', 'حي نزال', 'حي عدن', 'خربة السوق', 
+        'راس العين', 'سحاب', 'صالحية العابد', 'طبربور', 'طلوع المصدار', 'عرجان', 
+        'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
+    ]
     
-    intent = ai_response.get("intent", "search")
-    if intent == "error":
-        return SmartSearchResponse(intent="search", result_count=0, filters_applied={}, action_required=ai_response.get("message", "عذراً، النظام تحت ضغط عالي. يرجى الانتظار."))
-    if intent != "search":
-        return SmartSearchResponse(intent=intent, result_count=0, filters_applied={})
-        
-    raw = ai_response.get("raw_filters", {})
-    
-    # STEP 2: Python Engine Smart Matching
-    
-    # Category
-    category_id = map_category_smart(raw.get("property_type"), raw.get("transaction"))
+    expanded_locations = []
+    for loc in raw_locations:
+        loc_clean = loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip()
+        if loc_clean in ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية"]:
+            expanded_locations.extend(WEST_AMMAN_REGIONS)
+        elif loc_clean in ["عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية"]:
+            expanded_locations.extend(EAST_AMMAN_REGIONS)
+        else:
+            expanded_locations.append(loc)
+            
+    raw["locations"] = list(dict.fromkeys(expanded_locations)) # remove duplicates
     
     # Locations
-    region_ids, not_found_regions, city_id = resolve_regions_smart(db, raw.get("locations", []))
+    region_ids, not_found_regions, city_id = resolve_regions_smart(db, raw["locations"])
     
     # Price
     min_price = parse_price(raw.get("min_price_word"))
@@ -442,41 +537,128 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     furnished = None
     if raw.get("furnishing_word"):
         for k, v in FURNISHING_SYNONYMS.items():
-            if k in raw["furnishing_word"]:
+            if k in str(raw["furnishing_word"]):
                 furnished = v
                 break
                 
-    # Floor
-    floor = parse_floor(raw.get("floor_word"))
-    
+    # Floor handling
+    floor_words = raw.get("floor_words") or []
+    if isinstance(floor_words, str): floor_words = [floor_words]
+    # Fallback for old schema
+    if raw.get("floor_word") and raw.get("floor_word") not in floor_words:
+        floor_words.append(raw.get("floor_word"))
+        
+    floor_numbers = raw.get("floor_numbers") or []
+    if isinstance(floor_numbers, int): floor_numbers = [floor_numbers]
+    if raw.get("floor_number") is not None and raw.get("floor_number") not in floor_numbers:
+        floor_numbers.append(raw.get("floor_number"))
+        
+    for fw in floor_words:
+        parsed = parse_floor(fw)
+        if parsed is not None and parsed not in floor_numbers:
+            floor_numbers.append(parsed)
+            
+    # Reverse map numbers to words for UI chips if missing
+    floor_mapping = {
+        -1: "الطابق الأرضي", -2: "طابق التسوية",
+        1: "الطابق الأول", 2: "الطابق الثاني", 3: "الطابق الثالث", 4: "الطابق الرابع",
+        5: "الطابق الخامس", 6: "الطابق السادس", 100: "طابق أخير"
+    }
+    for fn in floor_numbers:
+        if fn in floor_mapping:
+            if floor_mapping[fn] not in floor_words:
+                floor_words.append(floor_mapping[fn])
     # Area
     min_area = raw.get("min_area_number")
     max_area = raw.get("max_area_number")
     
-    # Extra Features
-    features_list = raw.get("features", [])
+    # New Fields
+    rent_period = raw.get("rent_period")
+    building_age = raw.get("building_age")
+    interface = raw.get("interface")
+    
+    nearby_locations = raw.get("nearby_locations") or []
+    if isinstance(nearby_locations, str):
+        nearby_locations = [nearby_locations]
+        
+    main_features = raw.get("main_features") or []
+    if isinstance(main_features, str):
+        main_features = [main_features]
+        
+    extra_features = raw.get("extra_features") or []
+    if isinstance(extra_features, str):
+        extra_features = [extra_features]
+    
+    # Extra Features fallback
+    features_list = raw.get("features") or []
     if isinstance(features_list, str):
         features_list = [features_list]
         
+    # Inject new text fields into features_list for full text search fallback
+    for item in [rent_period, building_age, interface] + nearby_locations + main_features + extra_features + floor_words:
+        if item and item not in features_list:
+            features_list.append(item)
+            
     # Build Display Data for Frontend
     location_names = []
-    if city_id:
-        city = db.query(models.City).filter(models.City.id == city_id).first()
-        if city: location_names.append(city.name_ar)
-        
     if region_ids:
-        regions = db.query(models.Region).filter(models.Region.id.in_(region_ids)).all()
-        for r in regions: location_names.append(r.name_ar)
-        
-    tags = []
-    bedrooms = raw.get("bedrooms_number")
-    if bedrooms is not None: tags.append(f"bedrooms:{bedrooms}")
-    if furnished is True: tags.append("furnished:Ù…ÙØ±ÙˆØ´Ø©")
-    elif furnished is False: tags.append("furnished:ØºÙŠØ± Ù…ÙØ±ÙˆØ´Ø©")
+        resolved_regions = db.query(models.Region).filter(models.Region.id.in_(region_ids)).all()
+        location_names = [r.name_ar for r in resolved_regions]
+    elif city_id:
+        city_obj = db.query(models.City).filter(models.City.id == city_id).first()
+        if city_obj:
+            location_names = [city_obj.name_ar]
     
-    # Append generic features as tags so they display in the UI
-    for f in features_list:
-        tags.append(f)
+    tags = []
+    
+    if raw.get("bedrooms_number") is not None:
+        tags.append(f"bedrooms:{raw['bedrooms_number']}")
+    
+    if raw.get("bathrooms_number") is not None:
+        tags.append(f"bathrooms:{raw['bathrooms_number']}")
+        
+    fw = raw.get("furnishing_word")
+    if fw in ["مفروشة", "غير مفروشة", "مفروش جزئياً"]:
+        tags.append(f"furnished:{fw}")
+        
+    if rent_period:
+        tags.append(f"rent_duration:{rent_period}")
+        
+    for fw in floor_words:
+        tags.append(f"floor:{fw}")
+        
+    if building_age:
+        tags.append(f"age:{building_age}")
+        
+    if interface:
+        tags.append(f"facade:{interface}")
+        
+    for nb in nearby_locations:
+        tags.append(f"nearby:{nb}")
+        
+    for mf in main_features:
+        tags.append(f"main_features:{mf}")
+        
+    for ef in extra_features:
+        tags.append(f"extra_features:{ef}")
+        
+    if min_area:
+        tags.append(f"min_area:{min_area}")
+    if max_area:
+        tags.append(f"max_area:{max_area}")
+        
+    # Resolve actual category name from DB
+    resolved_category_name = raw.get("property_type")
+    if category_id is not None:
+        try:
+            cat_obj = db.query(models.Category).filter(models.Category.id == category_id).first()
+            if cat_obj and cat_obj.name:
+                resolved_category_name = cat_obj.name
+        except Exception:
+            pass
+            
+    if not resolved_category_name:
+        resolved_category_name = "نتائج البحث"
 
     applied_filters = {
         "category_id": category_id,
@@ -484,14 +666,18 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         "region_ids": region_ids,
         "min_price": min_price,
         "max_price": max_price,
-        "bedrooms": bedrooms,
+        "bedrooms": raw.get("bedrooms_number"),
         "bathrooms": raw.get("bathrooms_number"),
         "furnished": furnished,
-        "floor": floor,
+        "floor_numbers": floor_numbers,
         "min_area": min_area,
         "max_area": max_area,
+        "rent_period": rent_period,
+        "building_age": building_age,
+        "interface": interface,
+        "nearby_locations": nearby_locations,
         "features_list": features_list,
-        "category_name": raw.get("property_type"),
+        "category_name": resolved_category_name,
         "location_names": location_names,
         "tags": tags,
         "not_found_regions": not_found_regions
@@ -502,8 +688,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     
     suggestion = None
     if not_found_regions:
-        names = " Ø£Ùˆ ".join(not_found_regions)
-        suggestion = f"Ù…Ù„Ø§Ø­Ø¸Ø©: Ù…Ù†Ø·Ù‚Ø© '{names}' ØºÙŠØ± Ù…Ø³Ø¬Ù„Ø©ØŒ ØªÙ… Ø¹Ø±Ø¶ Ù†ØªØ§Ø¦Ø¬ ØªÙ‚Ø±ÙŠØ¨ÙŠØ©."
+        names = " أو ".join(not_found_regions)
+        suggestion = f"ملاحظة: منطقة '{names}' غير مسجلة، تم عرض نتائج تقريبية."
         
     if count > 0:
         return SmartSearchResponse(
@@ -524,8 +710,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج بكل الميزات الإضافية المطلوبة، تم تجاهلها لعرض نتائج أقرب.")
 
     # 2. Remove floor
-    if floor is not None:
-        applied_filters["floor"] = None
+    if applied_filters.get("floor_numbers"):
+        applied_filters["floor_numbers"] = []
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
@@ -549,7 +735,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion=f"لم نجد نتائج بسعر {max_price}، فقمنا برفع الميزانية لغاية {applied_filters['max_price']}")
             
     # 5. Remove Bedrooms
-    if bedrooms:
+    if applied_filters.get("bedrooms") is not None:
         applied_filters["bedrooms"] = None
         applied_filters["tags"] = [t for t in applied_filters["tags"] if not t.startswith("bedrooms")]
         query = build_search_query(db, applied_filters)
@@ -585,3 +771,43 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         suggestion="نعتذر، لا يوجد أي عقارات مطابقة لبحثك حالياً."
     )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@smart_search_router.get("/api/debug-cats")
+def debug_cats(db: Session = Depends(get_db)):
+    try:
+        all_cats = db.query(models.Category).all()
+        
+        descendants = []
+        current_parents = [2, 3] # Real Estate Sale & Rent
+        
+        while current_parents:
+            children = [c for c in all_cats if c.parent_id in current_parents]
+            descendants.extend(children)
+            current_parents = [c.id for c in children]
+            
+        parent_ids = {c.parent_id for c in all_cats if c.parent_id is not None}
+        leaf_cats = [c for c in descendants if c.id not in parent_ids]
+        
+        cat_mapping = [f"ID: {c.id}, Name: {c.name}" for c in leaf_cats]
+        categories_str = "\n".join(cat_mapping)
+        return {"cats": categories_str}
+    except Exception as e:
+        return {"error": str(e)}
