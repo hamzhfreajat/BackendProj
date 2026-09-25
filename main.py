@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import asyncio
 
 if sys.platform == 'win32':
@@ -1210,7 +1210,13 @@ def read_ads(
         # Log the search query and results count in background
         if background_tasks and log_query and log_query.strip():
             user_id_val = current_user.id if hasattr(current_user, 'id') else None
-            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val, category_id, tags)
+            parsed_json = {k: v for k, v in {
+                "category_id": category_id, "section": section, "location": location,
+                "min_price": min_price, "max_price": max_price, "is_hot": is_hot,
+                "source_type": source_type, "sort_by": sort_by, "tags": tags,
+                "location_search": location_search
+            }.items() if v is not None}
+            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val, category_id, tags, parsed_json)
 
         if not ranked_ad_ids:
             return []
@@ -1226,7 +1232,13 @@ def read_ads(
     elif background_tasks and log_query and log_query.strip():
         user_id_val = current_user.id if hasattr(current_user, 'id') else None
         total_results = query.count()
-        background_tasks.add_task(log_search_query_task, log_query, total_results, user_id_val, category_id, tags)
+        parsed_json = {k: v for k, v in {
+            "category_id": category_id, "section": section, "location": location,
+            "min_price": min_price, "max_price": max_price, "is_hot": is_hot,
+            "source_type": source_type, "sort_by": sort_by, "tags": tags,
+            "location_search": location_search
+        }.items() if v is not None}
+        background_tasks.add_task(log_search_query_task, log_query, total_results, user_id_val, category_id, tags, parsed_json)
         
     if location and not ignore_location:
         parent_loc = None
@@ -3564,6 +3576,46 @@ async def sync_ad_views_worker():
             
         await asyncio.sleep(60)
 
+async def deactivate_old_scraper_ads_worker():
+    """Periodically deactivate non-organic ads older than 2 months."""
+    import asyncio
+    from datetime import datetime, timedelta
+    
+    while True:
+        try:
+            from database import SessionLocal
+            from sqlalchemy import update
+            db = SessionLocal()
+            try:
+                two_months_ago = datetime.utcnow() - timedelta(days=60)
+                
+                # Deactivate ads older than 2 months that are NOT organic
+                stmt = (
+                    update(models.Ad)
+                    .where(
+                        models.Ad.created_at <= two_months_ago,
+                        models.Ad.is_published == True,
+                        or_(
+                            models.Ad.source_type != models.SourceType.ORGANIC_USER,
+                            models.Ad.source_url.isnot(None)
+                        )
+                    )
+                    .values(is_published=False)
+                )
+                result = db.execute(stmt)
+                db.commit()
+                if result.rowcount > 0:
+                    print(f"[DEBUG] deactivate_old_scraper_ads_worker successfully deactivated {result.rowcount} old ads.")
+            except Exception as e:
+                db.rollback()
+                print(f"Error bulk deactivating old ads: {e}")
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Error in deactivate_old_scraper_ads_worker: {e}")
+            
+        await asyncio.sleep(86400) # Check once every 24 hours
+
 from arq import create_pool
 from arq.connections import RedisSettings
 
@@ -3572,6 +3624,7 @@ async def startup_event():
     asyncio.create_task(republish_notifier_worker())
     asyncio.create_task(facebook_autopost_worker())
     asyncio.create_task(sync_ad_views_worker())
+    asyncio.create_task(deactivate_old_scraper_ads_worker())
     
     try:
         redis_host = os.getenv("REDIS_HOST", "redis")
@@ -3593,6 +3646,9 @@ async def startup_event():
             # Add is_active and is_banned to users
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE"))
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE"))
+            
+            # Add parsed_json to search_query_logs
+            db.execute(text("ALTER TABLE search_query_logs ADD COLUMN IF NOT EXISTS parsed_json JSONB"))
             
             # Create support_messages table if it doesn't exist
             db.execute(text("""
@@ -3628,7 +3684,7 @@ async def startup_event():
     except Exception as e:
         print(f"Critical error during startup DB migrations: {e}")
 
-def log_search_query_task(search: str, results_count: int, user_id: int, category_id: int = None, tags: list = None):
+def log_search_query_task(search: str, results_count: int, user_id: int, category_id: int = None, tags: list = None, parsed_json: dict = None):
     if not search or not search.strip():
         return
     from database import SessionLocal
@@ -3648,7 +3704,8 @@ def log_search_query_task(search: str, results_count: int, user_id: int, categor
             results_count=results_count,
             user_id=user_id,
             category_name=category_name,
-            extracted_tags=tags_str
+            extracted_tags=tags_str,
+            parsed_json=parsed_json
         )
         db.add(log_entry)
         db.commit()
