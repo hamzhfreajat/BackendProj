@@ -133,6 +133,39 @@ def map_category_smart(raw_prop: str, raw_trans: str) -> Optional[int]:
     trans_norm = raw_trans.lower() if raw_trans else ""
     
     # 1. Resolve Transaction (Sale vs Rent)
+    transaction_intent = None
+    for k, v in TRANSACTION_SYNONYMS.items():
+        if k in trans_norm or k in prop_norm:
+            transaction_intent = v
+            break
+            
+    # If the user did NOT specify if they want rent or sale,
+    # return None so the search API spans across both rent and sale categories!
+    if not transaction_intent:
+        return None
+                
+    # 2. Try combined match first
+    combined = f"{prop_norm} للايجار" if transaction_intent == "rent" else f"{prop_norm} للبيع"
+    for k, v in CATEGORY_SYNONYMS.items():
+        if k in combined:
+            return v
+            
+    # 3. Fallback to direct mapping
+    for k, v in CATEGORY_SYNONYMS.items():
+        if k in prop_norm:
+            # If it's a generic map (like 10301), and they want rent, force rent ID
+            if transaction_intent == "rent" and v == 10301: return 301 # apartments
+            if transaction_intent == "rent" and v == 10101: return 3101 # villas
+            if transaction_intent == "rent" and v == 10302: return 302 # studios
+            if transaction_intent == "rent" and v == 10853: return 303 # shops
+            return v
+            
+    return None
+        
+    prop_norm = raw_prop.lower()
+    trans_norm = raw_trans.lower() if raw_trans else ""
+    
+    # 1. Resolve Transaction (Sale vs Rent)
     is_rent = False
     for k, v in TRANSACTION_SYNONYMS.items():
         if k in trans_norm or k in prop_norm:
