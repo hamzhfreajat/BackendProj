@@ -288,6 +288,7 @@ class Ad(Base):
     is_facebook_posted = Column(Boolean, default=False)
     primary_image_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
+    original_created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     ip_address = Column(String(50), nullable=True)
 
@@ -562,6 +563,7 @@ class SearchQueryLog(Base):
     results_count = Column(Integer, default=0)
     category_name = Column(String(255), nullable=True)
     extracted_tags = Column(String(500), nullable=True)
+    parsed_json = Column(JSONB, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
     
     user = relationship("User")

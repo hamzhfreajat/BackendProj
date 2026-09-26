@@ -277,8 +277,8 @@ app.include_router(duplicate_router)
 app.include_router(wallet_router.router)
 
 app.include_router(ai_router)
-# from smart_search_router import smart_search_router
-# app.include_router(smart_search_router)
+from smart_search_router import smart_search_router
+app.include_router(smart_search_router)
 app.include_router(media_router)
 app.include_router(og_router)
 app.include_router(auth.router)
@@ -1559,6 +1559,8 @@ def read_ads(
         query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), has_image.desc(), has_price.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'strict_newest':
         query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
+    elif sort_by == 'dashboard_strict':
+        query = query.order_by(models.Ad.original_created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'premium_first':
         query = query.order_by(models.Ad.is_featured.desc(), effective_bid.desc(), models.Ad.is_hot.desc(), is_recent_organic.asc(), batch_id.asc(), is_ai.asc(), models.Ad.created_at.desc(), models.Ad.id.desc())
     elif sort_by == 'recommended' or sort_by is None:
@@ -2845,7 +2847,6 @@ def republish_ad(ad_id: int, current_user: models.User = Depends(auth.get_curren
     if last_date and datetime.utcnow() - last_date < timedelta(hours=24):
         raise HTTPException(status_code=400, detail="already_republished")
         
-    db_ad.created_at = datetime.utcnow()
     db_ad.last_republished_at = datetime.utcnow()
     db_ad.republish_notification_sent = False
     
@@ -3649,6 +3650,10 @@ async def startup_event():
             
             # Add parsed_json to search_query_logs
             db.execute(text("ALTER TABLE search_query_logs ADD COLUMN IF NOT EXISTS parsed_json JSONB"))
+            
+            # Add original_created_at to ads
+            db.execute(text("ALTER TABLE ads ADD COLUMN IF NOT EXISTS original_created_at TIMESTAMP DEFAULT NOW()"))
+            db.execute(text("UPDATE ads SET original_created_at = created_at WHERE original_created_at IS NULL"))
             
             # Create support_messages table if it doesn't exist
             db.execute(text("""

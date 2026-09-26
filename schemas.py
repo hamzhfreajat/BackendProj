@@ -450,6 +450,9 @@ class Ad(AdBase):
     id: int
     user_id: int
     views: int = 0
+    chats_count: int = 0
+    favorites_count: int = 0
+    original_created_at: Optional[datetime] = None
     is_hot: bool = False
     is_published: bool = False
     is_featured: bool = False
