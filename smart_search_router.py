@@ -246,9 +246,19 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
     db_candidates = {r.id: {"norm": normalize_arabic(r.name_ar), "obj": r} for r in all_regions}
     city_candidates = {c.id: {"norm": normalize_arabic(c.name_ar), "obj": c} for c in all_cities}
     
+    inferred_city = city_id
+    
+    # PASS 1: Identify explicit cities first to restrict regions
+    for raw_loc in raw_locations:
+        norm_loc = normalize_arabic(raw_loc)
+        if not norm_loc: continue
+        for c_id, c_data in city_candidates.items():
+            if norm_loc == c_data["norm"] or (difflib.SequenceMatcher(None, norm_loc, c_data["norm"]).ratio() > 0.85):
+                inferred_city = c_id
+                break
+
     found_region_ids = []
     not_found_names = []
-    inferred_city = city_id
     
     for raw_loc in raw_locations:
         norm_loc = normalize_arabic(raw_loc)
@@ -302,6 +312,7 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
                     norm_area = normalize_arabic(area)
                     # Find exact match in DB
                     for r_id, r_data in db_candidates.items():
+                        if inferred_city and r_data["obj"].city_id != inferred_city: continue
                         if r_data["norm"] == norm_area:
                             found_region_ids.append(r_id)
                             if not inferred_city: inferred_city = r_data["obj"].city_id
@@ -315,6 +326,7 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
         best_score = 0.0
         
         for r_id, r_data in db_candidates.items():
+            if inferred_city and r_data["obj"].city_id != inferred_city: continue
             db_norm = r_data["norm"]
             # Fast exact match
             if norm_loc == db_norm:
