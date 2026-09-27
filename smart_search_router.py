@@ -477,7 +477,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
                 found_props.append(k)
                 mapped_categories.add(CATEGORY_SYNONYMS[k])
 
-    if len(mapped_categories) > 1:
+    if False:
         props_str = " أو ".join(found_props[:2])
         return SmartSearchResponse(
             intent="search",
