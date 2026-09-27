@@ -563,7 +563,6 @@ class SearchQueryLog(Base):
     results_count = Column(Integer, default=0)
     category_name = Column(String(255), nullable=True)
     extracted_tags = Column(String(500), nullable=True)
-    parsed_json = Column(JSONB, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
     
     user = relationship("User")

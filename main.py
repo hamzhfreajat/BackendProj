@@ -1216,7 +1216,7 @@ def read_ads(
                 "source_type": source_type, "sort_by": sort_by, "tags": tags,
                 "location_search": location_search
             }.items() if v is not None}
-            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val, category_id, tags, parsed_json)
+            background_tasks.add_task(log_search_query_task, log_query, len(ranked_ad_ids), user_id_val, category_id, tags)
 
         if not ranked_ad_ids:
             return []
@@ -1238,7 +1238,7 @@ def read_ads(
             "source_type": source_type, "sort_by": sort_by, "tags": tags,
             "location_search": location_search
         }.items() if v is not None}
-        background_tasks.add_task(log_search_query_task, log_query, total_results, user_id_val, category_id, tags, parsed_json)
+        background_tasks.add_task(log_search_query_task, log_query, total_results, user_id_val, category_id, tags)
         
     if location and not ignore_location:
         parent_loc = None
@@ -3649,7 +3649,7 @@ async def startup_event():
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE"))
             
             # Add parsed_json to search_query_logs
-            db.execute(text("ALTER TABLE search_query_logs ADD COLUMN IF NOT EXISTS parsed_json JSONB"))
+            db.execute(text("ALTER TABLE search_query_logs SELECT 1"))
             
             # Add original_created_at to ads
             db.execute(text("ALTER TABLE ads ADD COLUMN IF NOT EXISTS original_created_at TIMESTAMP DEFAULT NOW()"))
@@ -3689,7 +3689,7 @@ async def startup_event():
     except Exception as e:
         print(f"Critical error during startup DB migrations: {e}")
 
-def log_search_query_task(search: str, results_count: int, user_id: int, category_id: int = None, tags: list = None, parsed_json: dict = None):
+def log_search_query_task(search: str, results_count: int, user_id: int, category_id: int = None, tags: list = None):
     if not search or not search.strip():
         return
     from database import SessionLocal
@@ -3709,8 +3709,7 @@ def log_search_query_task(search: str, results_count: int, user_id: int, categor
             results_count=results_count,
             user_id=user_id,
             category_name=category_name,
-            extracted_tags=tags_str,
-            parsed_json=parsed_json
+            extracted_tags=tags_str
         )
         db.add(log_entry)
         db.commit()
