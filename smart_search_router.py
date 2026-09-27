@@ -649,6 +649,9 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     
     tags = []
     
+    if "من المالك" in text_clean or "من مالك" in text_clean:
+        tags.append("من المالك مباشرة")
+    
     if raw.get("bedrooms_number") is not None:
         tags.append(f"bedrooms:{raw['bedrooms_number']}")
     
