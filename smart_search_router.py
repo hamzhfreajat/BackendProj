@@ -254,6 +254,32 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
         norm_loc = normalize_arabic(raw_loc)
         if not norm_loc: continue
         
+        # --- Handle Amman vs Aqaba Ordinals ---
+        aqaba_ordinals = {
+            "الثالثه": "السكنيه 3 (الثالثه)",
+            "الرابعه": "السكنيه 4 (الرابعه)",
+            "الخامسه": "السكنيه 5 (الخامسه)",
+            "السادسه": "السكنيه 6 (السادسه)",
+            "السابعه": "السكنيه 7 (السابعه)",
+            "الثامنه": "السكنيه 8 (الثامنه)",
+            "التاسعه": "السكنيه 9 (التاسعه)",
+            "العاشره": "السكنيه 10 (العاشره)"
+        }
+        amman_ordinals = {
+            "الثالث": "الدوار الثالث",
+            "الرابع": "الدوار الرابع",
+            "الخامس": "الدوار الخامس",
+            "السادس": "الدوار السادس",
+            "السابع": "الدوار السابع",
+            "الثامن": "الدوار الثامن",
+            "التاسع": "الدوار التاسع"
+        }
+        if norm_loc in aqaba_ordinals:
+            norm_loc = aqaba_ordinals[norm_loc]
+        elif norm_loc in amman_ordinals:
+            norm_loc = amman_ordinals[norm_loc]
+        # -------------------------------------
+        
         # 0. Check if it's a City directly
         city_matched = False
         for c_id, c_data in city_candidates.items():

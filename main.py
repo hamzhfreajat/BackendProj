@@ -3674,6 +3674,23 @@ async def startup_event():
             
             # Add last_notified_ad_count to categories
             db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS last_notified_ad_count INTEGER DEFAULT 0"))
+            
+            # Update Aqaba region names
+            aqaba_updates = {
+                "السكنية 3": "السكنية 3 (الثالثة)",
+                "السكنية 4": "السكنية 4 (الرابعة)",
+                "السكنية 5": "السكنية 5 (الخامسة)",
+                "السكنية 6": "السكنية 6 (السادسة)",
+                "السكنية 7": "السكنية 7 (السابعة)",
+                "السكنية 8": "السكنية 8 (الثامنة)",
+                "السكنية 9": "السكنية 9 (التاسعة)",
+                "السكنية 10": "السكنية 10 (العاشرة)",
+            }
+            for old_name, new_name in aqaba_updates.items():
+                db.execute(
+                    text("UPDATE regions SET name_ar = :new_name, name = :new_name WHERE name_ar = :old_name AND city_id IN (SELECT id FROM cities WHERE name_ar = 'العقبة')"),
+                    {"new_name": new_name, "old_name": old_name}
+                )
             db.commit()
         except Exception as e:
             print(f"Migration error: {e}")
