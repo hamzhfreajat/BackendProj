@@ -753,9 +753,9 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     try:
         from models import SearchQueryLog
         query_log = SearchQueryLog(
-            query_text=request.text,
+            query_text=request.text[:500],
             results_count=count,
-            extracted_tags=json.dumps(ai_response)
+            extracted_tags=json.dumps(ai_response)[:500]
         )
         db.add(query_log)
         db.commit()
