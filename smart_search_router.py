@@ -44,6 +44,28 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bمعنا\b', 'برفقتنا', text)
     text = re.sub(r'\bمعي\b', 'برفقتي', text)
     
+    # Jordanian Slang ordinals
+    text = re.sub(r'\bتالت\b', 'ثالث', text)
+    text = re.sub(r'\bالتالت\b', 'الثالث', text)
+    text = re.sub(r'\bتالتة\b', 'ثالثة', text)
+    text = re.sub(r'\bتالتّه\b', 'ثالثه', text)
+    text = re.sub(r'\bالتالتة\b', 'الثالثة', text)
+    text = re.sub(r'\bالتالته\b', 'الثالثه', text)
+    
+    text = re.sub(r'\bتامن\b', 'ثامن', text)
+    text = re.sub(r'\bالتامن\b', 'الثامن', text)
+    text = re.sub(r'\bتامنة\b', 'ثامنة', text)
+    text = re.sub(r'\bتامنه\b', 'ثامنه', text)
+    text = re.sub(r'\bالتامنة\b', 'الثامنة', text)
+    text = re.sub(r'\bالتامنه\b', 'الثامنه', text)
+    
+    text = re.sub(r'\bتاني\b', 'ثاني', text)
+    text = re.sub(r'\bالتاني\b', 'الثاني', text)
+    text = re.sub(r'\bتانية\b', 'ثانية', text)
+    text = re.sub(r'\bتانيه\b', 'ثانيه', text)
+    text = re.sub(r'\bالتانية\b', 'الثانية', text)
+    text = re.sub(r'\bالتانيه\b', 'الثانيه', text)
+    
     cache_key = f"smart_search_ai:{text}"
     cached_result = redis_client.get(cache_key)
     if cached_result:
@@ -65,7 +87,7 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
 Do NOT guess or correct anything, except for category_id which must be selected from the provided list.
 You MUST choose the most specific end-level category from the list. 
 CRITICAL RULE: If the user DOES NOT explicitly mention whether they want to RENT (ايجار) or BUY/SALE (بيع / شراء), you MUST set category_id to null so the search can span across both. Do not guess the category if rent/sale intent is ambiguous.
-CRITICAL RULE: If the user explicitly negates a feature (e.g. 'مش طابق ارضي', 'بدون فرش', 'غير مفروش'), DO NOT extract it.
+CRITICAL RULE: If the user explicitly negates a feature or location (e.g. 'ما بتناسبنا التاسعة', 'مش بالزرقاء', 'مش طابق ارضي', 'بدون فرش', 'غير مفروش'), DO NOT extract it. Locations or features mentioned negatively MUST be completely ignored.
 CRITICAL RULE: If the user uses relative sizes for an apartment:
 - 'صغيرة' (small): set max_area_number to 90 (unless a specific number is provided).
 - 'كبيرة' (large) or 'واسعة': set min_area_number to 150 (unless a specific number is provided).
@@ -271,7 +293,15 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
             "سابعه": "سكنيه 7 (السابعه)",
             "ثامنه": "سكنيه 8 (الثامنه)",
             "تاسعه": "سكنيه 9 (التاسعه)",
-            "عاشره": "سكنيه 10 (العاشره)"
+            "عاشره": "سكنيه 10 (العاشره)",
+            "الثالثه": "سكنيه 3 (الثالثه)",
+            "الرابعه": "سكنيه 4 (الرابعه)",
+            "الخامسه": "سكنيه 5 (الخامسه)",
+            "السادسه": "سكنيه 6 (السادسه)",
+            "السابعه": "سكنيه 7 (السابعه)",
+            "الثامنه": "سكنيه 8 (الثامنه)",
+            "التاسعه": "سكنيه 9 (التاسعه)",
+            "العاشره": "سكنيه 10 (العاشره)"
         }
         amman_ordinals = {
             "اول": "دوار اول",
