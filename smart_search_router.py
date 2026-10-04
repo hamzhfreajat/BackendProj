@@ -225,19 +225,7 @@ ZONE_REGIONS = {
 }
 
 def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None) -> tuple:
-    if raw_locations:
-        expanded = []
-        for loc in raw_locations:
-            loc_clean = loc.strip()
-            matched = False
-            for zname, zregs in ZONE_REGIONS.items():
-                if zname in loc_clean or loc_clean in zname:
-                    expanded.extend(zregs)
-                    matched = True
-                    break
-            if not matched:
-                expanded.append(loc_clean)
-        raw_locations = list(set(expanded))
+
 
     """
     Step 2: Python Matcher Engine.
@@ -284,13 +272,28 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
             "عاشره": "سكنيه 10 (العاشره)"
         }
         amman_ordinals = {
+            "اول": "دوار اول",
+            "أول": "دوار اول",
+            "الاول": "دوار اول",
+            "الأول": "دوار اول",
+            "ثاني": "دوار ثاني",
+            "الثاني": "دوار ثاني",
             "ثالث": "دوار ثالث",
+            "الثالث": "دوار ثالث",
             "رابع": "دوار رابع",
+            "الرابع": "دوار رابع",
             "خامس": "دوار خامس",
+            "الخامس": "دوار خامس",
             "سادس": "دوار سادس",
+            "السادس": "دوار سادس",
             "سابع": "دوار سابع",
+            "السابع": "دوار سابع",
             "ثامن": "دوار ثامن",
+            "الثامن": "دوار ثامن",
             "تاسع": "دوار تاسع",
+            "التاسع": "دوار تاسع",
+            "دوار اول": "دوار اول",
+            "دوار ثاني": "دوار ثاني",
             "دوار ثالث": "دوار ثالث",
             "دوار رابع": "دوار رابع",
             "دوار خامس": "دوار خامس",
@@ -540,9 +543,16 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         if aq_ord in text_clean and aq_ord not in [normalize_arabic(l) for l in raw_locations]:
             raw_locations.append(aq_ord)
     
-    for am_ord in ["ثالث", "رابع", "خامس", "سادس", "سابع", "ثامن", "تاسع"]:
+    import re
+    for am_ord in ["اول", "ثاني", "ثالث", "رابع", "خامس", "سادس", "سابع", "ثامن", "تاسع"]:
+        # Only extract if it's 'دوار', or preceded by spaces or commas and NOT preceded by 'طابق' or 'دوار'
         if f"دوار {am_ord}" in text_clean or f"دوار ال{am_ord}" in text_clean:
             raw_locations.append(f"دوار {am_ord}")
+        else:
+            # Check for isolated ordinals like "الثاني", "الرابع" which mean circles in Amman context
+            pattern = r'(?<!طابق )\bال' + am_ord + r'\b'
+            if re.search(pattern, text_clean):
+                raw_locations.append(f"دوار {am_ord}")
             
     WEST_AMMAN_REGIONS = [
         'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
