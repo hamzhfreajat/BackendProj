@@ -41,6 +41,8 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bعرف\b', 'غرف', text)
     text = re.sub(r'\bعرفه\b', 'غرفه', text)
     text = re.sub(r'\bعرفة\b', 'غرفة', text)
+    text = re.sub(r'\bمعنا\b', 'برفقتنا', text)
+    text = re.sub(r'\bمعي\b', 'برفقتي', text)
     
     cache_key = f"smart_search_ai:{text}"
     cached_result = redis_client.get(cache_key)
@@ -330,7 +332,6 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
                     norm_area = normalize_arabic(area)
                     # Find exact match in DB
                     for r_id, r_data in db_candidates.items():
-                        if inferred_city and r_data["obj"].city_id != inferred_city: continue
                         if r_data["norm"] == norm_area:
                             found_region_ids.append(r_id)
                             if not inferred_city: inferred_city = r_data["obj"].city_id
@@ -344,13 +345,13 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
         best_score = 0.0
         
         for r_id, r_data in db_candidates.items():
-            if inferred_city and r_data["obj"].city_id != inferred_city: continue
             db_norm = r_data["norm"]
             # Fast exact match
             if norm_loc == db_norm:
                 best_match_id = r_id
                 best_score = 1.0
-                break
+                if inferred_city and r_data["obj"].city_id == inferred_city:
+                    break
             
             # SequenceMatcher provides ratio 0.0 to 1.0
             score = difflib.SequenceMatcher(None, norm_loc, db_norm).ratio()
@@ -361,6 +362,10 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
                 boosted_score = 0.85 + (substring_ratio * 0.14)
                 if boosted_score > score:
                     score = boosted_score
+                    
+            # Small boost if it's in the inferred city to break ties
+            if inferred_city and r_data["obj"].city_id == inferred_city:
+                score += 0.05
                     
             if score > best_score:
                 best_score = score
