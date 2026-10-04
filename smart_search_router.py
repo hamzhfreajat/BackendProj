@@ -44,6 +44,12 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bمعنا\b', 'برفقتنا', text)
     text = re.sub(r'\bمعي\b', 'برفقتي', text)
     
+    # Specific landmark intercepts
+    text = re.sub(r'\bاشارة النسيم\b', 'دوار النسيم', text)
+    text = re.sub(r'\bإشارة النسيم\b', 'دوار النسيم', text)
+    text = re.sub(r'\bاشاره النسيم\b', 'دوار النسيم', text)
+    text = re.sub(r'\bإشاره النسيم\b', 'دوار النسيم', text)
+    
     # Jordanian Slang ordinals
     text = re.sub(r'\bتالت\b', 'ثالث', text)
     text = re.sub(r'\bالتالت\b', 'الثالث', text)
