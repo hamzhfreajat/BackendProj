@@ -50,6 +50,10 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bاشاره النسيم\b', 'دوار النسيم', text)
     text = re.sub(r'\bإشاره النسيم\b', 'دوار النسيم', text)
     
+    # Normalize Rent words so AI doesn't get confused by Hamza
+    text = text.replace('إيجار', 'ايجار').replace('الإيجار', 'الايجار').replace('للإيجار', 'للايجار')
+    text = text.replace('أجار', 'اجار').replace('الأجار', 'الاجار').replace('للأجار', 'للاجار')
+    
     # Jordanian Slang ordinals
     text = re.sub(r'\bتالت\b', 'ثالث', text)
     text = re.sub(r'\bالتالت\b', 'الثالث', text)
@@ -585,6 +589,10 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     if "بيت" in text_clean and ("ايجار" in text_clean or "اجار" in text_clean):
         if "مستقل" not in text_clean:
             category_id = 301  # شقق للايجار
+            
+    # Fallback: if DeepSeek failed to extract category, use Python mapped categories
+    if category_id is None and len(mapped_categories) == 1:
+        category_id = list(mapped_categories)[0]
     raw_locations = raw.get("locations") or []
 
     # MANUAL INTERCEPT: DeepSeek struggles to extract Arabic ordinals as locations
