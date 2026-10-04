@@ -36,6 +36,12 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     """
     Step 1: Uses DeepSeek to act purely as an NLP entity extractor.
     """
+    import re
+    # Fix common typos before processing
+    text = re.sub(r'\bعرف\b', 'غرف', text)
+    text = re.sub(r'\bعرفه\b', 'غرفه', text)
+    text = re.sub(r'\bعرفة\b', 'غرفة', text)
+    
     cache_key = f"smart_search_ai:{text}"
     cached_result = redis_client.get(cache_key)
     if cached_result:
@@ -86,7 +92,7 @@ Output JSON format:
     "min_area_number": "Extract the integer minimum area in square meters mentioned, or null",
     "max_area_number": "Extract the integer maximum area in square meters mentioned, or null",
     "floor_words": ["Choose from: طابق التسوية, طابق شبه أرضي, الطابق الأرضي, طابق أخير, روف, طابق أخير مع روف. If not mentioned, return empty list."],
-    "floor_numbers": ["Extract all floor integer numbers mentioned as a list of ints"],
+    "floor_numbers": ["Extract floor numbers ONLY if explicitly preceded by words like 'طابق' (e.g. طابق 3). DO NOT extract bedroom counts here!"],
     "bedrooms_number": "Extract the integer number of bedrooms mentioned, or null if not mentioned",
     "bathrooms_number": "Extract the integer number of bathrooms mentioned, or null if not mentioned",
     "rent_period": "Choose ONE from: يومي, أسبوعي, شهري, كل 3 أشهر, كل أربع أشهر, كل 5 أشهر, كل 6 أشهر, سنوي. If not mentioned, return null.",
