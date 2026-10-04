@@ -354,6 +354,14 @@ def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None)
             
             # SequenceMatcher provides ratio 0.0 to 1.0
             score = difflib.SequenceMatcher(None, norm_loc, db_norm).ratio()
+            
+            # Boost score if one is a substring of the other (helps long names like شارع الجامعة (الجامعة الأردنية))
+            if (norm_loc in db_norm or db_norm in norm_loc) and len(norm_loc) > 4:
+                substring_ratio = min(len(norm_loc), len(db_norm)) / max(len(norm_loc), len(db_norm))
+                boosted_score = 0.85 + (substring_ratio * 0.14)
+                if boosted_score > score:
+                    score = boosted_score
+                    
             if score > best_score:
                 best_score = score
                 best_match_id = r_id
