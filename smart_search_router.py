@@ -569,15 +569,23 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
     ]
     
-    expanded_locations = []
+    has_west = any(loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip() in ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية"] for loc in raw_locations)
+    has_east = any(loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip() in ["عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية"] for loc in raw_locations)
+    
+    specific_locations = []
     for loc in raw_locations:
         loc_clean = loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip()
-        if loc_clean in ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية"]:
+        if loc_clean not in ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية", "عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية", "عمان", "الاردن", "الأردن"]:
+            specific_locations.append(loc)
+            
+    expanded_locations = []
+    if specific_locations:
+        expanded_locations = specific_locations
+    else:
+        if has_west:
             expanded_locations.extend(WEST_AMMAN_REGIONS)
-        elif loc_clean in ["عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية"]:
+        if has_east:
             expanded_locations.extend(EAST_AMMAN_REGIONS)
-        else:
-            expanded_locations.append(loc)
             
     raw["locations"] = list(dict.fromkeys(expanded_locations)) # remove duplicates
     
@@ -792,14 +800,9 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         if count > 0:
             return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion=f"لم نجد نتائج بسعر {max_price}، فقمنا برفع الميزانية لغاية {applied_filters['max_price']}")
             
-    # 5. Remove Bedrooms
-    if applied_filters.get("bedrooms") is not None:
-        applied_filters["bedrooms"] = None
-        applied_filters["tags"] = [t for t in applied_filters["tags"] if not t.startswith("bedrooms")]
-        query = build_search_query(db, applied_filters)
-        count = query.count()
-        if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج بنفس عدد الغرف، تم توسيع البحث.")
+    # 5. Remove Bedrooms (Skipped to strictly enforce bedroom requirements)
+    # Bedrooms are a strict requirement for most users, dropping them leads to irrelevant results (e.g. 2 bedrooms when 4 are requested).
+    pass
             
     # 6. Fallback to just City + Category
     if region_ids:
