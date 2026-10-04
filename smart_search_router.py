@@ -569,24 +569,32 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
     ]
     
-    has_west = any(loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip() in ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية"] for loc in raw_locations)
-    has_east = any(loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip() in ["عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية"] for loc in raw_locations)
+    WEST_TERMS = ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية"]
+    EAST_TERMS = ["عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية"]
+    BROAD_TERMS = WEST_TERMS + EAST_TERMS + ["عمان", "الاردن", "الأردن"]
     
-    specific_locations = []
-    for loc in raw_locations:
-        loc_clean = loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip()
-        if loc_clean not in ["عمان الغربيه", "غرب عمان", "عمان غربيه", "عمان الغربية", "عمان غربية", "عمان الشرقيه", "شرق عمان", "عمان شرقيه", "عمان الشرقية", "عمان شرقية", "عمان", "الاردن", "الأردن"]:
-            specific_locations.append(loc)
-            
+    locs_clean = [loc.replace('ة', 'ه').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').strip() for loc in raw_locations]
+    
+    specific_locations = [loc for loc, lc in zip(raw_locations, locs_clean) if lc not in BROAD_TERMS]
+    
     expanded_locations = []
-    if specific_locations:
-        expanded_locations = specific_locations
-    else:
+    
+    # 1. Keep specific locations
+    expanded_locations.extend(specific_locations)
+    
+    # 2. If NO specific locations were provided, expand West/East Amman if mentioned
+    if not specific_locations:
+        has_west = any(l in WEST_TERMS for l in locs_clean)
+        has_east = any(l in EAST_TERMS for l in locs_clean)
         if has_west:
             expanded_locations.extend(WEST_AMMAN_REGIONS)
         if has_east:
             expanded_locations.extend(EAST_AMMAN_REGIONS)
             
+    # 3. Always keep 'عمان' if it was explicitly mentioned (helps city_id resolution)
+    if any(l == "عمان" for l in locs_clean):
+        expanded_locations.append("عمان")
+        
     raw["locations"] = list(dict.fromkeys(expanded_locations)) # remove duplicates
     
     # Locations
