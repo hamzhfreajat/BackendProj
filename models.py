@@ -264,6 +264,9 @@ class Ad(Base):
     is_boosted = Column(Boolean, default=False)
     boost_expiry = Column(TIMESTAMP, nullable=True)
     chats_count = Column(Integer, default=0)
+    # Kept in sync by main._refresh_ad_rating. rating_avg is NULL while the ad has no visible reviews.
+    rating_avg = Column(DECIMAL(3, 2), nullable=True)
+    reviews_count = Column(Integer, default=0, server_default="0")
     favorites_count = Column(Integer, default=0)
     
     # Pay-Per-Click Bidding
@@ -515,6 +518,23 @@ class AdReport(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     
     ad = relationship("Ad", backref="reports")
+    user = relationship("User")
+
+class AdReview(Base):
+    __tablename__ = "ad_reviews"
+    __table_args__ = (UniqueConstraint("ad_id", "user_id", name="uq_ad_reviews_ad_user"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    rating = Column(Integer, nullable=False) # 1-5
+    tags = Column(JSONB, default=list) # Predefined texts, see schemas.AD_REVIEW_*_TAGS
+    comment = Column(Text, nullable=True)
+    is_hidden = Column(Boolean, default=False, nullable=False, server_default="false") # hidden by admin
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    ad = relationship("Ad")
     user = relationship("User")
 
 class AdSearchIndex(Base):

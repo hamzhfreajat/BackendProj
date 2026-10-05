@@ -15,6 +15,7 @@ from database import get_db
 from arabic_utils import normalize_arabic, convert_hindi_numerals, parse_price
 from dialect_dictionary import FURNISHING_SYNONYMS, TRANSACTION_SYNONYMS, CATEGORY_SYNONYMS, ZONE_REGIONS
 from auth import redis_client
+from smart_search_locations import resolve_locations, match_city
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +77,15 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bالتانية\b', 'الثانية', text)
     text = re.sub(r'\bالتانيه\b', 'الثانيه', text)
     
-    cache_key = f"smart_search_ai:{text}"
-    cached_result = redis_client.get(cache_key)
-    if cached_result:
-        return json.loads(cached_result)
+    # Bump the version whenever the prompt or output format changes
+    cache_key = f"smart_search_ai:v2:{text}"
+    if redis_client:
+        try:
+            cached_result = redis_client.get(cache_key)
+            if cached_result:
+                return json.loads(cached_result)
+        except Exception as e:
+            logger.error(f"Smart search cache read failed: {e}")
 
     url = "https://api.deepseek.com/chat/completions"
     import os
@@ -117,7 +123,9 @@ Output JSON format:
   "raw_filters": {{
     "category_id": integer ID of the best matching category from the list above, or null if unknown,
     "property_type": "Extract the property type mentioned (e.g. شقة, فيلا, سيارة), or null",
-    "locations": ["Extract ALL location names, regions, or cities mentioned in the text as a list of strings"],
+    "city": "The Jordanian city or governorate the user explicitly mentions (e.g. عمان, اربد, الزرقاء, العقبة), written without prefixes like بـ or في. null if no city is mentioned. Do NOT guess the city from a region name.",
+    "locations": ["Extract ALL regions / neighbourhoods mentioned (e.g. خلدا, الزهور, الوحدات الشرقية). Do NOT put the city here and do NOT put landmarks here."],
+    "landmarks": [{{"name": "A landmark the user mentions that is not itself a neighbourhood: a circle (دوار), signal (اشارة), mall, university, hospital, mosque, street, bridge, etc. (e.g. دوار هيا)", "region": "From your knowledge of Jordan, the neighbourhood this landmark is located in, or null if you are not sure", "city": "The city this landmark is located in (must equal the city above when the user stated one), or null if you are not sure"}}],
     "nearby_locations": ["Choose from: بنك / صراف آلي, دراي كلين, سوبر ماركت, صالة رياضية / جيم, صيدلية, محطة باصات, مدرسة, مستشفى, مسجد, مطعم. If not mentioned, return empty list."],
     "furnishing_word": "Choose ONE from: مفروشة, غير مفروشة, مفروش جزئياً. If not mentioned, return null.",
     "payment_method": "Choose ONE from: كاش, أقساط. If not mentioned, return null.",
@@ -153,9 +161,11 @@ Output JSON format:
             result = json.loads(response.read().decode("utf-8"))
             content = result["choices"][0]["message"]["content"]
             parsed_json = json.loads(content)
-            redis_client.setex(cache_key, 86400, json.dumps(parsed_json))
             if redis_client:
-                redis_client.setex(cache_key, 86400, json.dumps(parsed_json))
+                try:
+                    redis_client.setex(cache_key, 86400, json.dumps(parsed_json))
+                except Exception as e:
+                    logger.error(f"Smart search cache write failed: {e}")
             return parsed_json
     except urllib.error.HTTPError as e:
         logger.error(f"HTTPError calling DeepSeek API: {str(e)}")
@@ -168,7 +178,7 @@ def generate_fallback_suggestion(original_filters: dict, alternative_count: int,
     url = "https://api.deepseek.com/chat/completions"
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
-        return "جرب تغيير بعض ال�?لاتر للحصول على نتائج."
+        return "جرب تغيير بعض الفلاتر للحصول على نتائج."
 
     headers = {
         "Content-Type": "application/json",
@@ -176,13 +186,13 @@ def generate_fallback_suggestion(original_filters: dict, alternative_count: int,
     }
 
     prompt = f"""
-المستخدم بحث عن عقار باستخدام هذه ال�?لاتر:
+المستخدم بحث عن عقار باستخدام هذه الفلاتر:
 {json.dumps(original_filters, ensure_ascii=False)}
 
 ولكن لم نجد أي نتائج. 
-قمنا بإزالة ال�?لتر: {removed_filter} ووجدنا {alternative_count} إعلانات.
+قمنا بإزالة الفلتر: {removed_filter} ووجدنا {alternative_count} إعلانات.
 
-اكتب رسالة ودية قصيرة جداً باللهجة الأردنية تقترح على المستخدم تعديل هذا ال�?لتر بالذات (مثلاً إذا كان السعر، اقترح زيادة الميزانية، إذا كان المنطقة اقترح توسيع نطاق البحث) للحصول على {alternative_count} نتائج. لا تستخدم أي رموز Markdown.
+اكتب رسالة ودية قصيرة جداً باللهجة الأردنية تقترح على المستخدم تعديل هذا الفلتر بالذات (مثلاً إذا كان السعر، اقترح زيادة الميزانية، إذا كان المنطقة اقترح توسيع نطاق البحث) للحصول على {alternative_count} نتائج. لا تستخدم أي رموز Markdown.
     """
 
     data = {
@@ -195,241 +205,33 @@ def generate_fallback_suggestion(original_filters: dict, alternative_count: int,
             result = json.loads(response.read().decode("utf-8"))
             return result["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        return "لا توجد نتائج مطابقة، جرب تغيير بعض ال?لاتر للحصول على نتائج."
+        return "لا توجد نتائج مطابقة، جرب تغيير بعض الفلاتر للحصول على نتائج."
 
-ZONE_REGIONS = {
-    "عمان الغربية": [
-        'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
-        'الدوار السابع', 'الدوار الثامن', 'الروابي', 'الصويفية', 'العبدلي', 'المدينة الرياضية', 
-        'ام اذينة', 'ام اذينة الشرقي', 'ام اذينة الغربي', 'ام السماق', 'تلاع العلي', 
-        'تلاع العلي الشمالي', 'تلاع العلي الشرقي', 'دير غبار', 'شارع المدينة', 
-        'شارع المدينة المنورة', 'شارع مكة', 'شارع الجامعة', 'ضاحية الامير راشد', 
-        'ضاحية الرشيد', 'ضاحية الحسين', 'ضاحية النخيل', 'ضاحية الروضة', 'وادي صقرة', 
-        'دوار الداخلية', 'دوار الواحة', 'دوار الكيلو', 'بزنس بارك', 'طلوع نيفين', 
-        'البحاث', 'البيادر', 'الجاردنز', 'الجندويل', 'الحمر', 'الديار', 'الرابية', 
-        'الرضوان', 'الرونق', 'السهل', 'الصناعة', 'الظهير', 'الكرسي', 'الكمالية', 
-        'أم الأسود', 'بدر الجديدة', 'خلدا', 'دابوق', 'شفا بدران', 'شميساني', 
-        'صويلح', 'طريق المطار', 'طريق المطار - جسر ديونز', 'عبدون', 'عبدون الجنوبي', 
-        'عبدون الشمالي', 'عراق الامير', 'مرج الحمام', 'وادي السير', 'حي البركة', 
-        'حي الخالدين', 'حي الرحمانية', 'حي الصالحين', 'حي الصحابة', 'رجم عميش'
-    ],
-    "غرب عمان": [
-        'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
-        'الدوار السابع', 'الدوار الثامن', 'الروابي', 'الصويفية', 'العبدلي', 'المدينة الرياضية', 
-        'ام اذينة', 'ام اذينة الشرقي', 'ام اذينة الغربي', 'ام السماق', 'تلاع العلي', 
-        'تلاع العلي الشمالي', 'تلاع العلي الشرقي', 'دير غبار', 'شارع المدينة', 
-        'شارع المدينة المنورة', 'شارع مكة', 'شارع الجامعة', 'ضاحية الامير راشد', 
-        'ضاحية الرشيد', 'ضاحية الحسين', 'ضاحية النخيل', 'ضاحية الروضة', 'وادي صقرة', 
-        'دوار الداخلية', 'دوار الواحة', 'دوار الكيلو', 'بزنس بارك', 'طلوع نيفين', 
-        'البحاث', 'البيادر', 'الجاردنز', 'الجندويل', 'الحمر', 'الديار', 'الرابية', 
-        'الرضوان', 'الرونق', 'السهل', 'الصناعة', 'الظهير', 'الكرسي', 'الكمالية', 
-        'أم الأسود', 'بدر الجديدة', 'خلدا', 'دابوق', 'شفا بدران', 'شميساني', 
-        'صويلح', 'طريق المطار', 'طريق المطار - جسر ديونز', 'عبدون', 'عبدون الجنوبي', 
-        'عبدون الشمالي', 'عراق الامير', 'مرج الحمام', 'وادي السير', 'حي البركة', 
-        'حي الخالدين', 'حي الرحمانية', 'حي الصالحين', 'حي الصحابة', 'رجم عميش'
-    ],
-    "عمان الشرقية": [
-        'ابو علندا', 'البنيات', 'المناره', 'ضاحية الامير حسن', 'ضاحية الحاج حسن', 
-        'ضاحية الاستقلال', 'ضاحية الاقصى', 'وادي السرور', 'وادي الرمم', 'وادي الحدادة', 
-        'وادي العش', 'أم الحيران', 'النويجيس', 'جبل القلعة', 'جبل الأشرفية', 'جبل التاج', 
-        'جبل الجوفة', 'جبل الحسين', 'جبل الزهور', 'جبل المريخ', 'جبل النزهة', 'جبل النصر', 
-        'جبل النظيف', 'جبل عمان', 'دوار المشاغل', 'شارع الحزام', 'عين غزال', 'البيضاء', 
-        'الجويدة', 'الحرّيّة', 'الخزنة', 'الخشافية', 'الدوار الأول', 'الدوار الثاني', 
-        'الذراع', 'الربوة', 'الرجيب', 'الرقيم', 'القصور', 'القويسمة', 'الماضونة', 
-        'المحطة', 'المستندة', 'المقابلين', 'الموقر', 'المغيرات', 'الهاشمي الجنوبي', 
-        'الهاشمي الشمالي', 'الوحدات', 'اليادودة', 'الياسمين', 'اليرموك', 'ام نوارة', 
-        'أم قصير', 'بدر', 'بسمان', 'جاوا', 'حطين', 'حي نزال', 'حي عدن', 'خربة السوق', 
-        'راس العين', 'سحاب', 'صالحية العابد', 'طبربور', 'طلوع المصدار', 'عرجان', 
-        'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
-    ],
-    "شرق عمان": [
-        'ابو علندا', 'البنيات', 'المناره', 'ضاحية الامير حسن', 'ضاحية الحاج حسن', 
-        'ضاحية الاستقلال', 'ضاحية الاقصى', 'وادي السرور', 'وادي الرمم', 'وادي الحدادة', 
-        'وادي العش', 'أم الحيران', 'النويجيس', 'جبل القلعة', 'جبل الأشرفية', 'جبل التاج', 
-        'جبل الجوفة', 'جبل الحسين', 'جبل الزهور', 'جبل المريخ', 'جبل النزهة', 'جبل النصر', 
-        'جبل النظيف', 'جبل عمان', 'دوار المشاغل', 'شارع الحزام', 'عين غزال', 'البيضاء', 
-        'الجويدة', 'الحرّيّة', 'الخزنة', 'الخشافية', 'الدوار الأول', 'الدوار الثاني', 
-        'الذراع', 'الربوة', 'الرجيب', 'الرقيم', 'القصور', 'القويسمة', 'الماضونة', 
-        'المحطة', 'المستندة', 'المقابلين', 'الموقر', 'المغيرات', 'الهاشمي الجنوبي', 
-        'الهاشمي الشمالي', 'الوحدات', 'اليادودة', 'الياسمين', 'اليرموك', 'ام نوارة', 
-        'أم قصير', 'بدر', 'بسمان', 'جاوا', 'حطين', 'حي نزال', 'حي عدن', 'خربة السوق', 
-        'راس العين', 'سحاب', 'صالحية العابد', 'طبربور', 'طلوع المصدار', 'عرجان', 
-        'ماركا', 'ماركا الشمالية', 'ماركا الجنوبية', 'وسط البلد', 'ياجوز', 'الكوم الشرقي'
-    ]
-}
+def _load_location_data(db: Session):
+    cities = [(c.id, c.name_ar) for c in db.query(models.City).all()]
+    regions = [(r.id, r.city_id, r.name_ar) for r in db.query(models.Region).all()]
+    aliases = [(a.alias_name, a.region_id) for a in db.query(models.RegionAlias).all()]
+    return cities, regions, aliases
 
-def resolve_regions_smart(db: Session, raw_locations: list, city_id: int = None) -> tuple:
+_ORDINALS = ["ثالث", "رابع", "خامس", "سادس", "سابع", "ثامن", "تاسع", "عاشر"]
+# Aqaba residential areas are known by feminine ordinals: "الثالثة" -> "السكنية 3 (الثالثة)"
+AQABA_ORDINAL_REGIONS = {f"{o}ه": f"السكنية {i} (ال{o}ة)" for i, o in enumerate(_ORDINALS, start=3)}
+# Amman circles are known by masculine ordinals: "السابع" -> "الدوار السابع"
+AMMAN_ORDINAL_REGIONS = {o: f"الدوار ال{o}" for o in ["اول", "ثاني"] + _ORDINALS[:-1]}
 
-
-    """
-    Step 2: Python Matcher Engine.
-    Uses fuzzy matching against normalized DB values to find regions.
-    Returns: (list of matching region IDs, list of unfound raw region names, inferred city_id)
-    """
-    if not raw_locations:
-        return [], [], city_id
-        
-    # Fetch all regions to memory for matching (small enough to be very fast)
-    all_regions = db.query(models.Region).all()
-    all_cities = db.query(models.City).all()
-    # Pre-calculate normalized names
-    db_candidates = {r.id: {"norm": normalize_arabic(r.name_ar), "obj": r} for r in all_regions}
-    city_candidates = {c.id: {"norm": normalize_arabic(c.name_ar), "obj": c} for c in all_cities}
-    
-    inferred_city = city_id
-    
-    # PASS 1: Identify explicit cities first to restrict regions
-    for raw_loc in raw_locations:
-        norm_loc = normalize_arabic(raw_loc)
-        if not norm_loc: continue
-        for c_id, c_data in city_candidates.items():
-            if norm_loc == c_data["norm"] or (difflib.SequenceMatcher(None, norm_loc, c_data["norm"]).ratio() > 0.85):
-                inferred_city = c_id
-                break
-
-    found_region_ids = []
-    not_found_names = []
-    
-    for raw_loc in raw_locations:
-        norm_loc = normalize_arabic(raw_loc)
-        if not norm_loc: continue
-        
-        # --- Handle Amman vs Aqaba Ordinals ---
-        aqaba_ordinals = {
-            "ثالثه": "سكنيه 3 (الثالثه)",
-            "رابعه": "سكنيه 4 (الرابعه)",
-            "خامسه": "سكنيه 5 (الخامسه)",
-            "سادسه": "سكنيه 6 (السادسه)",
-            "سابعه": "سكنيه 7 (السابعه)",
-            "ثامنه": "سكنيه 8 (الثامنه)",
-            "تاسعه": "سكنيه 9 (التاسعه)",
-            "عاشره": "سكنيه 10 (العاشره)",
-            "الثالثه": "سكنيه 3 (الثالثه)",
-            "الرابعه": "سكنيه 4 (الرابعه)",
-            "الخامسه": "سكنيه 5 (الخامسه)",
-            "السادسه": "سكنيه 6 (السادسه)",
-            "السابعه": "سكنيه 7 (السابعه)",
-            "الثامنه": "سكنيه 8 (الثامنه)",
-            "التاسعه": "سكنيه 9 (التاسعه)",
-            "العاشره": "سكنيه 10 (العاشره)"
-        }
-        amman_ordinals = {
-            "اول": "دوار اول",
-            "أول": "دوار اول",
-            "الاول": "دوار اول",
-            "الأول": "دوار اول",
-            "ثاني": "دوار ثاني",
-            "الثاني": "دوار ثاني",
-            "ثالث": "دوار ثالث",
-            "الثالث": "دوار ثالث",
-            "رابع": "دوار رابع",
-            "الرابع": "دوار رابع",
-            "خامس": "دوار خامس",
-            "الخامس": "دوار خامس",
-            "سادس": "دوار سادس",
-            "السادس": "دوار سادس",
-            "سابع": "دوار سابع",
-            "السابع": "دوار سابع",
-            "ثامن": "دوار ثامن",
-            "الثامن": "دوار ثامن",
-            "تاسع": "دوار تاسع",
-            "التاسع": "دوار تاسع",
-            "دوار اول": "دوار اول",
-            "دوار ثاني": "دوار ثاني",
-            "دوار ثالث": "دوار ثالث",
-            "دوار رابع": "دوار رابع",
-            "دوار خامس": "دوار خامس",
-            "دوار سادس": "دوار سادس",
-            "دوار سابع": "دوار سابع",
-            "دوار ثامن": "دوار ثامن",
-            "دوار تاسع": "دوار تاسع"
-        }
-        if norm_loc in aqaba_ordinals:
-            norm_loc = aqaba_ordinals[norm_loc]
-        elif norm_loc in amman_ordinals:
-            norm_loc = amman_ordinals[norm_loc]
-        # -------------------------------------
-        
-        # 0. Check if it's a City directly
-        city_matched = False
-        for c_id, c_data in city_candidates.items():
-            if norm_loc == c_data["norm"] or (difflib.SequenceMatcher(None, norm_loc, c_data["norm"]).ratio() > 0.85):
-                if not inferred_city:
-                    inferred_city = c_id
-                city_matched = True
-                break
-                
-        if city_matched:
-            continue
-            
-        # 1. Check Zone Dictionary first (e.g. "عمان الغربية")
-        zone_matched = False
-        for zone_key, zone_areas in ZONE_REGIONS.items():
-            if norm_loc == normalize_arabic(zone_key):
-                zone_matched = True
-                # Match all areas in this zone
-                for area in zone_areas:
-                    norm_area = normalize_arabic(area)
-                    # Find exact match in DB
-                    for r_id, r_data in db_candidates.items():
-                        if r_data["norm"] == norm_area:
-                            found_region_ids.append(r_id)
-                            if not inferred_city: inferred_city = r_data["obj"].city_id
-                break
-        
-        if zone_matched:
-            continue
-            
-        # 2. Fuzzy Matching for specific region
-        best_match_id = None
-        best_score = 0.0
-        
-        for r_id, r_data in db_candidates.items():
-            db_norm = r_data["norm"]
-            # Fast exact match
-            if norm_loc == db_norm:
-                best_match_id = r_id
-                best_score = 1.0
-                if inferred_city and r_data["obj"].city_id == inferred_city:
-                    break
-            
-            # SequenceMatcher provides ratio 0.0 to 1.0
-            score = difflib.SequenceMatcher(None, norm_loc, db_norm).ratio()
-            
-            # Boost score if one is a substring of the other (helps long names like شارع الجامعة (الجامعة الأردنية))
-            if (norm_loc in db_norm or db_norm in norm_loc) and len(norm_loc) > 4:
-                substring_ratio = min(len(norm_loc), len(db_norm)) / max(len(norm_loc), len(db_norm))
-                boosted_score = 0.85 + (substring_ratio * 0.14)
-                if boosted_score > score:
-                    score = boosted_score
-                    
-            # Small boost if it's in the inferred city to break ties
-            if inferred_city and r_data["obj"].city_id == inferred_city:
-                score += 0.05
-                    
-            if score > best_score:
-                best_score = score
-                best_match_id = r_id
-                
-        # Acceptance Threshold (e.g. 75%)
-        if best_score > 0.75 and best_match_id:
-            found_region_ids.append(best_match_id)
-            if not inferred_city:
-                inferred_city = db_candidates[best_match_id]["obj"].city_id
-        else:
-            # 3. Fallback to Alias check
-            alias = db.query(models.RegionAlias).filter(
-                models.RegionAlias.alias_name.ilike(f"%{raw_loc}%")
-            ).first()
-            if alias:
-                found_region_ids.append(alias.region_id)
-                if not inferred_city:
-                    region = db.query(models.Region).filter(models.Region.id == alias.region_id).first()
-                    if region: inferred_city = region.city_id
-            else:
-                not_found_names.append(raw_loc)
-                
-    return list(set(found_region_ids)), not_found_names, inferred_city
+def map_ordinal_region(name: str, allow_aqaba: bool, allow_amman: bool):
+    """Turns a bare ordinal into the region it means. Returns None when the ordinal
+    belongs to a city other than the one the user stated."""
+    norm = normalize_arabic(name)
+    if norm.startswith("دوار "):
+        if norm[len("دوار "):] in AMMAN_ORDINAL_REGIONS:
+            return AMMAN_ORDINAL_REGIONS[norm[len("دوار "):]] if allow_amman else None
+        return name
+    if norm in AQABA_ORDINAL_REGIONS:
+        return AQABA_ORDINAL_REGIONS[norm] if allow_aqaba else None
+    if norm in AMMAN_ORDINAL_REGIONS:
+        return AMMAN_ORDINAL_REGIONS[norm] if allow_amman else None
+    return name
 
 def build_search_query(db: Session, filters: dict):
     from sqlalchemy import or_
@@ -442,10 +244,11 @@ def build_search_query(db: Session, filters: dict):
     if filters.get("city_id"):
         query = query.filter(models.AdSearchIndex.city_id == filters["city_id"])
         
-    if filters.get("location_names"):
+    # region_names never contains the city: the city is enforced by city_id above
+    if filters.get("region_names"):
         query = query.join(models.Ad, models.AdSearchIndex.ad_id == models.Ad.id)
         joined_ad = True
-        loc_conditions = [models.Ad.location.ilike(f"%{loc}%") for loc in filters["location_names"]]
+        loc_conditions = [models.Ad.location.ilike(f"%{loc}%") for loc in filters["region_names"]]
         if filters.get("region_ids"):
             query = query.filter(or_(models.AdSearchIndex.region_id.in_(filters["region_ids"]), *loc_conditions))
         else:
@@ -460,7 +263,7 @@ def build_search_query(db: Session, filters: dict):
         query = query.filter(models.AdSearchIndex.price <= filters["max_price"])
         
     if filters.get("bedrooms") is not None:
-        query = query.filter(models.AdSearchIndex.bedrooms >= filters["bedrooms"])
+        query = query.filter(models.AdSearchIndex.bedrooms == filters["bedrooms"])
         
     if filters.get("bathrooms") is not None:
         query = query.filter(models.AdSearchIndex.bathrooms >= filters["bathrooms"])
@@ -498,7 +301,7 @@ def parse_floor(floor_word: str):
     if "رابع" in w: return 4
     if "خامس" in w: return 5
     if "سادس" in w: return 6
-    if "اخير" in w or "أخير" in w or "رو�?" in w: return 100 # usually top floor
+    if "اخير" in w or "أخير" in w or "روف" in w: return 100 # usually top floor
     return None
 
 @smart_search_router.post("/api/smart-voice-search", response_model=SmartSearchResponse)
@@ -593,24 +396,39 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # Fallback: if DeepSeek failed to extract category, use Python mapped categories
     if category_id is None and len(mapped_categories) == 1:
         category_id = list(mapped_categories)[0]
-    raw_locations = raw.get("locations") or []
+    raw_locations = [str(l) for l in (raw.get("locations") or []) if l]
+    raw_landmarks = raw.get("landmarks") or []
+    if not isinstance(raw_landmarks, list):
+        raw_landmarks = []
+    stated_cities = [str(raw["city"])] if raw.get("city") else []
+
+    cities, regions, aliases = _load_location_data(db)
+
+    # The city the user stated decides which ordinals are meaningful
+    stated_city_id = next(
+        (c for c in (match_city(n, cities) for n in stated_cities + raw_locations) if c is not None), None
+    )
+    allow_aqaba_ordinals = stated_city_id is None or stated_city_id == match_city("العقبة", cities)
+    allow_amman_ordinals = stated_city_id is None or stated_city_id == match_city("عمان", cities)
 
     # MANUAL INTERCEPT: DeepSeek struggles to extract Arabic ordinals as locations
-    for aq_ord in ["ثالثه", "رابعه", "خامسه", "سادسه", "سابعه", "ثامنه", "تاسعه", "عاشره"]:
-        if aq_ord in text_clean and aq_ord not in [normalize_arabic(l) for l in raw_locations]:
-            raw_locations.append(aq_ord)
-    
+    if allow_aqaba_ordinals:
+        for aq_ord in ["ثالثه", "رابعه", "خامسه", "سادسه", "سابعه", "ثامنه", "تاسعه", "عاشره"]:
+            if aq_ord in text_clean and aq_ord not in [normalize_arabic(l) for l in raw_locations]:
+                raw_locations.append(aq_ord)
+
     import re
-    for am_ord in ["اول", "ثاني", "ثالث", "رابع", "خامس", "سادس", "سابع", "ثامن", "تاسع"]:
-        # Only extract if it's 'دوار', or preceded by spaces or commas and NOT preceded by 'طابق' or 'دوار'
-        if f"دوار {am_ord}" in text_clean or f"دوار ال{am_ord}" in text_clean:
-            raw_locations.append(f"دوار {am_ord}")
-        else:
-            # Check for isolated ordinals like "الثاني", "الرابع" which mean circles in Amman context
-            pattern = r'(?<!طابق )\bال' + am_ord + r'\b'
-            if re.search(pattern, text_clean):
+    if allow_amman_ordinals:
+        for am_ord in ["اول", "ثاني", "ثالث", "رابع", "خامس", "سادس", "سابع", "ثامن", "تاسع"]:
+            # Only extract if it's 'دوار', or preceded by spaces or commas and NOT preceded by 'طابق' or 'دوار'
+            if f"دوار {am_ord}" in text_clean or f"دوار ال{am_ord}" in text_clean:
                 raw_locations.append(f"دوار {am_ord}")
-            
+            else:
+                # Check for isolated ordinals like "الثاني", "الرابع" which mean circles in Amman context
+                pattern = r'(?<!طابق )\bال' + am_ord + r'\b'
+                if re.search(pattern, text_clean):
+                    raw_locations.append(f"دوار {am_ord}")
+
     WEST_AMMAN_REGIONS = [
         'ابو نصير', 'الجبيهة', 'الدوار الثالث', 'الدوار الرابع', 'الدوار الخامس', 'الدوار السادس', 
         'الدوار السابع', 'الدوار الثامن', 'الروابي', 'الصويفية', 'العبدلي', 'المدينة الرياضية', 
@@ -650,29 +468,46 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     
     specific_locations = [loc for loc, lc in zip(raw_locations, locs_clean) if lc not in BROAD_TERMS]
     
-    expanded_locations = []
-    
-    # 1. Keep specific locations
-    expanded_locations.extend(specific_locations)
-    
-    # 2. If NO specific locations were provided, expand West/East Amman if mentioned
+    has_west = any(l in WEST_TERMS for l in locs_clean)
+    has_east = any(l in EAST_TERMS for l in locs_clean)
+
+    # West/East Amman only expand to their regions when no specific region was given
+    zone_locations = []
     if not specific_locations:
-        has_west = any(l in WEST_TERMS for l in locs_clean)
-        has_east = any(l in EAST_TERMS for l in locs_clean)
         if has_west:
-            expanded_locations.extend(WEST_AMMAN_REGIONS)
+            zone_locations.extend(WEST_AMMAN_REGIONS)
         if has_east:
-            expanded_locations.extend(EAST_AMMAN_REGIONS)
-            
-    # 3. Always keep 'عمان' if it was explicitly mentioned (helps city_id resolution)
-    if any(l == "عمان" for l in locs_clean):
-        expanded_locations.append("عمان")
-        
-    raw["locations"] = list(dict.fromkeys(expanded_locations)) # remove duplicates
-    
-    # Locations
-    region_ids, not_found_regions, city_id = resolve_regions_smart(db, raw["locations"])
-    
+            zone_locations.extend(EAST_AMMAN_REGIONS)
+    if has_west or has_east or any(l == "عمان" for l in locs_clean):
+        stated_cities.append("عمان")
+
+    mapped = [map_ordinal_region(l, allow_aqaba_ordinals, allow_amman_ordinals) for l in specific_locations]
+    raw["locations"] = list(dict.fromkeys(m for m in mapped if m))
+
+    # Locations: city first, then regions and landmarks inside that city only
+    resolution = resolve_locations(
+        cities, regions, aliases,
+        city_names=stated_cities,
+        region_names=raw["locations"],
+        landmarks=raw_landmarks,
+        soft_region_names=zone_locations,
+    )
+    city_name_by_id = dict(cities)
+
+    if resolution.ambiguous:
+        parts = [
+            f"'{name}' ({'، '.join(city_name_by_id[c] for c in c_ids)})"
+            for name, c_ids in resolution.ambiguous.items()
+        ]
+        return SmartSearchResponse(
+            intent="search",
+            result_count=0,
+            filters_applied={},
+            action_required=f"منطقة {' و'.join(parts)} موجودة في أكثر من مدينة. يرجى كتابة اسم المدينة مع المنطقة."
+        )
+
+    region_ids, not_found_regions, city_id = resolution.region_ids, resolution.not_found, resolution.city_id
+
     # Price
     min_price = parse_price(raw.get("min_price_word"))
     max_price = parse_price(raw.get("max_price_word"))
@@ -744,15 +579,13 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             features_list.append(item)
             
     # Build Display Data for Frontend
-    location_names = []
-    if region_ids:
-        resolved_regions = db.query(models.Region).filter(models.Region.id.in_(region_ids)).all()
-        location_names = [r.name_ar for r in resolved_regions]
-    elif city_id:
-        city_obj = db.query(models.City).filter(models.City.id == city_id).first()
-        if city_obj:
-            location_names = [city_obj.name_ar]
-    
+    city_name = city_name_by_id.get(city_id) if city_id else None
+    region_name_by_id = {r_id: name for r_id, _, name in regions}
+    region_names = [region_name_by_id[r_id] for r_id in region_ids]
+    # City first: /api/ads treats a leading city as the scope of the regions after it,
+    # so a region name shared with another city can't leak into the results.
+    location_names = ([city_name] if city_name else []) + region_names
+
     tags = []
     
     if "من المالك" in text_clean or "من مالك" in text_clean:
@@ -826,6 +659,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         "features_list": features_list,
         "category_name": resolved_category_name,
         "location_names": location_names,
+        "region_names": region_names,
         "tags": tags,
         "not_found_regions": not_found_regions
     }
@@ -836,7 +670,12 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     suggestion = None
     if not_found_regions:
         names = " أو ".join(not_found_regions)
-        suggestion = f"ملاحظة: منطقة '{names}' غير مسجلة، تم عرض نتائج تقريبية."
+        if city_name and region_ids:
+            suggestion = f"ملاحظة: لم نجد '{names}' في {city_name}، تم عرض باقي المناطق المطلوبة."
+        elif city_name:
+            suggestion = f"ملاحظة: لم نجد '{names}' في {city_name}، تم عرض نتائج {city_name} كاملة."
+        else:
+            suggestion = f"ملاحظة: منطقة '{names}' غير مسجلة، تم عرض نتائج تقريبية."
         
     if count > 0:
         return SmartSearchResponse(
@@ -850,7 +689,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # 1. Remove features
     if features_list:
         applied_filters["features_list"] = []
-        applied_filters["tags"] = [t for t in tags if t not in features_list]
+        applied_filters["tags"] = tags = [t for t in tags if t.split(":", 1)[-1] not in features_list]
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
@@ -859,6 +698,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # 2. Remove floor
     if applied_filters.get("floor_numbers"):
         applied_filters["floor_numbers"] = []
+        applied_filters["tags"] = tags = [t for t in tags if not t.startswith("floor:")]
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
@@ -868,6 +708,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     if min_area is not None or max_area is not None:
         applied_filters["min_area"] = None
         applied_filters["max_area"] = None
+        applied_filters["tags"] = tags = [t for t in tags if not t.startswith(("min_area:", "max_area:"))]
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
@@ -888,7 +729,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # 6. Fallback to just City + Category
     if region_ids:
         applied_filters["region_ids"] = []
-        applied_filters["location_names"] = [n for n in location_names if n == "عمان"]
+        applied_filters["region_names"] = []
+        applied_filters["location_names"] = [city_name] if city_name else []
         query = build_search_query(db, applied_filters)
         count = query.count()
         
