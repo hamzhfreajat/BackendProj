@@ -474,6 +474,53 @@ def _rent_period():
     return case(*[(stored == value, key) for key, value in RENT_PERIODS.items()], else_=None)
 
 
+# ---------------------------------------------------------------------------
+# Refinements read from the ad itself: no agent, payable in instalments, ground floor
+# ---------------------------------------------------------------------------
+PRICE_CAPS = {"rent": [150, 200, 250, 300], "sale": [20000, 30000, 40000, 50000]}
+_GROUND_FLOOR = ["الطابق الأرضي", "طابق أرضي", "طابق الأرضي", "أرضي"]
+
+
+def _ad_text():
+    return func.coalesce(models.Ad.raw_description, models.Ad.description, "")
+
+
+def _by_owner():
+    """The advertiser says there is no agent, and nothing in the ad says otherwise."""
+    text = _ad_text()
+    return and_(
+        text.op("~")("من المالك|المالك مباش|بدون وسيط|بدون وسطاء|بدون سمسار"),
+        text.op("!~")("مكتب عقار|مكاتب عقار|للعقارات|العقاري[ةه]|عمول[ةه]|وسيط عقاري|شركة عقار"),
+    )
+
+
+def _instalments():
+    return or_(
+        _attr(("dynamic_data", "installment_possible")) == "نعم",
+        _attr(("dynamic_data", "payment_method")).in_(["أقساط", "كاش أو أقساط"]),
+        _attr(("payment_method",)).in_(["أقساط", "كاش أو أقساط"]),
+        _ad_text().op("~")("تقسيط|[اأ]قساط"),
+    )
+
+
+def _ground_floor():
+    return or_(_attr(("dynamic_data", "floor")).in_(_GROUND_FLOOR), _attr(("floor",)).in_(_GROUND_FLOOR))
+
+
+def _feature_conditions(deal: Optional[str]) -> dict:
+    """Every refinement that applies to the deal, as {name: condition}. Ceilings are "cap:200"."""
+    Index = models.AdSearchIndex
+    conditions = {"owner": _by_owner(), "ground": _ground_floor()}
+    if deal == "rent":
+        conditions["unfurnished"] = Index.furnished == False
+    if deal == "sale":
+        conditions["instalments"] = _instalments()
+    price = _comparable_price(deal)
+    for cap in PRICE_CAPS.get(deal or "", []):
+        conditions[f"cap:{cap}"] = price <= cap
+    return conditions
+
+
 def _refinement_counts(scope, deal: Optional[str]) -> dict:
     """How many ads of the page's scope each narrower page would hold, so the page
     can link to them (and only to the ones that are not empty)."""
@@ -489,6 +536,17 @@ def _refinement_counts(scope, deal: Optional[str]) -> dict:
         by_period = dict(scope.with_entities(period, func.count(Ad.id)).group_by(period).order_by(None).all())
         counts["daily"] = by_period.get("daily", 0)
         counts["monthly"] = by_period.get("monthly", 0)
+    # One pass over the ads for all of the rest
+    conditions = _feature_conditions(deal) if deal else {}
+    if conditions:
+        names = list(conditions)
+        row = scope.with_entities(*[func.count(Ad.id).filter(conditions[name]) for name in names]).order_by(None).first()
+        counts["caps"] = {}
+        for name, value in zip(names, row):
+            if name.startswith("cap:"):
+                counts["caps"][name[4:]] = value or 0
+            else:
+                counts[name] = value or 0
     return counts
 
 
@@ -524,6 +582,8 @@ def get_landing(
     bedrooms: Optional[str] = Query(None, description="One or several, comma-separated. 0 is a studio, 6 means 6 or more"),
     bathrooms: Optional[str] = Query(None, description="One or several, comma-separated. 6 means 6 or more"),
     furnished: Optional[bool] = None,
+    owner: Optional[bool] = Query(None, description="Only ads placed by the owner, with no agent"),
+    instalments: Optional[bool] = Query(None, description="Only ads that can be paid in instalments"),
     attrs: Optional[List[str]] = Query(None, description='Attribute filters as "name:value", repeatable'),
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
@@ -566,6 +626,10 @@ def get_landing(
         filtered = filtered.filter(Index.build_area <= max_area)
     if furnished is not None:
         filtered = filtered.filter(Index.furnished == furnished)
+    if owner:
+        filtered = filtered.filter(_by_owner())
+    if instalments:
+        filtered = filtered.filter(_instalments())
     price = _comparable_price(_deal_of(category_id, tax) if category_id is not None else None)
     if min_price is not None:
         filtered = filtered.filter(price >= min_price)
@@ -631,7 +695,7 @@ def get_landing(
         "deal": _deal_of(category_id, tax),
         "locations": locations,
         "bedrooms": refinements["bedrooms"],
-        "refinements": {key: refinements[key] for key in ("furnished", "daily", "monthly")},
+        "refinements": {key: value for key, value in refinements.items() if key != "bedrooms"},
         "categories": child_categories,
         "breadcrumb": _breadcrumb(category_id, tax),
     }
@@ -730,6 +794,27 @@ def get_sitemap_landing(db: Session = Depends(get_db)):
     ]
 
 
+@router.get("/sitemap/features")
+def get_sitemap_features(db: Session = Depends(get_db)):
+    """Counts of web-quality ads per (refinement, category, city, region), for the pages
+    "by owner", "unfurnished", "instalments", "ground floor" and the price ceilings."""
+    tax = _taxonomy(db)
+    Ad, Index = models.Ad, models.AdSearchIndex
+    result = []
+    for deal, root in REAL_ESTATE_ROOTS.items():
+        base = _quality_query(db).filter(Index.category_id.in_(tax["descendants"](root)))
+        for name, condition in _feature_conditions(deal).items():
+            rows = base.filter(condition).with_entities(
+                Index.category_id, Index.city_id, Index.region_id, func.count(Ad.id), func.max(Ad.created_at)
+            ).group_by(Index.category_id, Index.city_id, Index.region_id).order_by(None).all()
+            result.extend(
+                {"feature": name, "category_id": category_id, "city_id": city_id, "region_id": region_id, "count": count,
+                 "latest": latest.isoformat() if latest else None}
+                for category_id, city_id, region_id, count, latest in rows
+            )
+    return result
+
+
 @router.get("/sitemap/ads")
 def get_sitemap_ads(
     page: int = Query(1, ge=1),
@@ -752,5 +837,7 @@ def get_sitemap_ads(
             "id": ad.id,
             "slug": slugify(title),
             "updated_at": (ad.updated_at or ad.created_at).isoformat() if (ad.updated_at or ad.created_at) else None,
+            # The main photo, for the image entry of the ad's sitemap line
+            "image": next(iter(_images(ad)), None),
         })
     return {"total": total, "page": page, "page_size": page_size, "items": items}
