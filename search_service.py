@@ -9,6 +9,50 @@ LOCATIONS_CACHE = {
     "cities": None
 }
 
+# Words that stand for "no particular area" in an ad's location
+_NO_REGION = {"", "اخري", "مناطق اخري", "other", "غير محدد"}
+
+
+def _location_key(value) -> str:
+    """Folds spelling variants so "إربد" equals "اربد" and "الجبيهه" equals "الجبيهة"."""
+    return QueryParserService.normalize_arabic(str(value or "")).replace("،", ",").strip().lower()
+
+
+def resolve_ad_location(db: Session, location: str):
+    """(city_id, region_id) for an ad's own location ("المدينة, المنطقة").
+
+    Only whole names are accepted: the city has to equal a city and the region has
+    to equal a region of that city. Anything else leaves the region empty.
+
+    The region used to be guessed from the first place name found anywhere in the
+    ad's text, matched as a part of a region name. That filed "بادر بالاتصال" under
+    "الكرك, أدر", "فرصة نادرة" under "المفرق, نادرة" and every ad that only said
+    "اربد" under "مستشفى اربد التخصصي". A wrong region is worse than no region,
+    so nothing is guessed any more.
+    """
+    if LOCATIONS_CACHE["regions"] is None:
+        LOCATIONS_CACHE["regions"] = db.execute(text("SELECT id, city_id, name_ar FROM regions")).fetchall()
+        LOCATIONS_CACHE["cities"] = db.execute(text("SELECT id, name_ar FROM cities")).fetchall()
+
+    parts = [part.strip() for part in str(location or "").replace("،", ",").split(",") if part.strip()]
+    if not parts:
+        return None, None
+
+    city_key = _location_key(parts[0])
+    city_id = next((c_id for c_id, c_name in LOCATIONS_CACHE["cities"] if _location_key(c_name) == city_key), None)
+    if city_id is None:
+        return None, None
+
+    region_key = _location_key(parts[1]) if len(parts) > 1 else ""
+    if region_key in _NO_REGION:
+        return city_id, None
+    region_id = next(
+        (r_id for r_id, r_city_id, r_name in LOCATIONS_CACHE["regions"]
+         if r_city_id == city_id and _location_key(r_name) == region_key),
+        None,
+    )
+    return city_id, region_id
+
 class SearchService:
     @staticmethod
     def count_properties(db: Session, raw_query: str) -> int:
@@ -264,27 +308,12 @@ class SearchService:
 
             city_id = getattr(ad, 'city_id', None)
             region_id = getattr(ad, 'region_id', None)
-            
-            if not region_id and parsed.location:
-                # Build cache if empty
-                if LOCATIONS_CACHE["regions"] is None:
-                    LOCATIONS_CACHE["regions"] = db.execute(text("SELECT id, city_id, name_ar FROM regions")).fetchall()
-                    LOCATIONS_CACHE["cities"] = db.execute(text("SELECT id, name_ar FROM cities")).fetchall()
-                
-                # Fast in-memory lookup
-                loc_lower = parsed.location.lower()
-                for r_id, r_cid, r_name in LOCATIONS_CACHE["regions"]:
-                    if r_name and loc_lower in r_name.lower():
-                        region_id = r_id
-                        city_id = r_cid
-                        break
-                
-                if not region_id:
-                    for c_id, c_name in LOCATIONS_CACHE["cities"]:
-                        if c_name and loc_lower in c_name.lower():
-                            city_id = c_id
-                            break
-            
+
+            if not region_id:
+                # The ad's own location decides; the words of its text never do
+                resolved_city_id, region_id = resolve_ad_location(db, loc)
+                city_id = resolved_city_id or city_id
+
             upsert_sql = """
                 INSERT INTO ad_search_index (
                     ad_id, category_id, city_id, region_id, deal_type, property_type, price,

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import models
 from mapper import get_dynamic_location_rules, map_location, get_location_map, map_location_with_fallback
+from price_guard import category_for_deal, check_price, corrected_deal, deal_of_category, extract_price
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -92,7 +93,7 @@ class ExtractedAdAttributes(BaseModel):
 class ExtractedAd(BaseModel):
     post_index: int = Field(description="The index of the post in the prompt array (0 to 9)")
     category_id: int = Field(description="The ID of the category that best matches this post (e.g., 301 for apartments, 101 for cars, etc.)")
-    title: str = Field(description="A clean, concise title for the ad (max 80 chars)")
+    title: str = Field(description="A clean Arabic title (max 80 chars) written the way people search. For real estate build it as: property type + main detail (bedrooms, مفروشة, area in m2) + للإيجار or للبيع + في + neighborhood، city. Example: 'شقة مفروشة غرفتين للإيجار في خلدا، عمان'. Use the common words: شقة, استوديو, بيت مستقل, فيلا, أرض, محل, مكتب, سكن طالبات. Add يومي or شهري for short lets and 'من المالك مباشرة' ONLY when the post says so. Never include phone numbers, prices, emojis or sales words such as فرصة / لقطة / عاجل.")
     description: str = Field(description="The full ad text cleaned up")
     price: float = Field(description="The extracted price in JOD. Return 0 if not found")
     location: Optional[str] = Field(description="The geographic location. For real estate format as 'المدينة, المنطقة'. CRITICAL: Any mention of Aqaba residential zones like 'التاسعة', 'المنطقة السكنية الثامنة', 'المنطقة الخامسة' MUST be standardized to 'العقبة, السكنية 9', 'العقبة, السكنية 8', 'العقبة, السكنية 5', etc. Do not hallucinate cities if not mentioned.")
@@ -513,12 +514,33 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                             if not loc:
                                 loc = city
 
+                            # The AI's price is checked against the post's own words (see price_guard.py)
+                            final_price = ai_ad.get("price") or 0.0
+                            parents = {c.id: c.parent_id for c in db_categories}
+                            deal = deal_of_category(final_category_id, parents)
+                            if deal and final_price:
+                                said_deal = corrected_deal(final_price, deal, raw_text)
+                                if said_deal != deal:
+                                    final_category_id = category_for_deal(final_category_id, said_deal, parents)
+                                    deal = said_deal
+                                checked_price, reason = check_price(final_price, deal, raw_text)
+                                if checked_price != final_price:
+                                    print(f"WARNING: [Scraper] Price {final_price} refused ({reason}); the ad is saved without a price.")
+                                    attributes_payload["refused_price"] = f"{final_price}: {reason}"
+                                    final_price = checked_price
+                            elif deal:
+                                # No price from the AI: take one only when the post states a single, clearly labelled price
+                                recovered_price, _ = extract_price(raw_text, deal)
+                                if recovered_price:
+                                    final_price = recovered_price
+                                    attributes_payload["recovered_price"] = True
+
                             # 3. Create Ad
                             new_ad = models.Ad(
                                 title=ai_ad.get("title", "")[:255],
                                 description=ai_ad.get("description", ""),
                                 raw_description=original_post['text'], # Save raw text for future duplicate checking
-                                price=ai_ad.get("price") or 0.0,
+                                price=final_price,
                                 location=loc[:255],
                                 source_url=original_post.get("post_url", url)[:255],
                                 source_type=models.SourceType.SCRAPER_BOT,

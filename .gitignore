@@ -24,3 +24,11 @@ rebuild_seed.py
 gen-lang-client-*.json
 .env.backup
 fb_cookies.json
+
+# One-off outputs of relocate_misfiled_ads.py
+relocation_backup_*.json
+relocation_plan.csv
+price_fix_backup_*.json
+price_fix_plan.csv
+price_recovery_backup_*.json
+price_recovery_plan.csv

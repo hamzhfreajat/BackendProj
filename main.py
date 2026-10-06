@@ -250,7 +250,7 @@ async def cloudflare_edge_caching(request: Request, call_next):
             return response
             
         # Heavy static lookups (categories, locations) - Cache at Cloudflare Edge for 5 minutes
-        if path.startswith("/api/categories") or path.startswith("/api/locations"):
+        if path.startswith("/api/categories") or path.startswith("/api/locations") or path.startswith("/api/web/"):
             response.headers["Cache-Control"] = "public, max-age=300, s-maxage=300"
             
         # Standard feed lists (ads, ticker) - Cache for 60 seconds to squash identical concurrent requests
@@ -284,6 +284,9 @@ app.include_router(wallet_router.router)
 app.include_router(ai_router)
 from smart_search_router import smart_search_router
 app.include_router(smart_search_router)
+
+from web_router import router as web_router
+app.include_router(web_router)
 app.include_router(media_router)
 app.include_router(og_router)
 app.include_router(auth.router)

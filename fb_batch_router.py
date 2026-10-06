@@ -37,6 +37,7 @@ if not os.getenv("GOOGLE_API_KEY"):
 # Project imports
 from database import get_db
 import models
+from price_guard import category_for_deal, check_price, corrected_deal, deal_of_category, extract_price
 from models import SourceType
 import schemas
 router = APIRouter(prefix="/api", tags=["fb-batch"])
@@ -805,6 +806,18 @@ def _is_duplicate(db: Session, post: FbPost, seen_in_batch_hashes: set) -> Optio
             if ad_img: return ad_img.id
 
     return None
+_CATEGORY_PARENTS = {"at": 0.0, "map": None}
+
+
+def _category_parents(db) -> dict:
+    """Category id -> parent id, kept for ten minutes."""
+    import time
+    if _CATEGORY_PARENTS["map"] is None or time.time() - _CATEGORY_PARENTS["at"] > 600:
+        _CATEGORY_PARENTS["map"] = dict(db.query(models.Category.id, models.Category.parent_id).all())
+        _CATEGORY_PARENTS["at"] = time.time()
+    return _CATEGORY_PARENTS["map"]
+
+
 def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, default_location):
     # Dynamically extract Category from AI category_name strings
     categories_map = get_category_map()
@@ -837,7 +850,10 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
                     # Sort by longest first to match the best region
                     all_regions_in_city.sort(key=lambda r: len(r.name_ar), reverse=True)
                     for existing_r in all_regions_in_city:
-                        if existing_r.name_ar in region_name:
+                        # Whole words only: "لب" must not match inside "طلب", nor "أدر" inside "بادر"
+                        if existing_r.name_ar and re.search(
+                            r"(?<![ء-ي])" + re.escape(existing_r.name_ar) + r"(?![ء-ي])", region_name
+                        ):
                             fuzzy_matched_region = existing_r
                             break
 
@@ -881,6 +897,29 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
         final_price = float(raw_price)
     except (ValueError, TypeError):
         final_price = 0.0
+
+    # The AI's price is checked against the post's own words before it is trusted (see price_guard.py)
+    price_note = None
+    price_recovered = False
+    parents = _category_parents(db)
+    deal = deal_of_category(final_category_id, parents)
+    if deal and final_price > 0:
+        said_deal = corrected_deal(final_price, deal, post.text or "")
+        if said_deal != deal:
+            new_category_id = category_for_deal(final_category_id, said_deal, parents)
+            logger.info(f"Post says {said_deal}, AI filed it under {deal}: category {final_category_id} -> {new_category_id}")
+            final_category_id, deal = new_category_id, said_deal
+        checked_price, reason = check_price(final_price, deal, post.text or "")
+        if checked_price != final_price:
+            logger.warning(f"Price {final_price:g} refused ({reason}); the ad is saved without a price")
+            price_note = f"{final_price:g}: {reason}"
+            final_price = checked_price
+    elif deal:
+        # The AI gave no price: take one only when the post states a single, clearly labelled price
+        recovered_price, _ = extract_price(post.text or "", deal)
+        if recovered_price:
+            logger.info(f"Price {recovered_price:g} read from the post's own text")
+            final_price, price_recovered = recovered_price, True
 
     from datetime import datetime, timedelta
     ad_created_at = None
@@ -926,6 +965,8 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
             "reactions": post.reactions,
             "scraped_at": post.scrapedAt,
             "phone_number": ai_data.get("phone_number"),
+            **({"refused_price": price_note} if price_note else {}),
+            **({"recovered_price": True} if price_recovered else {}),
             "images": processed_images,
             "videos": post.videos or [],
         },
