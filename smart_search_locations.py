@@ -192,7 +192,12 @@ def resolve_locations(
         if not lm_name and not lm_region:
             continue
         lm_city_id = match_city(str(lm.get("city") or ""), cities)
-        if result.city_id is None and lm_city_id is None:
+        # A landmark we know by its own name ("دوار القبة" in إربد) is found by that name.
+        # The city the AI attached to it is a guess, and a wrong guess hid the place.
+        known = index.candidates(lm_name, allow_fuzzy=False) if result.city_id is None and lm_name else []
+        if len({index.city_of[r] for r in known}) == 1:
+            plain_regions.append(lm_name)
+        elif result.city_id is None and lm_city_id is None:
             plain_regions.append(lm_region or lm_name)
         else:
             anchored_landmarks.append((lm_name, lm_region, lm_city_id))

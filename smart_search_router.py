@@ -250,7 +250,13 @@ def build_search_query(db: Session, filters: dict):
     joined_ad = False
     
     if filters.get("category_id"):
-        query = query.filter(models.AdSearchIndex.category_id == filters["category_id"])
+        # The category and everything under it, the same way /api/ads reads a category
+        pairs = db.query(models.Category.id, models.Category.parent_id).all()
+        wanted, grew = {filters["category_id"]}, True
+        while grew:
+            more = {c_id for c_id, parent_id in pairs if parent_id in wanted} - wanted
+            wanted, grew = wanted | more, bool(more)
+        query = query.filter(models.AdSearchIndex.category_id.in_(wanted))
         
     if filters.get("city_id"):
         query = query.filter(models.AdSearchIndex.city_id == filters["city_id"])
@@ -413,6 +419,14 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # Fallback: if DeepSeek failed to extract category, use Python mapped categories
     if category_id is None and len(mapped_categories) == 1:
         category_id = list(mapped_categories)[0]
+    # "غرفة للاجار": a room to rent has a category of its own
+    import re as _re
+    if category_id is None and has_rent and not has_sale and not mapped_categories             and _re.search(r"(?<![ء-ي])(?:ل|ال|لل)?غرف[هة](?![ء-ي])", text_clean):
+        category_id = 3065
+    # The kind of property may be unknown, but the deal is not: someone asking to rent
+    # is never shown sales, and the other way round
+    if category_id is None and has_rent != has_sale:
+        category_id = 3 if has_rent else 2
     raw_locations = [str(l) for l in (raw.get("locations") or []) if l]
     raw_landmarks = raw.get("landmarks") or []
     if not isinstance(raw_landmarks, list):
@@ -746,6 +760,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         count = query.count()
         if count > 0:
             return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion=f"لم نجد نتائج بسعر {max_price}، فقمنا برفع الميزانية لغاية {applied_filters['max_price']}")
+        # The higher budget found nothing either: the user's own budget stays
+        applied_filters["max_price"] = max_price
             
     # 5. Remove Bedrooms (Skipped to strictly enforce bedroom requirements)
     # Bedrooms are a strict requirement for most users, dropping them leads to irrelevant results (e.g. 2 bedrooms when 4 are requested).

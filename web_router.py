@@ -479,6 +479,8 @@ def _rent_period():
 # ---------------------------------------------------------------------------
 PRICE_CAPS = {"rent": [150, 200, 250, 300], "sale": [20000, 30000, 40000, 50000]}
 _GROUND_FLOOR = ["الطابق الأرضي", "طابق أرضي", "طابق الأرضي", "أرضي"]
+_FIRST_FLOOR = ["1", "الطابق الأول", "طابق أول", "الأول"]
+_NEW_BUILDING = ["0 - 11 شهر", "0-11 شهر", "جديد", "قيد الإنشاء"]
 
 
 def _ad_text():
@@ -507,10 +509,23 @@ def _ground_floor():
     return or_(_attr(("dynamic_data", "floor")).in_(_GROUND_FLOOR), _attr(("floor",)).in_(_GROUND_FLOOR))
 
 
+def _first_floor():
+    return or_(_attr(("dynamic_data", "floor")).in_(_FIRST_FLOOR), _attr(("floor",)).in_(_FIRST_FLOOR))
+
+
+def _new_building():
+    """Built within the last year, by the ad's own details."""
+    return or_(
+        _attr(("dynamic_data", "building_age")).in_(_NEW_BUILDING),
+        _attr(("dynamic_data", "age")).in_(_NEW_BUILDING),
+        _attr(("building_age",)).in_(_NEW_BUILDING),
+    )
+
+
 def _feature_conditions(deal: Optional[str]) -> dict:
     """Every refinement that applies to the deal, as {name: condition}. Ceilings are "cap:200"."""
     Index = models.AdSearchIndex
-    conditions = {"owner": _by_owner(), "ground": _ground_floor()}
+    conditions = {"owner": _by_owner(), "ground": _ground_floor(), "first": _first_floor(), "new": _new_building()}
     if deal == "rent":
         conditions["unfurnished"] = Index.furnished == False
     if deal == "sale":
@@ -584,6 +599,7 @@ def get_landing(
     furnished: Optional[bool] = None,
     owner: Optional[bool] = Query(None, description="Only ads placed by the owner, with no agent"),
     instalments: Optional[bool] = Query(None, description="Only ads that can be paid in instalments"),
+    new_building: Optional[bool] = Query(None, description="Only buildings under a year old"),
     attrs: Optional[List[str]] = Query(None, description='Attribute filters as "name:value", repeatable'),
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
@@ -630,6 +646,8 @@ def get_landing(
         filtered = filtered.filter(_by_owner())
     if instalments:
         filtered = filtered.filter(_instalments())
+    if new_building:
+        filtered = filtered.filter(_new_building())
     price = _comparable_price(_deal_of(category_id, tax) if category_id is not None else None)
     if min_price is not None:
         filtered = filtered.filter(price >= min_price)
@@ -650,7 +668,7 @@ def get_landing(
         column = Index.region_id if city_id is not None else Index.city_id
         counts = scope.with_entities(column, func.count(Ad.id)).filter(column.isnot(None)).group_by(column).order_by(
             func.count(Ad.id).desc()
-        ).limit(60).all()
+        ).limit(250).all()
         source = tax["regions"] if city_id is not None else tax["cities"]
         for loc_id, count in counts:
             place = source.get(loc_id)
@@ -792,6 +810,62 @@ def get_sitemap_landing(db: Session = Depends(get_db)):
         }
         for category_id, city_id, region_id, beds, is_furnished, rent_period, count, latest in rows
     ]
+
+
+# A price is only quoted for a place with at least this many priced ads
+MIN_PRICE_SAMPLE = 5
+
+
+@router.get("/prices")
+def get_prices(category_id: int, city_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """The price guide of one kind of property: the typical price in each area of a
+    city (or in each city, without one), and by number of bedrooms. Every figure is
+    computed from the ads on the site right now. Rents are per month."""
+    tax = _taxonomy(db)
+    Ad, Index = models.Ad, models.AdSearchIndex
+    deal = _deal_of(category_id, tax) if category_id in tax["real_estate_ids"] else None
+    if deal is None:
+        raise HTTPException(status_code=404, detail="Unknown category")
+    if city_id is not None and city_id not in tax["cities"]:
+        raise HTTPException(status_code=404, detail="Unknown city")
+
+    scope = _apply_scope(_quality_query(db), tax, category_id, city_id, None)
+    price = _comparable_price(deal)
+
+    def grouped(column):
+        return scope.with_entities(
+            column,
+            func.count(Index.ad_id),
+            func.percentile_cont(0.5).within_group(price),
+            func.percentile_cont(0.1).within_group(price),
+            func.percentile_cont(0.9).within_group(price),
+        ).filter(column.isnot(None)).group_by(column).having(func.count(Index.ad_id) >= MIN_PRICE_SAMPLE).order_by(None).all()
+
+    column = Index.region_id if city_id is not None else Index.city_id
+    source = tax["regions"] if city_id is not None else tax["cities"]
+    places = []
+    for place_id, count, median, low, high in grouped(column):
+        place = source.get(place_id)
+        # "أخرى" is not a place anyone looks up a price for
+        if place is None or place.name_ar in ("أخرى", "مناطق أخرى"):
+            continue
+        places.append({"id": place_id, "name_ar": place.name_ar, "name_en": place.name_en, "count": count,
+                       "median": round(float(median)), "low": round(float(low)), "high": round(float(high))})
+    places.sort(key=lambda row: -row["count"])
+
+    bedrooms = [
+        {"value": beds, "count": count, "median": round(float(median)), "low": round(float(low)), "high": round(float(high))}
+        for beds, count, median, low, high in sorted(grouped(Index.bedrooms), key=lambda row: row[0])
+        if 1 <= beds <= 5
+    ]
+    latest = scope.with_entities(func.max(Ad.created_at)).order_by(None).scalar()
+    return {
+        "deal": deal,
+        "stats": _price_stats(scope, deal),
+        "places": places,
+        "bedrooms": bedrooms,
+        "updated_at": latest.isoformat() if latest else None,
+    }
 
 
 @router.get("/sitemap/features")
