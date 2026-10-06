@@ -440,7 +440,7 @@ def read_categories(skip: int = 0, limit: int = 20000, with_ads_only: bool = Fal
             
         filters = []
         if target_loc_norm == norm_str("أخرى") and parent_loc_norm:
-            filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc_norm}, أخرى%"))
+            filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc_norm}, {norm_str('أخرى')}%"))
             filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc_norm}, other%"))
         else:
             city = db.query(models.City).filter(norm_col(models.City.name_ar) == target_loc_norm).first()
@@ -1283,7 +1283,7 @@ def read_ads(
                 t_loc_norm = norm_str(t_loc)
                 
                 if t_loc_norm == norm_str("أخرى"):
-                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {norm_str('أخرى')}%"))
                     filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, other%"))
                 else:
                     if t_loc_norm.startswith("ال"):
@@ -1299,7 +1299,7 @@ def read_ads(
                 t_loc_norm = norm_str(t_loc)
                 
                 if t_loc_norm == norm_str("أخرى"):
-                    filters.append(norm_col(models.Ad.location).ilike(f"%أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"%{norm_str('أخرى')}%"))
                     filters.append(norm_col(models.Ad.location).ilike(f"%other%"))
                 else:
                     if t_loc_norm.startswith("ال"):
@@ -1624,7 +1624,7 @@ def aggregate_ads(
     query = db.query(models.Ad).join(models.AdSearchIndex, models.Ad.id == models.AdSearchIndex.ad_id)
     
     if location_search:
-        query = query.filter(models.Ad.location.ilike(f"%{location_search}%"))
+        query = query.filter(norm_col(models.Ad.location).ilike(f"%{norm_str(location_search)}%"))
         
     if only_others:
         query = query.filter(or_(
@@ -1658,7 +1658,7 @@ def aggregate_ads(
         elif section == 'buy':
             query = query.filter(models.AdSearchIndex.category_id.in_([1, 2])) # Real estate buy
             
-    if location and len(location) > 0 and not ignore_location:
+    if location and len(location) > 0:
         parent_loc = None
         target_locs = []
         
@@ -1684,10 +1684,10 @@ def aggregate_ads(
                     filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}%"))
                 else:
                     # Enforce that the region is INSIDE the selected city
-                    filters.append(models.Ad.location.ilike(f"{parent_loc}%{t_loc}%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}%{t_loc_norm}%"))
         else:
             for t_loc in target_locs:
-                filters.append(models.Ad.location.ilike(f"%{t_loc}%"))
+                filters.append(norm_col(models.Ad.location).ilike(f"%{norm_str(t_loc)}%"))
                 
         if filters:
             query = query.filter(or_(*filters))
@@ -1906,7 +1906,7 @@ def get_ads_count(
                 t_loc_norm = norm_str(t_loc)
                 
                 if t_loc_norm == norm_str("أخرى"):
-                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, {norm_str('أخرى')}%"))
                     filters.append(norm_col(models.Ad.location).ilike(f"{parent_loc}, other%"))
                 else:
                     if t_loc_norm.startswith("ال"):
@@ -1922,7 +1922,7 @@ def get_ads_count(
                 t_loc_norm = norm_str(t_loc)
                 
                 if t_loc_norm == norm_str("أخرى"):
-                    filters.append(norm_col(models.Ad.location).ilike(f"%أخرى%"))
+                    filters.append(norm_col(models.Ad.location).ilike(f"%{norm_str('أخرى')}%"))
                     filters.append(norm_col(models.Ad.location).ilike(f"%other%"))
                 else:
                     if t_loc_norm.startswith("ال"):
