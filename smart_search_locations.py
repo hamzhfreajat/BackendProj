@@ -156,6 +156,29 @@ def resolve_locations(
         result.city_id = stated_city_ids[0]
         result.ignored_city_ids = stated_city_ids[1:]
 
+    # A city that is only part of a place's name is not where the user is looking:
+    # "مجمع عمان" is a bus station in إربد, and "عند مجمع عمان" does not mean عمان.
+    # When such a name matches nothing in the stated city and matches places in
+    # exactly one other city, that other city is the one meant.
+    renamed_city_landmarks = set()
+    if result.city_id is not None and len(stated_city_ids) == 1:
+        city_word = normalize_arabic(dict(cities).get(result.city_id, ""))
+        landmark_names = [str(lm.get("name") or "").strip() for lm in landmarks or [] if isinstance(lm, dict)]
+        for name in plain_regions + landmark_names:
+            words = normalize_arabic(name or "").split()
+            if len(words) < 2 or city_word not in words:
+                continue
+            if index.candidates(name, city_id=result.city_id):
+                continue
+            other_cities = list(dict.fromkeys(index.city_of[r] for r in index.candidates(name)))
+            if len(other_cities) == 1:
+                result.city_id = other_cities[0]
+                if name in landmark_names:
+                    # Looked up by its own name, like a region the user wrote
+                    renamed_city_landmarks.add(name)
+                    plain_regions.append(name)
+                break
+
     # Landmarks: with no city to anchor them, the AI's region is treated like
     # a region the user wrote, so the ambiguity rules below apply to it too.
     anchored_landmarks = []
@@ -163,6 +186,8 @@ def resolve_locations(
         if not isinstance(lm, dict):
             continue
         lm_name = str(lm.get("name") or "").strip()
+        if lm_name in renamed_city_landmarks:
+            continue
         lm_region = str(lm.get("region") or "").strip()
         if not lm_name and not lm_region:
             continue
@@ -222,6 +247,15 @@ def resolve_locations(
         cands = index.candidates(lm_name, city_id=scope_city, allow_fuzzy=False)
         if not cands and lm_region:
             cands = index.candidates(lm_region, city_id=scope_city)
+        if not cands:
+            # A shortened name of exactly one known place: "مجمع عمان" for "مجمع عمان الجديد"
+            norm = normalize_arabic(lm_name or "")
+            longer = [
+                r_id for r_id, r_city, r_norm in index.regions
+                if len(norm) > 4 and norm in r_norm and (scope_city is None or r_city == scope_city)
+            ]
+            if len(longer) == 1:
+                cands = longer
         if cands:
             found.append(cands[0])
             if result.city_id is None:
