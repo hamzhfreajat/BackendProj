@@ -760,12 +760,15 @@ class AdReviewsSummary(BaseModel):
 class AdReviewAdminOut(AdReviewOut):
     is_hidden: bool = False
     ad_title: Optional[str] = None
+    # "ORGANIC_USER" for an ad a person posted, "SCRAPER_BOT" for one the scraper brought in
+    ad_source_type: Optional[str] = None
     reviewer_phone: Optional[str] = None
     ad_flagged: bool = False
 
 class AdReviewFlaggedAd(BaseModel):
     ad_id: int
     ad_title: Optional[str] = None
+    ad_source_type: Optional[str] = None
     negative_count: int
     reviews_count: int
     average_rating: float

@@ -3459,6 +3459,11 @@ def delete_my_ad_review(
     rating_avg, reviews_count = _refresh_ad_rating(db, ad_id)
     return {"status": "success", "ad_rating_avg": rating_avg, "ad_reviews_count": reviews_count}
 
+def _source_type_name(ad) -> Optional[str]:
+    """An ad's source as plain text: "ORGANIC_USER" or "SCRAPER_BOT"."""
+    source = getattr(ad, "source_type", None) if ad is not None else None
+    return str(getattr(source, "value", source)) if source is not None else None
+
 def _ad_review_stats_query(db: Session):
     """Per-ad stats over visible reviews: (ad_id, negative_count, reviews_count, average_rating)."""
     negative_count = func.count(models.AdReview.id).filter(
@@ -3486,9 +3491,9 @@ def get_dashboard_reviews(
 ):
     flagged_rows = _ad_review_stats_query(db).order_by(text("negative_count DESC")).all()
     flagged_ids = [row.ad_id for row in flagged_rows]
-    flagged_titles = dict(
-        db.query(models.Ad.id, models.Ad.title).filter(models.Ad.id.in_(flagged_ids)).all()
-    ) if flagged_ids else {}
+    flagged_ads = {
+        ad.id: ad for ad in db.query(models.Ad).filter(models.Ad.id.in_(flagged_ids)).all()
+    } if flagged_ids else {}
 
     query = db.query(models.AdReview)
     if ad_id is not None:
@@ -3511,6 +3516,7 @@ def get_dashboard_reviews(
         out = _ad_review_out(r, schemas.AdReviewAdminOut)
         if r.ad:
             out.ad_title = r.ad.title
+            out.ad_source_type = _source_type_name(r.ad)
         if r.user:
             out.reviewer_phone = r.user.mobile_number
         out.ad_flagged = r.ad_id in flagged_set
@@ -3522,7 +3528,8 @@ def get_dashboard_reviews(
         flagged_ads=[
             schemas.AdReviewFlaggedAd(
                 ad_id=row.ad_id,
-                ad_title=flagged_titles.get(row.ad_id),
+                ad_title=flagged_ads[row.ad_id].title if row.ad_id in flagged_ads else None,
+                ad_source_type=_source_type_name(flagged_ads.get(row.ad_id)),
                 negative_count=row.negative_count,
                 reviews_count=row.reviews_count,
                 average_rating=round(float(row.average_rating or 0), 2),
@@ -3548,6 +3555,7 @@ def set_dashboard_review_visibility(
     out = _ad_review_out(db_review, schemas.AdReviewAdminOut)
     if db_review.ad:
         out.ad_title = db_review.ad.title
+        out.ad_source_type = _source_type_name(db_review.ad)
     return out
 
 @app.delete("/api/dashboard/reviews/{review_id}")
