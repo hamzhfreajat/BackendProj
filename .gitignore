@@ -34,3 +34,4 @@ price_recovery_backup_*.json
 price_recovery_plan.csv
 index_location_backup_*.json
 notification_text_backup_*.json
+unfiled_plan.csv

@@ -513,6 +513,9 @@ async def _async_run_scraper_task(request_data: dict, db: Session):
                                     loc = mapped_loc
                             if not loc:
                                 loc = city
+                            # Last check: only a city and area that exist in the tables, spelled as they are there
+                            from ad_location import settle_location
+                            loc = settle_location(db, loc, raw_text)
 
                             # The AI's price is checked against the post's own words (see price_guard.py)
                             final_price = ai_ad.get("price") or 0.0
