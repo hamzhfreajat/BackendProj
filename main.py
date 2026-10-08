@@ -306,6 +306,9 @@ app.include_router(telemetry_router)
 from blacklist_router import router as blacklist_router
 app.include_router(blacklist_router)
 
+from dashboard_router import router as dashboard_router
+app.include_router(dashboard_router)
+
 
 # Mount the uploads directory to serve media files
 import os
