@@ -111,6 +111,8 @@ def overview(db: Session = Depends(get_db), current_admin: models.User = Depends
         .all()
     )
 
+    new_seekers = db.query(func.count(models.SeekerPost.id)).filter(models.SeekerPost.status == "new").scalar() or 0
+
     last_scrape = db.query(models.ScrapingLog).order_by(models.ScrapingLog.created_at.desc()).first()
     scraped_day = (
         db.query(func.coalesce(func.sum(models.ScrapingLog.saved_ads), 0), func.coalesce(func.sum(models.ScrapingLog.errors_count), 0))
@@ -127,7 +129,7 @@ def overview(db: Session = Depends(get_db), current_admin: models.User = Depends
             "rejected": ads[8], "featured": ads[9],
         },
         "users": {"total": users[0], "today": users[1], "week": users[2], "previous_week": users[3], "banned": users[4]},
-        "attention": {"pending_reports": pending_reports, "low_reviews_week": low_reviews_week, "reviews_week": reviews_week},
+        "attention": {"pending_reports": pending_reports, "low_reviews_week": low_reviews_week, "reviews_week": reviews_week, "new_seekers": new_seekers},
         "trend": trend,
         "cities": [{"name": (name or "").strip() or UNKNOWN_LOCATION, "count": total} for name, total in cities],
         "categories": [{"name": name, "count": total} for name, total in categories],
@@ -292,3 +294,80 @@ def delete_alias(alias_id: int, db: Session = Depends(get_db), current_admin: mo
         raise HTTPException(status_code=404, detail="الاسم البديل غير موجود.")
     db.delete(alias)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Requests: Facebook posts from people looking for a property
+# ---------------------------------------------------------------------------
+SEEKER_STATUSES = {"new", "commented", "ignored"}
+
+
+def _group_names(db: Session) -> dict:
+    """Facebook group id -> the name it was saved under."""
+    names = {}
+    for group in db.query(models.SavedGroup).all():
+        match = re.search(r"groups/([^/?#]+)", group.url or "")
+        if match:
+            names[match.group(1)] = group.name
+    return names
+
+
+@router.get("/seekers")
+def seekers(
+    status: str = "new",
+    deal: str = "",
+    q: str = "",
+    page: int = 1,
+    limit: int = 30,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    """Posts from people looking for a property, newest first, with the link to each post."""
+    Post = models.SeekerPost
+    limit = max(1, min(limit, 100))
+    query = db.query(Post)
+    if status in SEEKER_STATUSES:
+        query = query.filter(Post.status == status)
+    if deal in ("rent", "sale"):
+        query = query.filter(Post.deal == deal)
+    if q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(Post.text.ilike(like), Post.location.ilike(like), Post.author.ilike(like)))
+    total = query.count()
+    rows = query.order_by(Post.created_at.desc()).offset((max(page, 1) - 1) * limit).limit(limit).all()
+    counts = dict(db.query(Post.status, func.count(Post.id)).group_by(Post.status).all())
+    groups = _group_names(db)
+
+    def group_of(url):
+        match = re.search(r"groups/([^/?#]+)", url or "")
+        return groups.get(match.group(1)) if match else None
+
+    return {
+        "total": total,
+        "counts": {name: counts.get(name, 0) for name in SEEKER_STATUSES},
+        "items": [
+            {
+                "id": row.id, "post_url": row.post_url, "author": row.author, "text": row.text, "kind": row.kind, "deal": row.deal,
+                "location": row.location, "posted_at": row.posted_at, "status": row.status, "group": group_of(row.post_url),
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in rows
+        ],
+    }
+
+
+class SeekerStatusUpdate(BaseModel):
+    status: str
+
+
+@router.patch("/seekers/{post_id}")
+def update_seeker(post_id: int, body: SeekerStatusUpdate, db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
+    """Marks a request as answered ("commented"), ignored, or new again."""
+    if body.status not in SEEKER_STATUSES:
+        raise HTTPException(status_code=400, detail="Unknown status")
+    post = db.query(models.SeekerPost).filter(models.SeekerPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Request not found")
+    post.status = body.status
+    db.commit()
+    return {"id": post.id, "status": post.status}

@@ -563,6 +563,21 @@ class AdSearchIndex(Base):
     
     ad = relationship("Ad")
 
+class SeekerPost(Base):
+    """A Facebook post from someone looking for a property, kept so the team can answer it."""
+    __tablename__ = "seeker_posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_url = Column(String(1000), nullable=False, unique=True)
+    author = Column(String(255), nullable=True)
+    text = Column(Text, nullable=False)
+    kind = Column(String(30), nullable=True)      # apartment, house, land...
+    deal = Column(String(10), nullable=True)      # rent | sale
+    location = Column(String(255), nullable=True) # "المدينة, المنطقة" when the text names it
+    posted_at = Column(String(100), nullable=True) # as Facebook showed it ("منذ ساعتين")
+    status = Column(String(20), nullable=False, default="new", server_default="new", index=True) # new | commented | ignored
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+
 class ScrapingLog(Base):
     __tablename__ = "scraping_logs"
 

@@ -40,6 +40,7 @@ import models
 from price_guard import category_for_deal, check_price, corrected_deal, deal_of_category, extract_price
 from models import SourceType
 import schemas
+import seeker_posts
 router = APIRouter(prefix="/api", tags=["fb-batch"])
 
 logger.info(f"fb_batch_router loaded — using source_type = {SourceType.SCRAPER_BOT}")
@@ -1178,6 +1179,14 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         if unique_key_url: seen_in_batch_urls.add(unique_key_url)
 
         raw_text = post.text or ""
+        # Someone LOOKING for a property is not an ad, but is kept with its link so the team can
+        # answer it. Checked before the phone rule: most requests carry no phone number.
+        seeker = seeker_posts.detect(raw_text)
+        if seeker:
+            kept = seeker_posts.remember(db, post, seeker)
+            skipped += 1
+            results.append(PostResult(index=idx, status="skipped", reason="طلب عقار وليس عرضاً" + (" (حُفظ في قائمة الطلبات)" if kept else "")))
+            continue
         # 1. Strip spaces, dashes, dots, parens
         clean_text = re.sub(r'[\s\-\.\(\)]', '', raw_text)
         # 2. Convert Arabic numerals to English
@@ -1317,6 +1326,9 @@ def _do_ingest(req: FbBatchRequest, db: Session):
                     reason = ai_data.get("rejection_reason") or "AI determined post is not offering real estate"
                     
                 logger.info(f"Post #{idx} rejected: {reason}")
+                # The AI also spots requests worded in ways the fixed rules miss
+                if (is_explicit_reject or is_legacy_reject) and seeker_posts.is_seeking_reason(reason, post.text or ""):
+                    seeker_posts.remember(db, post, {"kind": None, "deal": None})
                 _log_training_data(db, post.text or "", ai_data, "rejected", reason, raw_res, used_ai_model)
                 results.append(PostResult(index=idx, status="skipped", reason=reason))
                 continue
