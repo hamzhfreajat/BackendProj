@@ -637,7 +637,7 @@ def delete_category(
 # MY ADS / SELLER DASHBOARD
 # ============================================================
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 def _compute_ad_status(ad: models.Ad) -> str:
     if ad.is_sold: return "Sold"
@@ -777,6 +777,48 @@ def perform_bulk_action(
             
     db.commit()
     return {"status": "success"}
+
+REPUBLISH_COOLDOWN = timedelta(hours=24)
+# The search index is refreshed one ad at a time; beyond this many the rest catch up on their next change
+REPUBLISH_ALL_SYNC_LIMIT = 300
+
+@app.post("/api/my-ads/republish-all", response_model=dict, dependencies=[Depends(auth.get_rate_limiter(5, 60))])
+def republish_all_my_ads(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Moves every live ad of the user back to the top of the listings.
+
+    Only "Active" ads are touched: sold, paused, rejected, unfinished and expired ads stay as they
+    are. An ad that was posted or republished in the last 24 hours is left where it is, so the
+    button cannot be used to stay on top all day. Returns how many moved and how many are waiting.
+    """
+    now = datetime.utcnow()
+    ads = db.query(models.Ad).filter(models.Ad.user_id == current_user.id).all()
+
+    republished, waiting = [], 0
+    for ad in ads:
+        if _compute_ad_status(ad) != "Active":
+            continue
+        last_date = ad.last_republished_at or ad.created_at
+        if last_date and now - last_date < REPUBLISH_COOLDOWN:
+            waiting += 1
+            continue
+        ad.last_republished_at = now
+        ad.republish_notification_sent = False
+        # Listings are ordered by this date
+        ad.created_at = now
+        ad.updated_at = now
+        republished.append(ad)
+
+    db.commit()
+    for ad in republished[:REPUBLISH_ALL_SYNC_LIMIT]:
+        try:
+            SearchService.sync_ad_to_search_index(db, ad)
+        except Exception as e:
+            print(f"republish-all: could not refresh the search index for ad {ad.id}: {e}")
+
+    return {"status": "success", "republished": len(republished), "waiting": waiting}
 
 def get_optional_user(request: Request, db: Session = Depends(get_db)):
     token = request.headers.get("Authorization")
