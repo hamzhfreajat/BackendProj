@@ -3,7 +3,7 @@ Endpoints for the admin panel's home page and for handling ad reports.
 
 Everything here is for signed-in admins only.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -300,6 +300,27 @@ def delete_alias(alias_id: int, db: Session = Depends(get_db), current_admin: mo
 # Requests: Facebook posts from people looking for a property
 # ---------------------------------------------------------------------------
 SEEKER_STATUSES = {"new", "commented", "ignored"}
+# Jordan is three hours ahead of UTC all year, so "today" starts at 21:00 UTC the day before
+JORDAN_OFFSET = timedelta(hours=3)
+SEEKER_LINKS_LIMIT = 500
+
+
+def _seeker_query(db: Session, status: str, deal: str, q: str, period: str):
+    """The requests matching the page's filters. `period` is "today", "week" or empty for all."""
+    Post = models.SeekerPost
+    query = db.query(Post)
+    if status in SEEKER_STATUSES:
+        query = query.filter(Post.status == status)
+    if deal in ("rent", "sale"):
+        query = query.filter(Post.deal == deal)
+    if q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(Post.text.ilike(like), Post.location.ilike(like), Post.author.ilike(like)))
+    if period in ("today", "week"):
+        local_midnight = (datetime.utcnow() + JORDAN_OFFSET).replace(hour=0, minute=0, second=0, microsecond=0)
+        since = local_midnight - JORDAN_OFFSET - (timedelta(days=6) if period == "week" else timedelta(0))
+        query = query.filter(Post.created_at >= since.replace(tzinfo=timezone.utc))
+    return query
 
 
 def _group_names(db: Session) -> dict:
@@ -317,6 +338,7 @@ def seekers(
     status: str = "new",
     deal: str = "",
     q: str = "",
+    period: str = "",
     page: int = 1,
     limit: int = 30,
     db: Session = Depends(get_db),
@@ -325,14 +347,7 @@ def seekers(
     """Posts from people looking for a property, newest first, with the link to each post."""
     Post = models.SeekerPost
     limit = max(1, min(limit, 100))
-    query = db.query(Post)
-    if status in SEEKER_STATUSES:
-        query = query.filter(Post.status == status)
-    if deal in ("rent", "sale"):
-        query = query.filter(Post.deal == deal)
-    if q.strip():
-        like = f"%{q.strip()}%"
-        query = query.filter(or_(Post.text.ilike(like), Post.location.ilike(like), Post.author.ilike(like)))
+    query = _seeker_query(db, status, deal, q, period)
     total = query.count()
     rows = query.order_by(Post.created_at.desc()).offset((max(page, 1) - 1) * limit).limit(limit).all()
     counts = dict(db.query(Post.status, func.count(Post.id)).group_by(Post.status).all())
@@ -354,6 +369,21 @@ def seekers(
             for row in rows
         ],
     }
+
+
+@router.get("/seekers/links")
+def seeker_links(
+    status: str = "new",
+    deal: str = "",
+    q: str = "",
+    period: str = "",
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    """The Facebook link of every request matching the filters (not just one page), newest first."""
+    Post = models.SeekerPost
+    rows = _seeker_query(db, status, deal, q, period).with_entities(Post.post_url).order_by(Post.created_at.desc()).limit(SEEKER_LINKS_LIMIT).all()
+    return {"links": [url for (url,) in rows], "limit": SEEKER_LINKS_LIMIT}
 
 
 class SeekerStatusUpdate(BaseModel):
