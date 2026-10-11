@@ -18,6 +18,9 @@ REGIONS = [
     (14, AMMAN, "الدوار السابع"),
     (15, AMMAN, "شارع الجامعة (الجامعة الأردنية)"),
     (16, AMMAN, "الحي الشرقي"),
+    (17, AMMAN, "حي نزال"),
+    (18, AMMAN, "طريق المطار"),
+    (19, AMMAN, "شارع الأردن"),
     (20, IRBID, "الزهور"),
     (21, IRBID, "الحي الشرقي"),
     (22, IRBID, "البلد"),
@@ -140,6 +143,39 @@ def test_fuzzy_match_stays_in_city():
     r = resolve(city_names=["اربد"], region_names=["شارع الجامعة"])
     assert r.region_ids == []
     assert r.not_found == ["شارع الجامعة"]
+
+
+def test_region_named_without_its_kind_word():
+    # "مطلوب شقه للايجار بحي نزال": the AI hands over "نزال", the region is "حي نزال"
+    assert resolve(region_names=["نزال"]).region_ids == [17]
+    assert resolve(region_names=["حي نزال"]).region_ids == [17]
+    # "استديو مفروش قريب ل المطار" means "طريق المطار"
+    r = resolve(landmarks=[{"name": "المطار", "region": None, "city": None}])
+    assert r.city_id == AMMAN
+    assert r.region_ids == [18]
+    # ... and the other way round: "حي خلدا" is "خلدا"
+    assert resolve(region_names=["حي خلدا"]).region_ids == [11]
+
+
+def test_two_streets_are_not_alike_because_both_are_streets():
+    # "شارع الأنيس" is not in the DB; it used to come back as "شارع الأردن"
+    r = resolve(city_names=["عمان"], region_names=["شارع الأنيس", "الدوار السابع"])
+    assert r.region_ids == [14]
+    assert r.not_found == ["شارع الأنيس"]
+
+
+def test_the_country_is_not_a_street():
+    # "شقة في الاردن" must not turn into "شارع الأردن"
+    r = resolve(city_names=["عمان"], region_names=["الاردن"])
+    assert r.region_ids == []
+
+
+def test_same_place_under_another_kind_word_still_matches_in_the_city():
+    # "بشارع جامعه او دوار جامعه" in Irbid is "دوار الجامعة"
+    regions = REGIONS + [(24, IRBID, "دوار الجامعة")]
+    r = resolve_locations(CITIES, regions, ALIASES, city_names=["اربد"], region_names=["شارع جامعه", "دوار جامعه"])
+    assert r.region_ids == [24]
+    assert not r.not_found
 
 
 def test_zone_expansion_misses_are_silent():

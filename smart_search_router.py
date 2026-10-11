@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 import urllib.request
@@ -16,6 +17,7 @@ from arabic_utils import normalize_arabic, convert_hindi_numerals, parse_price
 from dialect_dictionary import FURNISHING_SYNONYMS, TRANSACTION_SYNONYMS, CATEGORY_SYNONYMS, ZONE_REGIONS
 from auth import redis_client
 from smart_search_locations import resolve_locations, match_city
+import smart_search_text as text_rules
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,11 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bعرفة\b', 'غرفة', text)
     text = re.sub(r'\bمعنا\b', 'برفقتنا', text)
     text = re.sub(r'\bمعي\b', 'برفقتي', text)
-    
+
+    # The closing line of a "wanted" post ("اللي عنده يبعتلي خاص او يعلق") speaks to
+    # the owners, and made the AI answer post_ad for someone who is searching
+    text = re.sub(r'(?:يلي|ياللي|اللي|الي|إلي)\s+عند[هو]\s+\S+(?:\s+خاص)?(?:\s+[اأ]و\s+يعلق)?', ' ', text)
+
     # Specific landmark intercepts
     text = re.sub(r'\bاشارة النسيم\b', 'دوار النسيم', text)
     text = re.sub(r'\bإشارة النسيم\b', 'دوار النسيم', text)
@@ -78,7 +84,7 @@ def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     text = re.sub(r'\bالتانيه\b', 'الثانيه', text)
     
     # Bump the version whenever the prompt or output format changes
-    cache_key = f"smart_search_ai:v2:{text}"
+    cache_key = f"smart_search_ai:v3:{text}"
     if redis_client:
         try:
             cached_result = redis_client.get(cache_key)
@@ -112,6 +118,10 @@ Intent mapping:
 - search: Looking for properties (e.g. "شقة للايجار", "بدي استأجر", "عقارات")
 - post_ad: Wants to sell or rent out their own property (e.g. "عندي شقة للبيع", "بدي انزل اعلان")
 
+CRITICAL RULE: A "wanted" post is a SEARCH. When the writer is looking for a property (it starts with or contains مطلوب / بدور على / ابحث عن / بحاجة / وين بلاقي), the intent is "search" even when they address the owners at the end ("اللي عنده يبعتلي", "يلي عندو يعلق", "الي عنده يتواصل خاص"). Those closing words are not a location, a feature or an offer. Always fill raw_filters for such a post.
+CRITICAL RULE: Write every neighbourhood with its full name as the user wrote it, keeping words like حي / جبل / ضاحية / شارع / دوار / طريق (e.g. "حي نزال", never just "نزال").
+CRITICAL RULE: "قريب من X" / "قرب X" / "عند X" names a landmark or a neighbourhood; extract X (e.g. "قريب من المطار" -> landmark "المطار").
+
 CRITICAL RULE: Words like (الثالثه, الرابعه, الخامسه, السادسه, السابعه, الثامنه, التاسعه, العاشره) are OFTEN regions in Aqaba. DO NOT extract them as floor numbers (floor_numbers) UNLESS the user explicitly says "طابق" (floor) before them. You MUST extract the exact word (e.g. "الثامنه") into the `locations` array!
 
 Available Categories (End-level only):
@@ -127,7 +137,7 @@ Output JSON format:
     "locations": ["Extract ALL regions / neighbourhoods mentioned (e.g. خلدا, الزهور, الوحدات الشرقية). Do NOT put the city here and do NOT put landmarks here."],
     "landmarks": [{{"name": "A landmark the user mentions that is not itself a neighbourhood: a circle (دوار), signal (اشارة), mall, university, hospital, mosque, street, bridge, etc. (e.g. دوار هيا)", "region": "From your knowledge of Jordan, the neighbourhood this landmark is located in, or null if you are not sure", "city": "The city this landmark is located in (must equal the city above when the user stated one), or null if you are not sure"}}],
     "nearby_locations": ["Choose from: بنك / صراف آلي, دراي كلين, سوبر ماركت, صالة رياضية / جيم, صيدلية, محطة باصات, مدرسة, مستشفى, مسجد, مطعم. If not mentioned, return empty list."],
-    "furnishing_word": "Choose ONE from: مفروشة, غير مفروشة, مفروش جزئياً. If not mentioned, return null.",
+    "furnishing_word": "Choose ONE from: مفروشة, غير مفروشة, مفروش جزئياً. فارغة / فاضية mean غير مفروشة. If not mentioned, return null.",
     "payment_method": "Choose ONE from: كاش, أقساط. If not mentioned, return null.",
     "max_price_word": "Extract text indicating max price",
     "min_price_word": "Extract text indicating min price",
@@ -137,7 +147,7 @@ Output JSON format:
     "floor_numbers": ["Extract floor numbers ONLY if explicitly preceded by words like 'طابق' (e.g. طابق 3). DO NOT extract bedroom counts here!"],
     "bedrooms_number": "Extract the integer number of bedrooms mentioned, or null if not mentioned",
     "bathrooms_number": "Extract the integer number of bathrooms mentioned, or null if not mentioned",
-    "rent_period": "Choose ONE from: يومي, أسبوعي, شهري, كل 3 أشهر, كل أربع أشهر, كل 5 أشهر, كل 6 أشهر, سنوي. If not mentioned, return null.",
+    "rent_period": "Choose ONE from: يومي, أسبوعي, شهري, كل 3 أشهر, كل أربع أشهر, كل 5 أشهر, كل 6 أشهر, سنوي. A stay of a few days (لمدة يومين, ثلاث ايام, ليلة) is يومي; a week or two is أسبوعي. If not mentioned, return null.",
     "building_age": "Choose ONE from: 0 - 11 شهر, 1 - 5 سنوات, 6 - 9 سنوات, 10 - 19 سنوات, +20 سنة. If not mentioned, return null.",
     "interface": "Choose ONE from: شمالية, جنوبية, شرقية, غربية, شمالية شرقية, شمالية غربية, جنوبية شرقية, جنوبية غربية. If not mentioned, return null.",
     "main_features": ["Choose from: تكييف مركزي, تدفئة, شرفة / بلكونة, غرفة خادمة, غرفة غسيل, خزائن حائط, مسبح خاص, سخان شمسي, زجاج شبابيك مزدوج, مناسبة لعرسان, كراج, سوبر ديلوكس. If not mentioned, return empty list."],
@@ -304,22 +314,61 @@ def build_search_query(db: Session, filters: dict):
 
     return query
 
-def parse_floor(floor_word: str):
-    if not floor_word:
-        return None
-    w = floor_word.lower()
-    if "ارضي" in w or "أرضي" in w or "حديقة" in w:
-        return -1
-    if "تسوية" in w:
-        return -2
-    if "اول" in w or "أول" in w: return 1
-    if "ثاني" in w: return 2
-    if "ثالث" in w: return 3
-    if "رابع" in w: return 4
-    if "خامس" in w: return 5
-    if "سادس" in w: return 6
-    if "اخير" in w or "أخير" in w or "روف" in w: return 100 # usually top floor
-    return None
+def count_results(db: Session, filters: dict) -> int:
+    """How many ads the results page will show for these filters.
+
+    The app opens /api/ads with the category, location_names, prices and tags, so
+    the count is taken the same way. Counting on ad_search_index said 0 for what
+    the index does not carry (a ground floor, a rent period), and the filter was
+    then dropped as if no such ad existed."""
+    # Only when the app is running: importing main here would start it a second time
+    get_ads_count = getattr(sys.modules.get("main"), "get_ads_count", None)
+    if get_ads_count is None:
+        return build_search_query(db, filters).count()
+    return get_ads_count(
+        category_id=filters.get("category_id"), section=None, search=None,
+        location=filters.get("location_names") or None,
+        min_price=filters.get("min_price"), max_price=filters.get("max_price"),
+        is_hot=None, is_published=None, source_type=None,
+        tags=filters.get("tags") or None,
+        only_others=False, location_search=None, phone=None, db=db,
+    )["total_count"]
+
+
+OWNER_TAG = "من المالك مباشرة"
+
+# What may be given up, in this order, when nothing matches. Everything else the
+# user asked for stays (place, budget, bedrooms, floor, furnishing, a short stay):
+# the app shows the applied filters as chips, so a dropped one reads as "the
+# search ignored what I said".
+RELAXATIONS = [
+    (("nearby:", "main_features:", "extra_features:", "age:", "facade:", "rent_duration:", OWNER_TAG),
+     "لم نجد نتائج بكل الميزات الإضافية المطلوبة، تم تجاهلها لعرض نتائج أقرب."),
+    (("min_area:", "max_area:"), "لم نجد نتائج بنفس المساحة، تم تجاهل المساحة."),
+    (("bathrooms:",), "لم نجد نتائج بنفس عدد الحمامات، تم تجاهله."),
+]
+KEPT_TAGS = {f"rent_duration:{period}" for period in text_rules.SHORT_STAY_PERIODS}
+
+
+def relax_filters(filters: dict, prefixes: tuple) -> dict:
+    """A copy of `filters` without the tags starting with `prefixes`, and with the
+    fields those tags came from cleared."""
+    relaxed = dict(filters)
+    relaxed["tags"] = [t for t in filters["tags"] if t in KEPT_TAGS or not t.startswith(prefixes)]
+    left = relaxed["tags"]
+    if not any(t.startswith("bathrooms:") for t in left):
+        relaxed["bathrooms"] = None
+    if not any(t.startswith(("min_area:", "max_area:")) for t in left):
+        relaxed["min_area"] = relaxed["max_area"] = None
+    if not any(t.startswith("rent_duration:") for t in left):
+        relaxed["rent_period"] = None
+    if not any(t.startswith("age:") for t in left):
+        relaxed["building_age"] = None
+    if not any(t.startswith("facade:") for t in left):
+        relaxed["interface"] = None
+    if not any(t.startswith("nearby:") for t in left):
+        relaxed["nearby_locations"] = []
+    return relaxed
 
 @smart_search_router.post("/api/smart-voice-search", response_model=SmartSearchResponse)
 def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db)):
@@ -345,11 +394,16 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # STEP 1: AI Entity Extraction
     ai_response = extract_raw_data_via_deepseek(request.text, categories_str=categories_str)
     
+    text_clean = text_rules.clean_text(request.text)
+
     intent = ai_response.get("intent", "search")
     if intent == "error":
         return SmartSearchResponse(intent="search", result_count=0, filters_applied={}, action_required=ai_response.get("message"))
     if intent == "error":
         return SmartSearchResponse(intent="search", result_count=0, filters_applied={}, action_required=ai_response.get("message", "عذراً، النظام تحت ضغط عالي. يرجى الانتظار."))
+    # "مطلوب بيت ... يلي عندو يبعتلي" is a search, whatever the AI made of "يلي عندو"
+    if intent != "search" and text_rules.is_demand_post(text_clean):
+        intent = "search"
     if intent != "search":
         return SmartSearchResponse(intent=intent, result_count=0, filters_applied={})
         
@@ -365,9 +419,6 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     
     category_id = raw.get("category_id")
     
-    # INTERCEPT: "بيت للايجار" -> "شقق للايجار" (301) unless "مستقل" is mentioned
-    text_clean = request.text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').lower()
-
     # Dynamic Validation using Dialect Dictionary
     from dialect_dictionary import TRANSACTION_SYNONYMS, CATEGORY_SYNONYMS
 
@@ -378,8 +429,16 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # Sort keys by length descending to match longest first (e.g. "شقة فندقية" before "شقة")
     sorted_cat_keys = sorted(CATEGORY_SYNONYMS.keys(), key=len, reverse=True)
     
+    import re
+    # Short words that also sit inside other words: "ارض" in "طابق ارضي", "دار" in "المدارس"
+    whole_word_only = {"ارض", "دار"}
+
     for k in sorted_cat_keys:
-        if k in text_clean:
+        if k in whole_word_only:
+            matched = re.search(r"(?<![ء-ي])(?:ال|لل|ل|ب|بال)?" + k + r"(?![ء-ي])", text_clean)
+        else:
+            matched = k in text_clean
+        if matched:
             # Prevent substring matching (e.g. finding "شقة" inside "شقة فندقية")
             if not any(k in found_larger for found_larger in found_props):
                 found_props.append(k)
@@ -404,6 +463,15 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             elif v == "sale":
                 has_sale = True
                 
+    # Price
+    min_price = parse_price(raw.get("min_price_word"))
+    max_price = parse_price(raw.get("max_price_word"))
+
+    if not has_rent and not has_sale:
+        # "سكن لطالب", "استديو مفروش", "لحدود 150 الف": clear without the word itself
+        inferred_deal = text_rules.infer_deal(text_clean, min_price, max_price)
+        has_rent, has_sale = inferred_deal == "rent", inferred_deal == "sale"
+
     if not has_rent and not has_sale:
         return SmartSearchResponse(
             intent="search",
@@ -411,17 +479,22 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             filters_applied={},
             action_required="يرجى التحديد: هل تبحث عن عقار للإيجار أم للبيع؟"
         )
+    deal = None if has_rent == has_sale else ("rent" if has_rent else "sale")
 
-    if "بيت" in text_clean and ("ايجار" in text_clean or "اجار" in text_clean):
+    # INTERCEPT: "بيت للايجار" -> "شقق للايجار" (301) unless "مستقل" is mentioned
+    if "بيت" in text_clean and ("ايجار" in text_clean or "اجار" in text_clean or deal == "rent"):
         if "مستقل" not in text_clean:
             category_id = 301  # شقق للايجار
-            
+
     # Fallback: if DeepSeek failed to extract category, use Python mapped categories
     if category_id is None and len(mapped_categories) == 1:
         category_id = list(mapped_categories)[0]
-    # "غرفة للاجار": a room to rent has a category of its own
+    # The dictionary maps a bare "شقة" to "شقق للبيع", and the AI makes the same slip
+    category_id = text_rules.align_category_with_deal(category_id, deal)
+    # "غرفة للاجار": a room to rent has a category of its own. No other kind of property
+    # is named in such a query, so this holds whatever category the AI picked.
     import re as _re
-    if category_id is None and has_rent and not has_sale and not mapped_categories             and _re.search(r"(?<![ء-ي])(?:ل|ال|لل)?غرف[هة](?![ء-ي])", text_clean):
+    if category_id not in (3061, 3062, 3063, 3064, 3065, 3066) and has_rent and not has_sale and not mapped_categories             and _re.search(r"(?<![ء-ي])(?:ل|ال|لل)?غرف[هة](?![ء-ي])", text_clean):
         category_id = 3065
     # The kind of property may be unknown, but the deal is not: someone asking to rent
     # is never shown sales, and the other way round
@@ -455,9 +528,10 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             if f"دوار {am_ord}" in text_clean or f"دوار ال{am_ord}" in text_clean:
                 raw_locations.append(f"دوار {am_ord}")
             else:
-                # Check for isolated ordinals like "الثاني", "الرابع" which mean circles in Amman context
+                # Check for isolated ordinals like "الثاني", "الرابع" which mean circles in Amman context.
+                # Not in a query about floors: "الطابق الارضي او الاول" names no circle.
                 pattern = r'(?<!طابق )\bال' + am_ord + r'\b'
-                if re.search(pattern, text_clean):
+                if re.search(pattern, text_clean) and not text_rules.mentions_floor(text_clean):
                     raw_locations.append(f"دوار {am_ord}")
 
     WEST_AMMAN_REGIONS = [
@@ -539,59 +613,51 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
 
     region_ids, not_found_regions, city_id = resolution.region_ids, resolution.not_found, resolution.city_id
 
-    # Price
-    min_price = parse_price(raw.get("min_price_word"))
-    max_price = parse_price(raw.get("max_price_word"))
-    
-    # Furnishing
-    furnished = None
-    if raw.get("furnishing_word"):
-        for k, v in FURNISHING_SYNONYMS.items():
-            if k in str(raw["furnishing_word"]):
-                furnished = v
-                break
-                
-    # Floor handling
-    floor_words = raw.get("floor_words") or []
-    if isinstance(floor_words, str): floor_words = [floor_words]
+    # Furnishing: the words of the query win over the AI, which is told to skip
+    # negated features and so never reports "غير مفروش" / "فارغة"
+    stated_furnishing = text_rules.extract_furnishing(text_clean)
+    ai_furnishing = raw.get("furnishing_word")
+    if ai_furnishing not in (text_rules.FURNISHED, text_rules.UNFURNISHED, text_rules.PARTLY_FURNISHED):
+        ai_furnishing = None
+    furnishing_word = stated_furnishing if stated_furnishing == text_rules.UNFURNISHED else (ai_furnishing or stated_furnishing)
+    raw["furnishing_word"] = furnishing_word
+    furnished = None if furnishing_word is None else furnishing_word != text_rules.UNFURNISHED
+
+    # Floors, as the values of the app's floor filter ("الطابق الأرضي", "1", "2", ...)
+    ai_floors = raw.get("floor_words") or []
+    if isinstance(ai_floors, str): ai_floors = [ai_floors]
     # Fallback for old schema
-    if raw.get("floor_word") and raw.get("floor_word") not in floor_words:
-        floor_words.append(raw.get("floor_word"))
-        
-    raw_floor_numbers = raw.get("floor_numbers") or []
-    if not isinstance(raw_floor_numbers, list): raw_floor_numbers = [raw_floor_numbers]
-    if raw.get("floor_number") is not None:
-        raw_floor_numbers.append(raw.get("floor_number"))
-    # The AI may return floors as 1, "1", "٢" or "الأول"
-    floor_numbers = []
-    for value in raw_floor_numbers:
-        number = to_int(value)
-        if number is None:
-            number = parse_floor(str(value))
-        if number is not None and number not in floor_numbers:
-            floor_numbers.append(number)
-        
-    for fw in floor_words:
-        parsed = parse_floor(fw)
-        if parsed is not None and parsed not in floor_numbers:
-            floor_numbers.append(parsed)
-            
-    # Reverse map numbers to words for UI chips if missing
-    floor_mapping = {
-        -1: "الطابق الأرضي", -2: "طابق التسوية",
-        1: "الطابق الأول", 2: "الطابق الثاني", 3: "الطابق الثالث", 4: "الطابق الرابع",
-        5: "الطابق الخامس", 6: "الطابق السادس", 100: "طابق أخير"
-    }
-    for fn in floor_numbers:
-        if fn in floor_mapping:
-            if floor_mapping[fn] not in floor_words:
-                floor_words.append(floor_mapping[fn])
+    if raw.get("floor_word"):
+        ai_floors.append(raw.get("floor_word"))
+    # A floor number is only believed when the query talks about a floor at all
+    if text_rules.mentions_floor(text_clean):
+        raw_floor_numbers = raw.get("floor_numbers") or []
+        if not isinstance(raw_floor_numbers, list): raw_floor_numbers = [raw_floor_numbers]
+        if raw.get("floor_number") is not None:
+            raw_floor_numbers.append(raw.get("floor_number"))
+        ai_floors = ai_floors + raw_floor_numbers
+
+    floor_words = text_rules.extract_floors(text_clean)
+    for value in ai_floors:
+        option = text_rules.floor_option(value)
+        if option and option not in floor_words:
+            floor_words.append(option)
+
+    # ad_search_index only knows numbered floors
+    legacy_floor_codes = {text_rules.FLOOR_GROUND: -1, text_rules.FLOOR_BASEMENT: -2, text_rules.FLOOR_LAST: 100}
+    floor_numbers = [int(f) if f.isdigit() else legacy_floor_codes[f] for f in floor_words if f.isdigit() or f in legacy_floor_codes]
     # Area
     min_area = raw.get("min_area_number")
     max_area = raw.get("max_area_number")
     
     # New Fields
     rent_period = raw.get("rent_period")
+    if rent_period not in text_rules.RENT_PERIODS:
+        rent_period = None
+    if deal == "sale":
+        rent_period = None
+    elif rent_period is None:
+        rent_period = text_rules.extract_rent_period(text_clean)
     building_age = raw.get("building_age")
     interface = raw.get("interface")
     
@@ -611,11 +677,6 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     features_list = raw.get("features") or []
     if isinstance(features_list, str):
         features_list = [features_list]
-        
-    # Inject new text fields into features_list for full text search fallback
-    for item in [rent_period, building_age, interface] + nearby_locations + main_features + extra_features + floor_words:
-        if item and item not in features_list:
-            features_list.append(item)
             
     # Build Display Data for Frontend
     city_name = city_name_by_id.get(city_id) if city_id else None
@@ -703,9 +764,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         "not_found_regions": not_found_regions
     }
     
-    query = build_search_query(db, applied_filters)
-    count = query.count()
-    
+    count = count_results(db, applied_filters)
+
     suggestion = None
     if not_found_regions:
         names = " أو ".join(not_found_regions)
@@ -715,7 +775,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             suggestion = f"ملاحظة: لم نجد '{names}' في {city_name}، تم عرض نتائج {city_name} كاملة."
         else:
             suggestion = f"ملاحظة: منطقة '{names}' غير مسجلة، تم عرض نتائج تقريبية."
-        
+
     if count > 0:
         return SmartSearchResponse(
             intent=intent,
@@ -723,73 +783,34 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             filters_applied=applied_filters,
             suggestion=suggestion
         )
-        
-    # Fallback progressively if 0 results
-    # 1. Remove features
-    if features_list:
-        applied_filters["features_list"] = []
-        applied_filters["tags"] = tags = [t for t in tags if t.split(":", 1)[-1] not in features_list]
-        query = build_search_query(db, applied_filters)
-        count = query.count()
-        if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج بكل الميزات الإضافية المطلوبة، تم تجاهلها لعرض نتائج أقرب.")
 
-    # 2. Remove floor
-    if applied_filters.get("floor_numbers"):
-        applied_filters["floor_numbers"] = []
-        applied_filters["tags"] = tags = [t for t in tags if not t.startswith("floor:")]
-        query = build_search_query(db, applied_filters)
-        count = query.count()
+    # Nothing matches everything that was asked: give up the least important wishes,
+    # one group at a time (see RELAXATIONS)
+    relaxed = applied_filters
+    for prefixes, message in RELAXATIONS:
+        candidate = relax_filters(relaxed, prefixes)
+        if candidate["tags"] == relaxed["tags"]:
+            continue
+        relaxed = candidate
+        count = count_results(db, relaxed)
         if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج في نفس الطابق المطلوب، تم تجاهل الطابق.")
-            
-    # 3. Remove area
-    if min_area is not None or max_area is not None:
-        applied_filters["min_area"] = None
-        applied_filters["max_area"] = None
-        applied_filters["tags"] = tags = [t for t in tags if not t.startswith(("min_area:", "max_area:"))]
-        query = build_search_query(db, applied_filters)
-        count = query.count()
-        if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج بنفس المساحة، تم تجاهل المساحة.")
+            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=relaxed, suggestion=message)
 
-    # 4. Expand Price
-    if max_price:
-        applied_filters["max_price"] = int(max_price * 1.25)
-        query = build_search_query(db, applied_filters)
-        count = query.count()
-        if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion=f"لم نجد نتائج بسعر {max_price}، فقمنا برفع الميزانية لغاية {applied_filters['max_price']}")
-        # The higher budget found nothing either: the user's own budget stays
-        applied_filters["max_price"] = max_price
-            
-    # 5. Remove Bedrooms (Skipped to strictly enforce bedroom requirements)
-    # Bedrooms are a strict requirement for most users, dropping them leads to irrelevant results (e.g. 2 bedrooms when 4 are requested).
-    pass
-            
-    # 6. Fallback to just City + Category
-    if region_ids:
-        applied_filters["region_ids"] = []
-        applied_filters["region_names"] = []
-        applied_filters["location_names"] = [city_name] if city_name else []
-        query = build_search_query(db, applied_filters)
-        count = query.count()
-        
     try:
         from models import SearchQueryLog
         query_log = SearchQueryLog(
             query_text=request.text[:500],
-            results_count=count,
+            results_count=0,
             extracted_tags=json.dumps(ai_response)[:500]
         )
         db.add(query_log)
         db.commit()
     except Exception as e:
         logger.error(f"Failed to log search query: {e}")
-        
-    if count > 0:
-        return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج في هذه المنطقة تحديداً، تم عرض نتائج المدينة كاملة.")
-            
+
+    # Still nothing. The place, the budget, the bedrooms, the floor and the furnishing
+    # stay as the user asked for them, with no results, rather than being swapped for
+    # a wider search: the budget is not raised and the region is not widened to its city.
     return SmartSearchResponse(
         intent=intent,
         result_count=0,

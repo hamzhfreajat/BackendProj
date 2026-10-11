@@ -65,14 +65,45 @@ def match_city(name: str, cities: Iterable[Tuple[int, str]]) -> Optional[int]:
     return best_id if best_score > CITY_FUZZY_THRESHOLD else None
 
 
-def _fuzzy_score(norm_loc: str, db_norm: str) -> float:
-    score = difflib.SequenceMatcher(None, norm_loc, db_norm).ratio()
+# Words that say what kind of place it is, not which one (normalized)
+PLACE_KIND_WORDS = {"حي", "منطقه", "شارع", "طريق", "دوار", "جبل", "ضاحيه", "اسكان", "مخيم", "اشاره", "جسر"}
+# Not a region, even though "شارع الأردن" is one
+NOT_A_PLACE = {"اردن", "مملكه"}
+
+
+def _split_kind(norm: str) -> Tuple[str, str]:
+    """"حي نزال" -> ("حي", "نزال"); a name without a kind word -> ("", name)."""
+    first, _, rest = norm.partition(" ")
+    if rest and first in PLACE_KIND_WORDS:
+        return first, rest
+    return "", norm
+
+
+def _same_name(norm_a: str, norm_b: str) -> bool:
+    """True when the two differ only by a kind word that one of them carries."""
+    kind_a, name_a = _split_kind(norm_a)
+    kind_b, name_b = _split_kind(norm_b)
+    return bool(kind_a) != bool(kind_b) and name_a == name_b
+
+
+def _similarity(a: str, b: str) -> float:
+    score = difflib.SequenceMatcher(None, a, b).ratio()
     # Boost when one name contains the other (helps long names like
     # "شارع الجامعة (الجامعة الأردنية)")
-    if (norm_loc in db_norm or db_norm in norm_loc) and len(norm_loc) > 4:
-        substring_ratio = min(len(norm_loc), len(db_norm)) / max(len(norm_loc), len(db_norm))
+    if (a in b or b in a) and len(a) > 4:
+        substring_ratio = min(len(a), len(b)) / max(len(a), len(b))
         score = max(score, 0.85 + substring_ratio * 0.14)
     return score
+
+
+def _fuzzy_score(norm_loc: str, db_norm: str) -> float:
+    loc_kind, loc_name = _split_kind(norm_loc)
+    db_kind, db_name = _split_kind(db_norm)
+    # Two streets are not alike because both are called "شارع": without this,
+    # "شارع الأنيس" matched "شارع الأردن"
+    if loc_kind and loc_kind == db_kind:
+        return _similarity(loc_name, db_name)
+    return _similarity(norm_loc, db_norm)
 
 
 class _Index:
@@ -104,6 +135,13 @@ class _Index:
         ]
         if by_alias:
             return list(dict.fromkeys(by_alias))
+
+        # The same name with the kind word on one side only: "نزال" is "حي نزال",
+        # "المطار" is "طريق المطار", "حي خلدا" is "خلدا"
+        if norm not in NOT_A_PLACE:
+            same_name = [r_id for r_id, _, r_norm in in_scope if _same_name(norm, r_norm)]
+            if same_name:
+                return same_name
 
         if not allow_fuzzy:
             return []
