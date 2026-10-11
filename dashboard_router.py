@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 import auth
 import models
 from database import get_db
+from seeker_posts import clean_link
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -362,7 +363,7 @@ def seekers(
         "counts": {name: counts.get(name, 0) for name in SEEKER_STATUSES},
         "items": [
             {
-                "id": row.id, "post_url": row.post_url, "author": row.author, "text": row.text, "kind": row.kind, "deal": row.deal,
+                "id": row.id, "post_url": clean_link(row.post_url), "author": row.author, "text": row.text, "kind": row.kind, "deal": row.deal,
                 "location": row.location, "posted_at": row.posted_at, "status": row.status, "group": group_of(row.post_url),
                 "created_at": row.created_at.isoformat() if row.created_at else None,
             }
@@ -383,7 +384,9 @@ def seeker_links(
     """The Facebook link of every request matching the filters (not just one page), newest first."""
     Post = models.SeekerPost
     rows = _seeker_query(db, status, deal, q, period).with_entities(Post.post_url).order_by(Post.created_at.desc()).limit(SEEKER_LINKS_LIMIT).all()
-    return {"links": [url for (url,) in rows], "limit": SEEKER_LINKS_LIMIT}
+    # Rows stored before links were shortened can repeat a post, so each link is given once
+    links = list(dict.fromkeys(clean_link(url) for (url,) in rows))
+    return {"links": links, "limit": SEEKER_LINKS_LIMIT}
 
 
 class SeekerStatusUpdate(BaseModel):

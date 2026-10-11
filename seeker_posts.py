@@ -7,6 +7,7 @@ each one is a person we can answer with a comment that links to matching ads on 
 """
 import re
 from typing import Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 
@@ -98,11 +99,29 @@ def is_seeking_reason(reason: str, text: str = "") -> bool:
     return _PROPERTY_RE.search(_fold(text)) is not None
 
 
+# The only parts of a Facebook address that say which post it is. The rest (__cft__, __tn__, ...)
+# is tracking: it differs on every visit and chat apps cut the link in the middle of it.
+_LINK_KEYS = ("story_fbid", "id", "fbid", "v")
+
+
+def clean_link(url: str) -> str:
+    """A post's short, stable address: "https://www.facebook.com/groups/1/posts/2/"."""
+    url = (url or "").strip()
+    try:
+        parts = urlsplit(url)
+        if not parts.netloc.lower().endswith("facebook.com"):
+            return url
+        kept = [(key, value) for key, value in parse_qsl(parts.query) if key in _LINK_KEYS]
+        return urlunsplit(("https", "www.facebook.com", parts.path, urlencode(kept), ""))
+    except Exception:
+        return url
+
+
 def remember(db, post, found: dict) -> bool:
     """Stores the request once (by its link). Returns True when it was new. Never raises."""
     import models
 
-    url = (getattr(post, "postUrl", None) or "").strip()
+    url = clean_link(getattr(post, "postUrl", None) or "")
     text = (getattr(post, "text", None) or "").strip()
     if not url or not text:
         return False
