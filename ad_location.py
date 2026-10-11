@@ -11,9 +11,10 @@ place at all) is settled here, with the rules of place_unfiled_ads.py:
     when it is written beside that city. Otherwise it stays "غير محدد".
 """
 import logging
+import re
 import time
 
-from place_unfiled_ads import from_text, same_area
+from place_unfiled_ads import NEAR_WORDS, from_text, same_area
 from relocate_misfiled_ads import NO_REGION, UNKNOWN_LOCATION, Places, fold
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,44 @@ def _places(db) -> Places:
     return _cache["places"]
 
 
+# A city after one of these is a landmark's name or a view, not where the ad is ("جامعة عمان الأهلية")
+NOT_ITS_CITY = NEAR_WORDS | {"جامعه", "مستشفي", "بنك", "مطله", "مطل", "اطلاله", "تطل", "مجمع", "كليه", "بلديه", "امانه"}
+# A city after one of these is the ad's address ("الموقع: إربد، شارع القدس")
+STATED = {"الموقع", "موقع", "موقعها", "موقعه", "العنوان", "في", "مدينه", "بمدينه", "محافظه"}
+
+
+def stated_elsewhere(places: Places, city_id, text: str):
+    """(city_id, region_id) when the ad's own words plainly put it in another city than `city_id`, else None.
+
+    Ads were filed under عمان while their text ended with "الموقع: الزرقاء، شارع الجيش". The other
+    city wins only when the text never mentions the stored one, names no area of it, names exactly
+    one city, and states it as an address. Hashtags are reach, not an address.
+    """
+    text = re.sub(r"#\S+", " ", text or "")
+    folded = fold(text)
+    stored = fold(places.city_name[city_id])
+    if not folded or stored in folded:
+        return None
+    found = places.find(text)
+    if any(kind == "region" and places.region[ident][0] == city_id and not places.risky(phrase) for kind, ident, _, phrase in found):
+        return None
+    if any(kind == "city" and (folded[:pos].split()[-1:] or [""])[0] in NOT_ITS_CITY for kind, _, pos, _ in found):
+        return None
+    named = from_text(places, text)
+    if named is None or named[0] == city_id:
+        return None
+    city = fold(places.city_name[named[0]])
+    area = fold(places.region[named[1]][1]) if named[1] is not None else None
+    words = folded.split()
+    for index, word in enumerate(words):
+        if word != city and not (word[:1] in "بل" and word[1:] == city):
+            continue
+        around = " ".join(words[max(0, index - 4): index + 6])
+        if index == 0 or word != city or words[index - 1] in STATED or (area and area in around):
+            return named[0], named[1]
+    return None
+
+
 def settle(places: Places, location: str, text: str = "", ai_location: str = "") -> str:
     """The location to store, given what the import arrived at, the post's text and the AI's own answer."""
     location = (location or "").strip()
@@ -41,7 +80,9 @@ def settle(places: Places, location: str, text: str = "", ai_location: str = "")
     words = parts[1] if len(parts) > 1 else ""
 
     if city_id is not None:
-        city = places.city_name[city_id]
+        elsewhere = stated_elsewhere(places, city_id, text)
+        if elsewhere is not None:
+            return places.location_text(*elsewhere)
         if not words or fold(words) == fold(parts[0]):
             return places.location_text(city_id)
         if fold(words) in NO_REGION:
