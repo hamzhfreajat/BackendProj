@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
+import auth
 import models
 from database import get_db
 from facebook_publisher import publish_facebook_post
@@ -22,7 +23,8 @@ def _norm_col(col):
     c = func.replace(c, 'ى', 'ي')
     return c
 
-router = APIRouter(prefix="/api/facebook", tags=["facebook"])
+# Admin only: these endpoints post to the Facebook page and change the auto-post rules
+router = APIRouter(prefix="/api/facebook", tags=["facebook"], dependencies=[Depends(auth.get_current_admin)])
 
 class RuleCreate(BaseModel):
     region_name: str
