@@ -448,10 +448,17 @@ def _comparable_price(deal: Optional[str]):
     return Index.price
 
 
-def _price_stats(query, deal: Optional[str] = None) -> dict:
-    """Median and typical range (10th-90th percentile). For rentals the figures are monthly."""
+def _price_stats(query, deal: Optional[str] = None, monthly_only: bool = False) -> dict:
+    """Median and typical range (10th-90th percentile). For rentals the figures are monthly.
+
+    `monthly_only` leaves out rentals let by the night: their 25-dinar prices among monthly
+    rents of 350 dragged a page's "typical range" down to nonsense.
+    """
     Index = models.AdSearchIndex
     price = _comparable_price(deal)
+    if monthly_only and deal == "rent":
+        period = _rent_period()
+        query = query.filter(or_(period.is_(None), period != "daily"))
     row = query.with_entities(
         func.count(Index.ad_id),
         func.percentile_cont(0.5).within_group(price),
@@ -709,7 +716,7 @@ def get_landing(
         "page_size": page_size,
         "ads": [_card(ad, index, tax) for ad, index in rows],
         # Mixing rent and sale prices would be meaningless, so stats need a category
-        "stats": _price_stats(filtered, _deal_of(category_id, tax)) if category_id is not None else None,
+        "stats": _price_stats(filtered, _deal_of(category_id, tax), monthly_only=True) if category_id is not None else None,
         "deal": _deal_of(category_id, tax),
         "locations": locations,
         "bedrooms": refinements["bedrooms"],
@@ -861,7 +868,7 @@ def get_prices(category_id: int, city_id: Optional[int] = None, db: Session = De
     latest = scope.with_entities(func.max(Ad.created_at)).order_by(None).scalar()
     return {
         "deal": deal,
-        "stats": _price_stats(scope, deal),
+        "stats": _price_stats(scope, deal, monthly_only=True),
         "places": places,
         "bedrooms": bedrooms,
         "updated_at": latest.isoformat() if latest else None,
