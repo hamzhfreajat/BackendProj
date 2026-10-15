@@ -32,6 +32,8 @@ class SmartSearchResponse(BaseModel):
     alternative_count: Optional[int] = None
     alternative_filters: Optional[dict] = None
     action_required: Optional[str] = None
+    # Filters dropped or widened to find results: "features", "floor", "area", "price", "region"
+    relaxed: List[str] = []
 
 def extract_raw_data_via_deepseek(text: str, categories_str: str = "") -> dict:
     """
@@ -289,7 +291,15 @@ def build_search_query(db: Session, filters: dict):
         query = query.filter(models.AdSearchIndex.furnished == filters["furnished"])
         
     if filters.get("floor_numbers"):
-        query = query.filter(models.AdSearchIndex.floor_number.in_(filters["floor_numbers"]))
+        # The index only keeps numbered floors, so "ground floor" never matched there. The
+        # ad's own floor attribute is read instead, with every spelling the website accepts.
+        from web_router import _apply_facets
+        values = [v for n in filters["floor_numbers"] for v in FLOOR_FACET_VALUES.get(n, [])]
+        if values:
+            if not joined_ad:
+                query = query.join(models.Ad, models.AdSearchIndex.ad_id == models.Ad.id)
+                joined_ad = True
+            query = _apply_facets(query, [f"floor:{v}" for v in values])
         
     if filters.get("min_area"):
         query = query.filter(models.AdSearchIndex.build_area >= filters["min_area"])
@@ -303,6 +313,12 @@ def build_search_query(db: Session, filters: dict):
                 query = query.filter(models.AdSearchIndex.search_text.ilike(f"%{feat}%"))
 
     return query
+
+# Floor numbers from parse_floor -> the floor values ads store (aliases are added by _apply_facets)
+FLOOR_FACET_VALUES = {
+    -2: ["طابق التسوية"], -1: ["الطابق الأرضي"], 100: ["طابق أخير", "روف", "طابق أخير مع روف"],
+    **{n: [str(n)] for n in range(1, 8)},
+}
 
 def parse_floor(floor_word: str):
     if not floor_word:
@@ -546,7 +562,8 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     # Furnishing
     furnished = None
     if raw.get("furnishing_word"):
-        for k, v in FURNISHING_SYNONYMS.items():
+        # Longest first: "غير مفروشة" contains "مفروشة" and was read as furnished
+        for k, v in sorted(FURNISHING_SYNONYMS.items(), key=lambda item: -len(item[0])):
             if k in str(raw["furnishing_word"]):
                 furnished = v
                 break
@@ -613,7 +630,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         features_list = [features_list]
         
     # Inject new text fields into features_list for full text search fallback
-    for item in [rent_period, building_age, interface] + nearby_locations + main_features + extra_features + floor_words:
+    for item in [rent_period, building_age, interface] + nearby_locations + main_features + extra_features:
         if item and item not in features_list:
             features_list.append(item)
             
@@ -724,44 +741,50 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             suggestion=suggestion
         )
         
-    # Fallback progressively if 0 results
+    # Fallback progressively if 0 results; every step taken is reported in `relaxed`
+    relaxed = []
     # 1. Remove features
     if features_list:
+        relaxed.append("features")
         applied_filters["features_list"] = []
         applied_filters["tags"] = tags = [t for t in tags if t.split(":", 1)[-1] not in features_list]
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج بكل الميزات الإضافية المطلوبة، تم تجاهلها لعرض نتائج أقرب.")
+            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, relaxed=relaxed, suggestion="لم نجد نتائج بكل الميزات الإضافية المطلوبة، تم تجاهلها لعرض نتائج أقرب.")
 
     # 2. Remove floor
     if applied_filters.get("floor_numbers"):
+        relaxed.append("floor")
         applied_filters["floor_numbers"] = []
         applied_filters["tags"] = tags = [t for t in tags if not t.startswith("floor:")]
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج في نفس الطابق المطلوب، تم تجاهل الطابق.")
+            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, relaxed=relaxed, suggestion="لم نجد نتائج في نفس الطابق المطلوب، تم تجاهل الطابق.")
             
     # 3. Remove area
     if min_area is not None or max_area is not None:
+        relaxed.append("area")
         applied_filters["min_area"] = None
         applied_filters["max_area"] = None
         applied_filters["tags"] = tags = [t for t in tags if not t.startswith(("min_area:", "max_area:"))]
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج بنفس المساحة، تم تجاهل المساحة.")
+            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, relaxed=relaxed, suggestion="لم نجد نتائج بنفس المساحة، تم تجاهل المساحة.")
 
     # 4. Expand Price
     if max_price:
+        relaxed.append("price")
         applied_filters["max_price"] = int(max_price * 1.25)
         query = build_search_query(db, applied_filters)
         count = query.count()
         if count > 0:
-            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion=f"لم نجد نتائج بسعر {max_price}، فقمنا برفع الميزانية لغاية {applied_filters['max_price']}")
+            return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, relaxed=relaxed, suggestion=f"لم نجد نتائج بسعر {max_price}، فقمنا برفع الميزانية لغاية {applied_filters['max_price']}")
         # The higher budget found nothing either: the user's own budget stays
         applied_filters["max_price"] = max_price
+        relaxed.remove("price")
             
     # 5. Remove Bedrooms (Skipped to strictly enforce bedroom requirements)
     # Bedrooms are a strict requirement for most users, dropping them leads to irrelevant results (e.g. 2 bedrooms when 4 are requested).
@@ -769,6 +792,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
             
     # 6. Fallback to just City + Category
     if region_ids:
+        relaxed.append("region")
         applied_filters["region_ids"] = []
         applied_filters["region_names"] = []
         applied_filters["location_names"] = [city_name] if city_name else []
@@ -788,7 +812,7 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
         logger.error(f"Failed to log search query: {e}")
         
     if count > 0:
-        return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, suggestion="لم نجد نتائج في هذه المنطقة تحديداً، تم عرض نتائج المدينة كاملة.")
+        return SmartSearchResponse(intent=intent, result_count=count, filters_applied=applied_filters, relaxed=relaxed, suggestion="لم نجد نتائج في هذه المنطقة تحديداً، تم عرض نتائج المدينة كاملة.")
             
     return SmartSearchResponse(
         intent=intent,

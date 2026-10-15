@@ -27,6 +27,9 @@ REGIONS = [
     (32, AQABA, "السكنية 8 (الثامنة)"),
     (33, AQABA, "السكنية 3 (الثالثة)"),
     (40, ZARQA, "الزرقاء الجديدة"),
+    (17, AMMAN, "حي نزال"),
+    (18, AMMAN, "طريق المطار"),
+    (19, AMMAN, "شارع الأردن"),
 ]
 
 ALIASES = [
@@ -164,6 +167,22 @@ def test_match_city_variants():
     assert match_city("خلدا", CITIES) is None
     assert match_city("", CITIES) is None
 
+
+
+def test_area_without_its_kind_word():
+    # "نزال" was not found: the area is stored as "حي نزال"
+    r = resolve_locations(CITIES, REGIONS, [], region_names=["نزال"])
+    assert (r.city_id, r.region_ids, r.not_found) == (AMMAN, [17], [])
+    r = resolve_locations(CITIES, REGIONS, [], region_names=["حي خلدا"])
+    assert r.region_ids == [11]
+
+
+def test_airport_means_airport_road():
+    # "قريب ل المطار" found nothing, and "شارع المطار" was matched to "شارع الأردن"
+    r = resolve_locations(CITIES, REGIONS, [], landmarks=[{"name": "المطار", "region": None, "city": None}])
+    assert (r.city_id, r.region_ids) == (AMMAN, [18])
+    r = resolve_locations(CITIES, REGIONS, [], city_names=["عمان"], region_names=["شارع المطار"])
+    assert r.region_ids == [18]
 
 if __name__ == "__main__":
     tests = [(name, fn) for name, fn in sorted(globals().items()) if name.startswith("test_") and callable(fn)]

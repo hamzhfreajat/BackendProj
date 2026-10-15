@@ -29,6 +29,21 @@ CITY_SYNONYMS = {
     "محافظه عاصمه": "عمان",
 }
 
+# Ways users refer to an area that differ from its name in the DB
+REGION_SYNONYMS = {
+    normalize_arabic(name): place
+    for name, place in {"المطار": "طريق المطار", "شارع المطار": "طريق المطار"}.items()
+}
+# Words that only say what kind of place follows: "حي نزال" and "نزال" are the same area
+PLACE_KIND_WORDS = ("حي ", "ضاحيه ", "منطقه ")
+
+
+def _without_kind(norm: str) -> str:
+    for word in PLACE_KIND_WORDS:
+        if norm.startswith(word):
+            return norm[len(word):]
+    return norm
+
 
 @dataclass
 class LocationResolution:
@@ -92,6 +107,7 @@ class _Index:
         norm = normalize_arabic(name or "")
         if not norm:
             return []
+        norm = normalize_arabic(REGION_SYNONYMS.get(norm, norm))
         in_scope = [r for r in self.regions if city_id is None or r[1] == city_id]
 
         exact = [r_id for r_id, _, r_norm in in_scope if r_norm == norm]
@@ -104,6 +120,12 @@ class _Index:
         ]
         if by_alias:
             return list(dict.fromkeys(by_alias))
+
+        # "نزال" for "حي نزال", "حي الياسمين" for "الياسمين"
+        bare = _without_kind(norm)
+        by_kind = [r_id for r_id, _, r_norm in in_scope if _without_kind(r_norm) == bare] if len(bare) >= 3 else []
+        if by_kind:
+            return by_kind
 
         if not allow_fuzzy:
             return []
