@@ -287,6 +287,9 @@ app.include_router(smart_search_router)
 
 from web_router import router as web_router
 app.include_router(web_router)
+# Ad page views and phone/WhatsApp clicks from the website
+from web_events_router import router as web_events_router
+app.include_router(web_events_router)
 app.include_router(media_router)
 app.include_router(og_router)
 app.include_router(auth.router)
