@@ -8,14 +8,16 @@ place at all) is settled here, with the rules of place_unfiled_ads.py:
   * another spelling of a known area becomes that area's own name;
   * an area the tables do not have is dropped and the city is kept;
   * with no city, the ad is filed only where its own text names one city, and an area only
-    when it is written beside that city. Otherwise it stays "غير محدد".
+    when it is written beside that city. Otherwise it stays "غير محدد";
+  * when the text does not name the city it was filed under, the Facebook group it came from
+    decides, if nearly all of that group's ads are in one city.
 """
 import logging
 import re
 import time
 
 from place_unfiled_ads import NEAR_WORDS, from_text, same_area
-from relocate_misfiled_ads import NO_REGION, UNKNOWN_LOCATION, Places, fold
+from relocate_misfiled_ads import EVERYDAY, NO_REGION, UNKNOWN_LOCATION, Places, fold
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +107,84 @@ def settle(places: Places, location: str, text: str = "", ai_location: str = "")
     return UNKNOWN_LOCATION
 
 
-def settle_location(db, location: str, text: str = "", ai_location: str = "") -> str:
+# A Facebook group is one city's group when at least this many of its ads, and this share, are there
+GROUP_MIN_ADS = 8
+GROUP_MIN_SHARE = 0.8
+_GROUP_SECONDS = 3600
+_GROUP_ID = re.compile(r"groups/(\d+)")
+_group_cities = {}  # group id -> (folded city name or None, when it was counted)
+
+
+def _group_city(db, source_url: str):
+    """The city nearly all ads of the post's Facebook group are in, or None."""
+    found = _GROUP_ID.search(source_url or "")
+    if not found:
+        return None
+    group = found.group(1)
+    cached = _group_cities.get(group)
+    if cached and time.time() - cached[1] < _GROUP_SECONDS:
+        return cached[0]
+    import models
+    from sqlalchemy import func
+
+    rows = (
+        db.query(func.split_part(models.Ad.location, ",", 1), func.count(models.Ad.id))
+        .filter(models.Ad.source_url.like(f"%groups/{group}/%"))
+        .group_by(func.split_part(models.Ad.location, ",", 1))
+        .all()
+    )
+    counts = {fold(city): n for city, n in rows if city and city.strip() and city.strip() != UNKNOWN_LOCATION}
+    city = None
+    total = sum(counts.values())
+    if total >= GROUP_MIN_ADS:
+        top, count = max(counts.items(), key=lambda item: item[1])
+        city = top if count / total >= GROUP_MIN_SHARE else None
+    _group_cities[group] = (city, time.time())
+    return city
+
+
+def by_group(places: Places, location: str, text: str, group_city: str = None) -> str:
+    """The ad's group decides the city when the text does not.
+
+    "خلف العالمية" in a post from an Amman group was filed under "العقبة, العالمية": the AI took
+    Aqaba's area of that name. A city the text names, or an area of it the text names in full,
+    still wins over the group.
+    """
+    group_city_id = places.city_by_key.get(group_city or "")
+    if group_city_id is None:
+        return location
+    city_id, region_id = places.parse_location(location)
+    if city_id == group_city_id:
+        return location
+    # The text says where it is: a city, or a clear area of a city other than the group's
+    # ("ناعور" in a Salt group is still Amman)
+    found = places.find(text or "")
+    named_cities = {ident for kind, ident, _, _ in found if kind == "city"}
+    named_area_cities = {places.region[ident][0] for kind, ident, _, phrase in found if kind == "region" and not places.risky(phrase)}
+    # Only the group's own city may be named ("في السلط والأقرب لعمان" names two: left as it is)
+    if (named_cities and named_cities != {group_city_id}) or (named_area_cities and group_city_id not in named_area_cities):
+        return location
+    if city_id is not None:
+        # An ad already filed under a city moves only when its text names the group's city, or
+        # when its area is a name that misleads ("العالمية"): the group is a hint, and a hint
+        # alone moved too many ads whose area the tables do not know ("بيرين")
+        if fold(places.city_name[city_id]) in fold(text):
+            return location
+        misleading_area = region_id is not None and fold(places.region[region_id][1]) in EVERYDAY
+        if group_city_id not in named_cities and not misleading_area:
+            return location
+    # The same area in the group's city, when it has one
+    area_there = same_area(places, group_city_id, places.region[region_id][1]) if region_id is not None else None
+    return places.location_text(group_city_id, area_there)
+
+
+def settle_location(db, location: str, text: str = "", ai_location: str = "", source_url: str = "") -> str:
     """`settle` against the live tables. Never raises: on any failure the location is returned unchanged."""
     try:
-        settled = settle(_places(db), location, text, ai_location)
+        places = _places(db)
+        settled = settle(places, location, text, ai_location)
+        if source_url:
+            settled = by_group(places, settled, text, _group_city(db, source_url))
         if settled != (location or "").strip():
             logger.info(f"Location '{location}' stored as '{settled}'")
         return settled

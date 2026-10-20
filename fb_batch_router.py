@@ -875,7 +875,7 @@ def _save_ad_to_db(db, post, ai_data, ai_user_id, fb_request_category_id, defaul
 
     # Last check: only a city and area that exist in the tables, spelled as they are there
     from ad_location import settle_location
-    mapped_location = settle_location(db, mapped_location, post.text or "", ai_loc_str)
+    mapped_location = settle_location(db, mapped_location, post.text or "", ai_loc_str, post.postUrl or "")
 
     # Generate smarter fallback title if AI extraction failed
     ad_title = ai_data.get("title")
