@@ -86,7 +86,7 @@ _GEMINI_BATCH_PROMPT = """You are an AI assistant that extracts structured class
 Below is a numbered list of Facebook posts representing real classified ads (usually referencing locations in Jordan).
 For EACH post, extract the following fields:
 - index        (int) -- the post number as given
-- title        (string, max 120 chars) -- Create a highly attractive, professional Arabic ad title. Use powerful keywords (e.g. "شقة فاخرة", "فرصة استثمارية"). Use exactly ONE relevant emoji (like 🌟, 🏠, or 🔥) at the beginning of the title.
+- title        (string, max 120 chars) -- Create an attractive, professional Arabic ad title. Use exactly ONE relevant emoji (like 🌟, 🏠, or 🔥) at the beginning of the title. The title MUST tell this ad apart from similar ones: include the details the post states, in this order when present: number of rooms, area in m², floor (when ground / roof / a specific floor), then the deal and the area (e.g. "🏠 شقة 3 غرف 150م طابق أرضي للإيجار في الرابية"). Generic words like "فاخرة" or "فرصة استثمارية" may be added only after those details, never instead of them.
 - description  (string) -- You MUST completely rewrite the description into a highly structured, luxurious, and professional Arabic real estate ad. 
 CRITICAL DESCRIPTION RULES:
 1. Start with an engaging, enthusiastic opening hook using emojis (e.g. ✨ فرصة لا تعوض للسكن الراقي...).
@@ -187,7 +187,7 @@ Output: {{"title": "شقة فارغة للإيجار في دير غبار", "pri
 Now, process the following post. Respond ONLY with a JSON object.
 
 Extract:
-- title: (string) generate a concise, professional arabic title (Empty if category_id is 0)
+- title: (string) generate a concise, professional arabic title (Empty if category_id is 0). Include the details the post states that tell it apart: rooms, area in m², floor, then the deal and the area (e.g. "شقة 3 غرف 150م للإيجار في الرابية"), not only generic words like "فاخرة".
 - price: (float) Extract the EXACT, fully-written numeric price in JOD.
   CRITICAL ZERO-TOLERANCE PRICE RULES:
   1. Every real estate ad MUST have a clear, unambiguous, and fully-written numeric price (e.g., 40000, 250, 65000).
