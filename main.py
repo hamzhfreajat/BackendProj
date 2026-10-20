@@ -150,6 +150,13 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["127.0.0.1", "10.0.0.0
 import time
 from database import SessionLocal
 
+
+def _floor_spellings(value: str) -> list:
+    """A floor filter value with the other spellings ads store it under."""
+    from web_router import FACET_ALIASES
+    others = [key for key, spellings in FACET_ALIASES.items() if value in spellings]
+    return list(dict.fromkeys([value, *FACET_ALIASES.get(value, []), *others]))
+
 @app.middleware("http")
 async def api_hit_tracking_middleware(request: Request, call_next):
     start_time = time.time()
@@ -1481,9 +1488,11 @@ def read_ads(
                     conds.append(models.Ad.attributes['dynamic_data']['furnishing'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['furnished'].astext == val)
             elif prefix == "floor":
+                # Every spelling of the floor ads hold: "1" / "الطابق الأول", "الطابق الأرضي" / "طابق أرضي"
                 for val in values:
-                    conds.append(models.Ad.attributes['floor'].astext == val)
-                    conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == val)
+                    for spelling in _floor_spellings(val):
+                        conds.append(models.Ad.attributes['floor'].astext == spelling)
+                        conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == spelling)
             elif prefix == "age":
                 for val in values:
                     conds.append(models.Ad.attributes['building_age'].astext == val)
@@ -1813,10 +1822,11 @@ def aggregate_ads(
                     vals = val.split(",")
                     conditions = []
                     for v in vals:
-                        conditions.extend([
-                            models.Ad.attributes['floor'].astext == v,
-                            models.Ad.attributes['dynamic_data']['floor'].astext == v
-                        ])
+                        for spelling in _floor_spellings(v):
+                            conditions.extend([
+                                models.Ad.attributes['floor'].astext == spelling,
+                                models.Ad.attributes['dynamic_data']['floor'].astext == spelling
+                            ])
                     query = query.filter(or_(*conditions))
                 elif prefix == "furnished":
                     vals = val.split(",")
@@ -2097,9 +2107,11 @@ def get_ads_count(
                     conds.append(models.Ad.attributes['dynamic_data']['furnishing'].astext == val)
                     conds.append(models.Ad.attributes['dynamic_data']['furnished'].astext == val)
             elif prefix == "floor":
+                # Every spelling of the floor ads hold: "1" / "الطابق الأول", "الطابق الأرضي" / "طابق أرضي"
                 for val in values:
-                    conds.append(models.Ad.attributes['floor'].astext == val)
-                    conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == val)
+                    for spelling in _floor_spellings(val):
+                        conds.append(models.Ad.attributes['floor'].astext == spelling)
+                        conds.append(models.Ad.attributes['dynamic_data']['floor'].astext == spelling)
             elif prefix == "age":
                 for val in values:
                     conds.append(models.Ad.attributes['building_age'].astext == val)

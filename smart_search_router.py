@@ -660,8 +660,12 @@ def smart_voice_search(request: SmartSearchRequest, db: Session = Depends(get_db
     if rent_period:
         tags.append(f"rent_duration:{rent_period}")
         
-    for fw in floor_words:
-        tags.append(f"floor:{fw}")
+    # Floors as ads store them ("1", "2", "الطابق الأرضي"), the values the app's floor filter
+    # sends: "الطابق الأول" matched no ad, so a spoken "طابق أول أو ثاني" found nothing
+    for number in floor_numbers:
+        for value in FLOOR_FACET_VALUES.get(number, []):
+            if f"floor:{value}" not in tags:
+                tags.append(f"floor:{value}")
         
     if building_age:
         tags.append(f"age:{building_age}")
