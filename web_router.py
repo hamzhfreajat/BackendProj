@@ -77,6 +77,56 @@ def _fold(value: str) -> str:
 
 SEO_TITLE_LENGTH = 70
 
+# What an ad's title already says, read on the folded text
+_SAYS_ROOMS = re.compile(r"\d+\s*(?:غرف|غرفه|نوم)|غرفتين|غرفتي|غرفه نوم|استوديو|ستوديو")
+_SAYS_AREA = re.compile(r"\d+\s*(?:م\b|م²|م2|متر|دونم)")
+_SAYS_FLOOR = re.compile(r"طابق|ارضي|روف|تسويه")
+_DEAL_WORD = re.compile(r"\s(?=(?:للإيجار|للايجار|للأجار|للاجار|للبيع)(?:[\s.,،:؛\-–]|$))")
+# Kinds of property where a room count means nothing
+_NO_ROOMS = ("استوديو", "أراضي", "اراضي", "أرض", "ارض", "محلات", "مكاتب", "مخازن", "مستودعات", "مزارع")
+_GROUND_FLOOR_VALUES = {"الطابق الارضي", "طابق ارضي", "طابق الارضي", "ارضي"}
+DISTINCT_TITLE_LENGTH = 80
+
+
+def _rooms_words(rooms: int) -> str:
+    return "غرفة نوم" if rooms == 1 else "غرفتين" if rooms == 2 else f"{rooms} غرف"
+
+
+def distinct_title(title: str, category_name: str, bedrooms: Optional[int], area: Optional[float], floor: Optional[str]) -> str:
+    """The title with what tells this ad apart from the many like it: rooms, size, a ground floor.
+
+    Hundreds of ads were titled alike ("شقة فاخرة للإيجار في الرابية" 53 times), which shows
+    a visitor the same line over and over and gives search engines duplicate titles. Only
+    details the ad itself holds are added, and only those the title does not already say:
+    "شقة فاخرة للإيجار في الرابية" -> "شقة فاخرة 3 غرف 150م للإيجار في الرابية".
+    """
+    folded = _fold(title)
+    details = []
+    # A room count far too small for the size is a data error (scraped ads often say 1), so it is left out
+    rooms_believable = bool(bedrooms) and 1 <= bedrooms <= 10 and (not area or area <= 60 + 60 * bedrooms)
+    if rooms_believable and not any(kind in category_name for kind in _NO_ROOMS) and not _SAYS_ROOMS.search(folded):
+        details.append(_rooms_words(bedrooms))
+    if area and 15 <= area <= 5000 and not _SAYS_AREA.search(folded):
+        details.append(f"{int(round(area))}م")
+    if floor and _fold(str(floor)).strip() in _GROUND_FLOOR_VALUES and not _SAYS_FLOOR.search(folded):
+        details.append("طابق أرضي")
+
+    result = title
+    for detail in details:
+        # Before "للإيجار" / "للبيع" when the title has it, else before " في ", else at the end
+        deal = _DEAL_WORD.search(result)
+        if deal:
+            candidate = f"{result[:deal.start()]} {detail}{result[deal.start():]}"
+        elif " في " in result:
+            at = result.index(" في ")
+            candidate = f"{result[:at]} {detail}{result[at:]}"
+        else:
+            candidate = f"{result} {detail}"
+        if len(candidate) > DISTINCT_TITLE_LENGTH:
+            break
+        result = candidate
+    return result
+
 
 def seo_title(title: str, deal: Optional[str], region_name: Optional[str], city_name: Optional[str]) -> str:
     """The title a search engine shows for an ad. Most ad titles leave out whether it is
@@ -382,11 +432,15 @@ def _card(ad, index, tax: dict) -> dict:
     category_name = tax["names"].get(ad.category_id, "عقار")
     images = _images(ad)
     title = web_title(ad.title, category_name, region.name_ar if region else None, city.name_ar if city else None)
+    shown = distinct_title(
+        title, category_name, index.bedrooms, float(index.build_area) if index.build_area is not None else None, _detail(ad, "floor")
+    )
     deal = _deal_of(ad.category_id, tax)
     return {
         "id": ad.id,
-        "title": title,
-        "seo_title": seo_title(title, deal, region.name_ar if region else None, city.name_ar if city else None),
+        "title": shown,
+        "seo_title": seo_title(shown, deal, region.name_ar if region else None, city.name_ar if city else None),
+        # From the stored title, not the shown one: an ad's address stays the same
         "slug": slugify(title),
         "price": float(index.price) if index.price is not None else None,
         "deal": deal,
