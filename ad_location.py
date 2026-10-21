@@ -124,15 +124,16 @@ def _group_city(db, source_url: str):
     cached = _group_cities.get(group)
     if cached and time.time() - cached[1] < _GROUP_SECONDS:
         return cached[0]
-    import models
-    from sqlalchemy import func
+    from sqlalchemy import text as sql
 
-    rows = (
-        db.query(func.split_part(models.Ad.location, ",", 1), func.count(models.Ad.id))
-        .filter(models.Ad.source_url.like(f"%groups/{group}/%"))
-        .group_by(func.split_part(models.Ad.location, ",", 1))
-        .all()
-    )
+    # GROUP BY 1: written twice through the ORM, the city got two different parameters and
+    # PostgreSQL refused the query. A savepoint keeps any failure here from aborting the
+    # transaction the ad is being saved in.
+    with db.begin_nested():
+        rows = db.execute(
+            sql("SELECT split_part(location, ',', 1), count(*) FROM ads WHERE source_url LIKE :url GROUP BY 1"),
+            {"url": f"%groups/{group}/%"},
+        ).all()
     counts = {fold(city): n for city, n in rows if city and city.strip() and city.strip() != UNKNOWN_LOCATION}
     city = None
     total = sum(counts.values())

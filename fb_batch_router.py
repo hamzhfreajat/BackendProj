@@ -1356,6 +1356,8 @@ def _do_ingest(req: FbBatchRequest, db: Session):
         except Exception as e:
             errors += 1
             logger.error(f"DB save failed for post #{idx}: {e}")
+            # One failed post must not leave the transaction aborted for the rest of the batch
+            db.rollback()
             results.append(PostResult(index=idx, status="error", reason=str(e)))
 
     return FbBatchResponse(
