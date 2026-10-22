@@ -597,7 +597,7 @@ class DeviceTokenCreate(BaseModel):
     device_type: Optional[str] = None
 
 class AdminNotificationCreate(BaseModel):
-    target_user_id: str  # Can be a specific ID like "5" or the string "all"
+    target_user_id: str  # A user id like "5", "all", or "owners" (users with a published ad)
     title: str
     body: str
     type: Optional[str] = "admin_alert"

@@ -440,6 +440,31 @@ def send_admin_notification(
         from fastapi import status as http_status
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Admin access required")
     
+    if data.target_user_id.lower() == "owners":
+        # People who advertise: real users with a published ad (not the scraper's "user-…"
+        # accounts, not admins). Each gets a personal notification, saved in the app too.
+        owner_ids = [
+            row[0]
+            for row in db.query(models.User.id)
+            .join(models.Ad, models.Ad.user_id == models.User.id)
+            .filter(models.Ad.is_published.is_(True), ~models.User.username.like("user-%"), models.User.user_type != "admin")
+            .distinct()
+            .all()
+        ]
+
+        async def _send_to_owners():
+            for owner_id in owner_ids:
+                try:
+                    await send_personal_notification(
+                        target_user_id=owner_id, title=data.title, body=data.body, notification_type=data.type, reference_id=None
+                    )
+                except Exception as e:
+                    print(f"[FCM] Owner push to user {owner_id} failed: {e}", flush=True)
+            print(f"[FCM] Owner push sent to {len(owner_ids)} users", flush=True)
+
+        background_tasks.add_task(_send_to_owners)
+        return {"status": "success", "message": f"Notification is being sent to {len(owner_ids)} advertisers."}
+
     if data.target_user_id.lower() == "all":
         # Send a single broadcast to the global 'all_users' FCM topic
         def _send_global_fcm():
