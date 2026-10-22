@@ -1,11 +1,12 @@
 import os
 import asyncio
 from arq.connections import RedisSettings
+from arq.cron import cron
 from database import SessionLocal
 import models
 import aiohttp
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 async def process_telemetry_batch(ctx, batch):
     db = SessionLocal()
@@ -58,8 +59,32 @@ async def delete_ad_from_elasticsearch(ctx, ad_id):
     except Exception as e:
         print(f"Error in delete_ad_from_elasticsearch task: {e}")
 
+# --- Ad owner features (ad_insights.py) ---
+
+AMMAN_TZ = timezone(timedelta(hours=3))  # Jordan has no daylight saving since 2022
+
+async def flush_ad_daily_stats(ctx):
+    import ad_insights
+    await asyncio.to_thread(ad_insights.flush_daily_stats)
+
+async def auto_republish_ads(ctx):
+    import ad_insights
+    await asyncio.to_thread(ad_insights.run_auto_republish)
+
+async def daily_ad_reports(ctx):
+    import ad_insights
+    return await ad_insights.generate_daily_reports()
+
 class WorkerSettings:
-    functions = [process_telemetry_batch, sync_ad_to_elasticsearch, delete_ad_from_elasticsearch]
+    functions = [process_telemetry_batch, sync_ad_to_elasticsearch, delete_ad_from_elasticsearch, daily_ad_reports]
+    cron_jobs = [
+        cron(flush_ad_daily_stats, minute=set(range(0, 60, 5)), run_at_startup=True),
+        cron(auto_republish_ads, minute={2, 17, 32, 47}),
+        # 06:30 Amman time: yesterday's numbers are final and owners are waking up
+        cron(daily_ad_reports, hour={6}, minute={30}, timeout=3600),
+    ]
+    # Cron hours above are Amman time, whatever the server clock says
+    timezone = AMMAN_TZ
     redis_settings = RedisSettings(
         host=os.getenv("REDIS_HOST", "redis"),
         port=int(os.getenv("REDIS_PORT", 6379)),

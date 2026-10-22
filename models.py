@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DECIMAL, ForeignKey, TIMESTAMP, Boolean, Enum, Table, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DECIMAL, ForeignKey, TIMESTAMP, Boolean, Enum, Table, UniqueConstraint, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
@@ -161,6 +161,9 @@ class User(Base):
     # Category Tracking
     latest_category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     category_filters_prefs = Column(JSONB, default=dict)
+
+    # Push a short summary when the daily ad report is ready
+    daily_report_enabled = Column(Boolean, default=True, server_default="true", nullable=False)
     
     ads = relationship("Ad", back_populates="owner")
     metrics = relationship("UserMetric", back_populates="user", uselist=False)
@@ -284,6 +287,8 @@ class Ad(Base):
     
     last_republished_at = Column(TIMESTAMP, nullable=True)
     republish_notification_sent = Column(Boolean, default=False)
+    # The owner asked us to move the ad back to the top once a day
+    auto_republish = Column(Boolean, default=False, server_default="false", nullable=False)
     
     # Scraper Support Fields
     source_type = Column(Enum(SourceType), default=SourceType.ORGANIC_USER)
@@ -678,3 +683,36 @@ class AdClickTracking(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     ip_address = Column(String(50), nullable=True, index=True)
     created_at = Column(TIMESTAMP, server_default=func.now(), index=True)
+
+
+class AdDailyStat(Base):
+    """What happened to one ad on one day (Amman time). Filled from Redis by the worker."""
+    __tablename__ = "ad_daily_stats"
+    __table_args__ = (UniqueConstraint("ad_id", "day", name="uq_ad_daily_stats_ad_day"),)
+
+    id = Column(Integer, primary_key=True)
+    ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), nullable=False, index=True)
+    day = Column(Date, nullable=False, index=True)
+    impressions = Column(Integer, default=0, server_default="0", nullable=False)  # shown in a list
+    views = Column(Integer, default=0, server_default="0", nullable=False)        # details page opened (once per person)
+    calls = Column(Integer, default=0, server_default="0", nullable=False)        # contacts: once per person per day
+    whatsapp = Column(Integer, default=0, server_default="0", nullable=False)
+    chats = Column(Integer, default=0, server_default="0", nullable=False)
+    favorites = Column(Integer, default=0, server_default="0", nullable=False)
+
+
+class AdDailyReport(Base):
+    """The morning report for one ad: numbers for the day before plus AI advice."""
+    __tablename__ = "ad_daily_reports"
+    __table_args__ = (UniqueConstraint("ad_id", "report_date", name="uq_ad_daily_reports_ad_date"),)
+
+    id = Column(Integer, primary_key=True)
+    ad_id = Column(Integer, ForeignKey("ads.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    report_date = Column(Date, nullable=False, index=True)  # the day the numbers are about
+    health_score = Column(Integer, nullable=False, default=0)  # 0-100
+    stats = Column(JSONB, nullable=False, default=dict)        # see ad_insights.build_ad_facts
+    summary = Column(Text, nullable=True)                      # short Arabic paragraph
+    tips = Column(JSONB, nullable=False, default=list)         # [{"text", "action"}]
+    ai_model = Column(String(100), nullable=True)              # None = rule-based fallback
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

@@ -513,6 +513,7 @@ class MyAdResponse(Ad):
     status: str = "Active"
     performance_score: int = 0
     suggested_action: Optional[str] = None
+    auto_republish: bool = False
     
     class Config:
         from_attributes = True

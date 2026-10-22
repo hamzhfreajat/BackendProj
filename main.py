@@ -86,6 +86,7 @@ from fb_batch_router import router as fb_batch_router
 from fb_publisher_router import router as fb_publisher_router
 from ai_router import router as ai_router
 from search_service import SearchService
+import ad_insights
 from autocomplete_service import AutocompleteService
 from media_router import router as media_router
 from og_router import router as og_router
@@ -318,6 +319,9 @@ app.include_router(blacklist_router)
 
 from dashboard_router import router as dashboard_router
 app.include_router(dashboard_router)
+
+from ad_insights_router import router as ad_insights_router
+app.include_router(ad_insights_router)
 
 
 # Mount the uploads directory to serve media files
@@ -873,6 +877,8 @@ def toggle_save_ad(ad_id: int, current_user: models.User = Depends(auth.get_curr
             db.add(new_metric)
         ad.favorites_count = (ad.favorites_count or 0) + 1
         is_saved = True
+        if ad.user_id != current_user.id:
+            ad_insights.record_ad_event(ad_id, "favorites", who=f"u{current_user.id}")
         
     db.commit()
     return {"status": "success", "is_saved": is_saved}
@@ -2735,6 +2741,10 @@ def track_ad_click(
         
     if current_user and current_user.id == ad.user_id:
         return {"status": "success", "deducted": 0.0, "reason": "self_click"}
+
+    # Daily report: "call" -> calls, "whatsapp" -> whatsapp, "chat" -> chats
+    contact_who = f"u{current_user.id}" if current_user else f"ip{auth.get_real_ip(request)}"
+    ad_insights.record_ad_event(ad_id, {"call": "calls", "whatsapp": "whatsapp", "chat": "chats"}[action_type], who=contact_who)
         
     # Check if this ad has an active bid and the owner has balance
     owner = db.query(models.User).filter(models.User.id == ad.user_id).with_for_update().first()
@@ -3041,6 +3051,8 @@ def record_ad_view(
         raise HTTPException(status_code=404, detail="Ad not found")
 
     db_ad.views = (db_ad.views or 0) + 1
+    if db_ad.user_id != current_user.id:
+        ad_insights.record_ad_event(ad_id, "views", who=f"u{current_user.id}")
 
     # Use raw insert / update on conflict for tracking view_at
     stmt = pg_insert(models.user_viewed_ads).values(
@@ -3079,6 +3091,9 @@ def record_bulk_ad_views(
     Called by the frontend every few seconds to record impressions (views).
     This buffers the views in Redis to prevent database thrashing.
     """
+    # Daily report: how often each ad was shown in a list
+    ad_insights.record_ad_event(request.ad_ids[:200], "impressions")
+
     from auth import redis_client
     if not redis_client:
         _fallback_bulk_views(db, request.ad_ids)
@@ -3730,6 +3745,7 @@ async def republish_notifier_worker():
                     models.Ad.is_sold == False,
                     models.Ad.is_published == True,
                     models.Ad.republish_notification_sent == False,
+                    models.Ad.auto_republish == False,  # these move up by themselves
                     or_(
                         models.Ad.last_republished_at <= now_minus_24h,
                         (models.Ad.last_republished_at == None) & (models.Ad.created_at <= now_minus_24h)
@@ -4056,6 +4072,10 @@ async def startup_event():
             
             # Add last_notified_ad_count to categories
             db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS last_notified_ad_count INTEGER DEFAULT 0"))
+
+            # Daily auto-republish and the morning ad report
+            db.execute(text("ALTER TABLE ads ADD COLUMN IF NOT EXISTS auto_republish BOOLEAN NOT NULL DEFAULT FALSE"))
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_report_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
             
             # Update/Insert Aqaba region names
             aqaba_updates = {
