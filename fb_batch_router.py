@@ -748,6 +748,44 @@ def _compute_image_hash(url: str) -> Optional[str]:
         logging.getLogger(__name__).warning(f"Failed to hash image {url}: {e}")
     return None
 
+_POST_ID = re.compile(r"(?:/posts/|story_fbid=|permalink/)(\d+)")
+
+
+def _same_post(url_a: str, url_b: str) -> bool:
+    """Whether two Facebook links are the same post (tracking parameters aside)."""
+    if not url_a or not url_b:
+        return False
+    if url_a == url_b:
+        return True
+    a, b = _POST_ID.search(url_a), _POST_ID.search(url_b)
+    return bool(a and b and a.group(1) == b.group(1))
+
+
+def _revive_repost(db: Session, ad_id: int, post: FbPost, blocked_phones: set):
+    """A new post of an ad hidden for its age brings that ad back, dated today.
+
+    Scraped ads are hidden after a few days (main.SCRAPED_AD_DAYS). An owner posting the same
+    flat again shows it is still available. The same post seen again does not count: Facebook
+    brings old posts back to the feed when someone comments. Sold, rejected and paused ads stay
+    hidden, and so do ads whose number was blocked since. Returns the ad, or None.
+    """
+    ad = db.query(models.Ad).filter(models.Ad.id == ad_id).first()
+    if ad is None or ad.is_published or ad.is_sold or ad.is_rejected or ad.is_paused:
+        return None
+    if ad.source_type == models.SourceType.ORGANIC_USER and not ad.source_url:
+        return None
+    if not post.postUrl or _same_post(post.postUrl, ad.source_url or ""):
+        return None
+    attributes = ad.attributes if isinstance(ad.attributes, dict) else {}
+    if attributes.get("phone_number") and attributes.get("phone_number") in blocked_phones:
+        return None
+    ad.is_published = True
+    ad.created_at = datetime.utcnow()
+    ad.source_url = post.postUrl
+    db.commit()
+    return ad
+
+
 def _is_duplicate(db: Session, post: FbPost, seen_in_batch_hashes: set) -> Optional[int]:
     source_url = post.postUrl or ""
     raw_description = post.text or ""
@@ -1148,6 +1186,18 @@ def _do_ingest(req: FbBatchRequest, db: Session):
             continue
 
         dup_ad_id = _is_duplicate(db, post, seen_in_batch_texts)
+        if dup_ad_id and dup_ad_id > 0:
+            try:
+                revived = _revive_repost(db, dup_ad_id, post, blocked_phones)
+            except Exception as e:
+                db.rollback()
+                revived = None
+                logger.error(f"Could not bring back ad {dup_ad_id}: {e}")
+            if revived:
+                saved += 1
+                logger.info(f"Post #{idx} is a repost: ad {revived.id} brought back")
+                results.append(PostResult(index=idx, status="saved", ad_id=revived.id, title=revived.title, reason="Repost: hidden ad brought back"))
+                continue
         if dup_ad_id:
             skipped += 1
             reason = f"Duplicate post (Matches Ad ID {dup_ad_id})"
