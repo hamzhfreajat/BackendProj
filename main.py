@@ -3963,8 +3963,15 @@ async def sync_ad_views_worker():
             
         await asyncio.sleep(60)
 
+# How long an ad scraped from Facebook stays published
+SCRAPED_AD_DAYS = 5
+
+
 async def deactivate_old_scraper_ads_worker():
-    """Periodically deactivate non-organic ads older than 2 months."""
+    """Once a day, hide scraped (non-organic) ads older than SCRAPED_AD_DAYS.
+
+    Facebook rentals go fast: after two months owners were being called about flats long rented.
+    """
     import asyncio
     from datetime import datetime, timedelta
     
@@ -3974,13 +3981,11 @@ async def deactivate_old_scraper_ads_worker():
             from sqlalchemy import update
             db = SessionLocal()
             try:
-                two_months_ago = datetime.utcnow() - timedelta(days=60)
-                
-                # Deactivate ads older than 2 months that are NOT organic
+                cutoff = datetime.utcnow() - timedelta(days=SCRAPED_AD_DAYS)
                 stmt = (
                     update(models.Ad)
                     .where(
-                        models.Ad.created_at <= two_months_ago,
+                        models.Ad.created_at <= cutoff,
                         models.Ad.is_published == True,
                         or_(
                             models.Ad.source_type != models.SourceType.ORGANIC_USER,
