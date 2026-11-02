@@ -1659,7 +1659,22 @@ def read_ads(
         for ad in ads:
             ad.is_saved = ad.id in saved_ids
             
-    return ads
+    return _sendable_ads(ads)
+
+
+def _sendable_ads(ads):
+    """The ads that fit the response, so one ad with bad data cannot fail a whole page.
+
+    Ad 71165 (posted from the website) failed validation and every Amman list page that
+    included it answered 500. A skipped ad is logged with the reason, to be fixed in the data.
+    """
+    sendable = []
+    for ad in ads:
+        try:
+            sendable.append(schemas.Ad.model_validate(ad))
+        except Exception as error:
+            print(f"[ads] Ad {getattr(ad, 'id', '?')} left out of the list: {error}", flush=True)
+    return sendable
 
 
 
