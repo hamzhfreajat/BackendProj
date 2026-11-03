@@ -12,6 +12,7 @@ app but are kept away from search engines.
 import json
 import re
 import time
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Dict, List, Optional
 
@@ -266,12 +267,20 @@ def _plausible_price(tax: dict):
     return or_(*checks)
 
 
-def _quality_query(db: Session):
-    """Live ads good enough to show on the web, joined to their search-index row."""
+# Scraped ads leave the app after 5 days (SCRAPED_AD_DAYS in main.py), because owners were
+# called about flats long rented. The website keeps showing them as ended, with no way to
+# contact anyone, for ENDED_AD_DAYS: area pages keep their content and their place in Google.
+SCRAPED_AD_DAYS = 5
+ENDED_AD_DAYS = 60
+# Ended ads shown under the live ones on a listing page
+ENDED_ON_PAGE = 12
+
+
+def _web_ready(tax: dict) -> list:
+    """What an ad needs to be on the web at all: a believable price, a photo and a real description."""
     Ad, Index = models.Ad, models.AdSearchIndex
-    return db.query(Ad, Index).join(Index, Index.ad_id == Ad.id).filter(
-        _plausible_price(_taxonomy(db)),
-        Ad.is_published == True,
+    return [
+        _plausible_price(tax),
         func.coalesce(Ad.is_paused, False) == False,
         func.coalesce(Ad.is_sold, False) == False,
         func.coalesce(Ad.is_rejected, False) == False,
@@ -279,6 +288,39 @@ def _quality_query(db: Session):
         Ad.image_url.isnot(None),
         Ad.image_url.notin_(["", "[]"]),
         func.length(func.coalesce(Ad.description, "")) >= MIN_DESCRIPTION_LENGTH,
+    ]
+
+
+def _is_ended():
+    """A scraped ad hidden by the 5-day rule within the last ENDED_AD_DAYS."""
+    Ad = models.Ad
+    now = datetime.utcnow()
+    return and_(
+        Ad.is_published == False,
+        or_(Ad.source_type != models.SourceType.ORGANIC_USER, Ad.source_url.isnot(None)),
+        Ad.created_at <= now - timedelta(days=SCRAPED_AD_DAYS),
+        Ad.created_at >= now - timedelta(days=ENDED_AD_DAYS),
+    )
+
+
+def _quality_query(db: Session):
+    """Live ads good enough to show on the web, joined to their search-index row."""
+    Ad, Index = models.Ad, models.AdSearchIndex
+    return db.query(Ad, Index).join(Index, Index.ad_id == Ad.id).filter(*_web_ready(_taxonomy(db)), Ad.is_published == True)
+
+
+def _ended_query(db: Session):
+    """Recently ended scraped ads that the website still shows, without contact details."""
+    Ad, Index = models.Ad, models.AdSearchIndex
+    return db.query(Ad, Index).join(Index, Index.ad_id == Ad.id).filter(*_web_ready(_taxonomy(db)), _is_ended())
+
+
+def _shown_query(db: Session):
+    """Every ad the website shows: live ones and recently ended ones. Page counts use it,
+    so an area page with a few live ads and many recent ones stays indexed."""
+    Ad, Index = models.Ad, models.AdSearchIndex
+    return db.query(Ad, Index).join(Index, Index.ad_id == Ad.id).filter(
+        *_web_ready(_taxonomy(db)), or_(Ad.is_published == True, _is_ended())
     )
 
 
@@ -436,8 +478,11 @@ def _card(ad, index, tax: dict) -> dict:
         title, category_name, index.bedrooms, float(index.build_area) if index.build_area is not None else None, _detail(ad, "floor")
     )
     deal = _deal_of(ad.category_id, tax)
+    # Ads reach the web unpublished only once they have ended (see _is_ended)
+    ended = not ad.is_published
     return {
         "id": ad.id,
+        "ended": ended,
         "title": shown,
         "seo_title": seo_title(shown, deal, region.name_ar if region else None, city.name_ar if city else None),
         # From the stored title, not the shown one: an ad's address stays the same
@@ -463,7 +508,7 @@ def _card(ad, index, tax: dict) -> dict:
         "is_featured": bool(getattr(ad, "is_featured", False)),
         "below_market": getattr(ad, "market_price_status", None) == "BELOW_MARKET",
         "has_video": isinstance(ad.attributes, dict) and bool(ad.attributes.get("video_url")),
-        "phone": getattr(ad, "phone_number", None) or None,
+        "phone": None if ended else (getattr(ad, "phone_number", None) or None),
         "is_organic": str(getattr(ad.source_type, "value", ad.source_type) or "") == "ORGANIC_USER",
         "bedrooms": index.bedrooms,
         "bathrooms": index.bathrooms,
@@ -683,45 +728,58 @@ def get_landing(
         if region is None or (city_id is not None and region.city_id != city_id):
             raise HTTPException(status_code=404, detail="Unknown region")
 
-    scope = _apply_scope(_quality_query(db), tax, category_id, city_id, region_id)
     wanted_regions = _int_list(region_ids, 50) if region_id is None else []
-    if wanted_regions:
-        scope = scope.filter(Index.region_id.in_(wanted_regions))
-
-    filtered = scope
-    wanted_beds = _int_list(bedrooms)
-    if wanted_beds:
-        # 6 means "6 or more", matching the filter's last option
-        filtered = filtered.filter(or_(*[Index.bedrooms >= 6 if n >= 6 else Index.bedrooms == n for n in wanted_beds]))
-    wanted_baths = _int_list(bathrooms)
-    if wanted_baths:
-        filtered = filtered.filter(or_(*[Index.bathrooms >= 6 if n >= 6 else Index.bathrooms == n for n in wanted_baths]))
-    filtered = _apply_facets(filtered, attrs)
-    if min_area is not None:
-        filtered = filtered.filter(Index.build_area >= min_area)
-    if max_area is not None:
-        filtered = filtered.filter(Index.build_area <= max_area)
-    if furnished is not None:
-        filtered = filtered.filter(Index.furnished == furnished)
-    if owner:
-        filtered = filtered.filter(_by_owner())
-    if instalments:
-        filtered = filtered.filter(_instalments())
-    if new_building:
-        filtered = filtered.filter(_new_building())
     price = _comparable_price(_deal_of(category_id, tax) if category_id is not None else None)
-    if min_price is not None:
-        filtered = filtered.filter(price >= min_price)
-    if max_price is not None:
-        filtered = filtered.filter(price <= max_price)
+
+    def narrow(query):
+        """The visitor's own filters."""
+        wanted_beds = _int_list(bedrooms)
+        if wanted_beds:
+            # 6 means "6 or more", matching the filter's last option
+            query = query.filter(or_(*[Index.bedrooms >= 6 if n >= 6 else Index.bedrooms == n for n in wanted_beds]))
+        wanted_baths = _int_list(bathrooms)
+        if wanted_baths:
+            query = query.filter(or_(*[Index.bathrooms >= 6 if n >= 6 else Index.bathrooms == n for n in wanted_baths]))
+        query = _apply_facets(query, attrs)
+        if min_area is not None:
+            query = query.filter(Index.build_area >= min_area)
+        if max_area is not None:
+            query = query.filter(Index.build_area <= max_area)
+        if furnished is not None:
+            query = query.filter(Index.furnished == furnished)
+        if owner:
+            query = query.filter(_by_owner())
+        if instalments:
+            query = query.filter(_instalments())
+        if new_building:
+            query = query.filter(_new_building())
+        if min_price is not None:
+            query = query.filter(price >= min_price)
+        if max_price is not None:
+            query = query.filter(price <= max_price)
+        return query
+
+    def in_scope(query):
+        query = _apply_scope(query, tax, category_id, city_id, region_id)
+        return query.filter(Index.region_id.in_(wanted_regions)) if wanted_regions else query
+
+    # Links and counts include recently ended ads; the list itself shows live ones first
+    scope = in_scope(_shown_query(db))
+    filtered = narrow(in_scope(_quality_query(db)))
+    shown = narrow(scope)
+    ended_filtered = narrow(in_scope(_ended_query(db)))
 
     total = filtered.with_entities(func.count(Ad.id)).scalar() or 0
+    ended_total = ended_filtered.with_entities(func.count(Ad.id)).scalar() or 0
     order = {
         "newest": Ad.created_at.desc(),
         "price_asc": price.asc(),
         "price_desc": price.desc(),
     }[sort]
     rows = filtered.order_by(order, Ad.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    ended_rows = (
+        ended_filtered.order_by(Ad.created_at.desc(), Ad.id.desc()).limit(ENDED_ON_PAGE).all() if page == 1 else []
+    )
 
     # Links to narrower pages, counted on the unfiltered scope
     locations = []
@@ -742,7 +800,7 @@ def get_landing(
     deal = _deal_of(category_id, tax) if category_id is not None else None
     if deal:
         root = REAL_ESTATE_ROOTS[deal]
-        place_scope = _apply_scope(_quality_query(db), tax, root, city_id, region_id)
+        place_scope = _apply_scope(_shown_query(db), tax, root, city_id, region_id)
         if wanted_regions:
             place_scope = place_scope.filter(Index.region_id.in_(wanted_regions))
         raw = dict(place_scope.with_entities(Index.category_id, func.count(Ad.id)).group_by(Index.category_id).all())
@@ -766,11 +824,13 @@ def get_landing(
     return {
         "category_counts": category_counts,
         "total": total,
+        "ended_total": ended_total,
+        "ended_ads": [_card(ad, index, tax) for ad, index in ended_rows],
         "page": page,
         "page_size": page_size,
         "ads": [_card(ad, index, tax) for ad, index in rows],
         # Mixing rent and sale prices would be meaningless, so stats need a category
-        "stats": _price_stats(filtered, _deal_of(category_id, tax), monthly_only=True) if category_id is not None else None,
+        "stats": _price_stats(shown, _deal_of(category_id, tax), monthly_only=True) if category_id is not None else None,
         "deal": _deal_of(category_id, tax),
         "locations": locations,
         "bedrooms": refinements["bedrooms"],
@@ -793,11 +853,13 @@ def get_web_ad(ad_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Ad not found")
 
     live = bool(ad.is_published) and not ad.is_paused and not ad.is_sold and not ad.is_rejected
+    # A recently ended scraped ad keeps its page, as ended and with no contact details
+    ended = not live and db.query(Ad.id).filter(Ad.id == ad.id, _is_ended()).first() is not None
     images = _images(ad)
     description = (ad.description or "").strip()
     low, high = PLAUSIBLE_PRICE.get(_deal_of(ad.category_id, tax) or "", (1, float("inf")))
     plausible = index.price is not None and low <= index.price <= high
-    indexable = bool(live and plausible and images and len(description) >= MIN_DESCRIPTION_LENGTH)
+    indexable = bool((live or ended) and plausible and images and len(description) >= MIN_DESCRIPTION_LENGTH)
 
     card = _card(ad, index, tax)
     attributes = ad.attributes if isinstance(ad.attributes, dict) else {}
@@ -810,7 +872,7 @@ def get_web_ad(ad_id: int, db: Session = Depends(get_db)):
     }
 
     # Market context: comparable ads in the same category and place
-    comparable = _apply_scope(_quality_query(db), tax, ad.category_id, index.city_id, index.region_id)
+    comparable = _apply_scope(_shown_query(db), tax, ad.category_id, index.city_id, index.region_id)
     if index.bedrooms is not None:
         narrowed = comparable.filter(Index.bedrooms == index.bedrooms)
         if (narrowed.with_entities(func.count(Ad.id)).scalar() or 0) >= 8:
@@ -834,6 +896,7 @@ def get_web_ad(ad_id: int, db: Session = Depends(get_db)):
         "images": images,
         "description": description,
         "live": live,
+        "ended": ended,
         "indexable": indexable,
         "updated_at": ad.updated_at.isoformat() if ad.updated_at else None,
         "location": ad.location,
@@ -857,7 +920,7 @@ def get_sitemap_landing(db: Session = Depends(get_db)):
     bedrooms = case((Index.bedrooms.between(1, 6), Index.bedrooms), else_=None)
     furnished = func.coalesce(Index.furnished, False)
     period = _rent_period()
-    rows = _quality_query(db).with_entities(
+    rows = _shown_query(db).with_entities(
         Index.category_id, Index.city_id, Index.region_id, bedrooms, furnished, period,
         func.count(Ad.id), func.max(Ad.created_at)
     ).filter(Index.category_id.in_(tax["real_estate_ids"])).group_by(
@@ -937,7 +1000,7 @@ def get_sitemap_features(db: Session = Depends(get_db)):
     Ad, Index = models.Ad, models.AdSearchIndex
     result = []
     for deal, root in REAL_ESTATE_ROOTS.items():
-        base = _quality_query(db).filter(Index.category_id.in_(tax["descendants"](root)))
+        base = _shown_query(db).filter(Index.category_id.in_(tax["descendants"](root)))
         for name, condition in _feature_conditions(deal).items():
             rows = base.filter(condition).with_entities(
                 Index.category_id, Index.city_id, Index.region_id, func.count(Ad.id), func.max(Ad.created_at)
@@ -959,7 +1022,7 @@ def get_sitemap_ads(
     """Web-quality ads for the ad sitemaps, newest first."""
     tax = _taxonomy(db)
     Ad, Index = models.Ad, models.AdSearchIndex
-    base = _quality_query(db).filter(Index.category_id.in_(tax["real_estate_ids"]))
+    base = _shown_query(db).filter(Index.category_id.in_(tax["real_estate_ids"]))
     total = base.with_entities(func.count(Ad.id)).scalar() or 0
     rows = base.order_by(Ad.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
     items = []
